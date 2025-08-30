@@ -78,22 +78,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to verify user' }, { status: 500 })
     }
 
-    // Fetch conversation history (last 10 messages for context)
+    // Fetch conversation history (last 30 messages for context)
     const { data: conversationHistory } = await supabase
       .from('conversations')
       .select('message, message_type, metadata, created_at')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
-      .limit(10)
+      .limit(30)
 
-    // Fetch today's daily card for context
-    const today = new Date().toISOString().split('T')[0]
-    const { data: dailyCard } = await supabase
+    // Fetch last 7 days of daily cards for context
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    const { data: weeklyCards } = await supabase
       .from('daily_log_cards')
-      .select('summary')
+      .select('summary, log_date')
       .eq('user_id', user.id)
-      .eq('log_date', today)
-      .single()
+      .gte('log_date', sevenDaysAgo)
+      .order('log_date', { ascending: false })
 
     // Fetch recent user context data (last 7 days)
     const { data: recentContext } = await supabase
@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
 
     // Build context for the AI
     const conversationContext = buildConversationContext(conversationHistory || [])
-    const userContext = buildUserContext(dailyCard, recentContext || [])
+    const userContext = buildEnhancedUserContext(weeklyCards || [], recentContext || [])
     
     // Build conversation state context
     const stateContext = buildStateContext(conversationState, checkinProgress)
@@ -246,8 +246,8 @@ function buildConversationContext(conversationHistory: Array<{message: string, m
     return []
   }
 
-  // Reverse to get chronological order and limit to last 8 messages (4 exchanges)
-  const recentMessages = conversationHistory.slice(0, 8).reverse()
+  // Reverse to get chronological order and limit to last 20 messages (10 exchanges)
+  const recentMessages = conversationHistory.slice(0, 20).reverse()
   
   return recentMessages.map(msg => ({
     role: msg.metadata?.role === 'assistant' ? 'assistant' : 'user',
@@ -255,32 +255,45 @@ function buildConversationContext(conversationHistory: Array<{message: string, m
   }))
 }
 
-// Helper function to build user context
-function buildUserContext(dailyCard: {summary?: Record<string, unknown>} | null, recentContext: Array<{data: Record<string, unknown>}>): string {
+// Helper function to build enhanced user context with weekly data
+function buildEnhancedUserContext(weeklyCards: Array<{summary?: Record<string, unknown>, log_date: string}>, recentContext: Array<{data: Record<string, unknown>}>): string {
   let context = ""
 
-  // Add daily card context
-  if (dailyCard?.summary) {
-    const summary = dailyCard.summary
-    context += "TODAY'S CONTEXT:\n"
-    
-    if (summary.sleep_hours) context += `- Sleep: ${summary.sleep_hours} hours\n`
-    if (summary.sleep_quality) context += `- Sleep Quality: ${summary.sleep_quality}/10\n`
-    if (summary.mood) context += `- Mood: ${summary.mood}/10\n`
-    if (summary.energy) context += `- Energy: ${summary.energy}/10\n`
-    if (summary.stress) context += `- Stress: ${summary.stress}/10\n`
-    if (summary.readiness) context += `- Readiness: ${summary.readiness}/10\n`
+  if (weeklyCards && weeklyCards.length > 0) {
+    // Add today's context (most recent card)
+    const todayCard = weeklyCards[0]
+    if (todayCard?.summary) {
+      const summary = todayCard.summary
+      context += "TODAY'S CONTEXT:\n"
+      
+      if (summary.sleep_hours) context += `- Sleep: ${summary.sleep_hours} hours\n`
+      if (summary.sleep_quality) context += `- Sleep Quality: ${summary.sleep_quality}/10\n`
+      if (summary.mood) context += `- Mood: ${summary.mood}/10\n`
+      if (summary.energy) context += `- Energy: ${summary.energy}/10\n`
+      if (summary.stress) context += `- Stress: ${summary.stress}/10\n`
+      if (summary.readiness) context += `- Readiness: ${summary.readiness}/10\n`
 
-    // Add context data
-    if (summary.context_data) {
-      context += "\nRECENT CONTEXT:\n"
-          Object.entries(summary.context_data).forEach(([category, data]: [string, Record<string, unknown>]) => {
-      Object.entries(data).forEach(([key, value]: [string, unknown]) => {
-          if (value && typeof value === 'object' && value.value) {
-            context += `- ${category}.${key}: ${JSON.stringify(value.value)}\n`
-          }
+      // Add context data
+      if (summary.context_data) {
+        context += "\nRECENT CONTEXT:\n"
+        Object.entries(summary.context_data).forEach(([category, data]: [string, Record<string, unknown>]) => {
+          Object.entries(data).forEach(([key, value]: [string, unknown]) => {
+            if (value && typeof value === 'object' && value.value) {
+              context += `- ${category}.${key}: ${JSON.stringify(value.value)}\n`
+            }
+          })
         })
-      })
+      }
+    }
+
+    // Add weekly trends if we have multiple days
+    if (weeklyCards.length > 1) {
+      context += "\nWEEKLY TRENDS:\n"
+      const trends = analyzeWeeklyTrends(weeklyCards)
+      if (trends.sleep_trend) context += `- Sleep: ${trends.sleep_trend}\n`
+      if (trends.energy_trend) context += `- Energy: ${trends.energy_trend}\n`
+      if (trends.mood_trend) context += `- Mood: ${trends.mood_trend}\n`
+      if (trends.workout_consistency) context += `- Workouts: ${trends.workout_consistency}\n`
     }
   }
 
@@ -296,6 +309,88 @@ function buildUserContext(dailyCard: {summary?: Record<string, unknown>} | null,
   }
 
   return context || "No previous context available."
+}
+
+// Helper function to analyze weekly trends
+function analyzeWeeklyTrends(weeklyCards: Array<{summary?: Record<string, unknown>, log_date: string}>): Record<string, string> {
+  const trends: Record<string, string> = {}
+  
+  if (weeklyCards.length < 2) return trends
+
+  // Analyze sleep trends
+  const sleepHours = weeklyCards
+    .map(card => card.summary?.sleep_hours)
+    .filter(hours => hours !== undefined && hours !== null)
+    .map(hours => Number(hours))
+  
+  if (sleepHours.length > 1) {
+    const avgSleep = sleepHours.reduce((a, b) => a + b, 0) / sleepHours.length
+    const minSleep = Math.min(...sleepHours)
+    const maxSleep = Math.max(...sleepHours)
+    
+    if (maxSleep - minSleep > 2) {
+      trends.sleep_trend = `Variable (${minSleep.toFixed(1)}-${maxSleep.toFixed(1)}h avg)`
+    } else {
+      trends.sleep_trend = `Consistent (${avgSleep.toFixed(1)}h avg)`
+    }
+  }
+
+  // Analyze energy trends
+  const energyLevels = weeklyCards
+    .map(card => card.summary?.energy)
+    .filter(energy => energy !== undefined && energy !== null)
+    .map(energy => Number(energy))
+  
+  if (energyLevels.length > 1) {
+    const avgEnergy = energyLevels.reduce((a, b) => a + b, 0) / energyLevels.length
+    const recentEnergy = energyLevels[0]
+    
+    if (recentEnergy > avgEnergy + 1) {
+      trends.energy_trend = `Improving (${recentEnergy}/10, up from ${avgEnergy.toFixed(1)}/10 avg)`
+    } else if (recentEnergy < avgEnergy - 1) {
+      trends.energy_trend = `Declining (${recentEnergy}/10, down from ${avgEnergy.toFixed(1)}/10 avg)`
+    } else {
+      trends.energy_trend = `Stable (${avgEnergy.toFixed(1)}/10 avg)`
+    }
+  }
+
+  // Analyze mood trends
+  const moods = weeklyCards
+    .map(card => card.summary?.mood)
+    .filter(mood => mood !== undefined && mood !== null)
+    .map(mood => Number(mood))
+  
+  if (moods.length > 1) {
+    const avgMood = moods.reduce((a, b) => a + b, 0) / moods.length
+    const recentMood = moods[0]
+    
+    if (recentMood > avgMood + 1) {
+      trends.mood_trend = `Improving (${recentMood}/10, up from ${avgMood.toFixed(1)}/10 avg)`
+    } else if (recentMood < avgMood - 1) {
+      trends.mood_trend = `Declining (${recentMood}/10, down from ${avgMood.toFixed(1)}/10 avg)`
+    } else {
+      trends.mood_trend = `Stable (${avgMood.toFixed(1)}/10 avg)`
+    }
+  }
+
+  // Analyze workout consistency
+  const workoutDays = weeklyCards.filter(card => 
+    card.summary?.context_data?.workout || 
+    card.summary?.workout_completed
+  ).length
+  
+  if (workoutDays > 0) {
+    const consistency = (workoutDays / weeklyCards.length) * 100
+    if (consistency >= 70) {
+      trends.workout_consistency = `Excellent (${workoutDays}/${weeklyCards.length} days)`
+    } else if (consistency >= 50) {
+      trends.workout_consistency = `Good (${workoutDays}/${weeklyCards.length} days)`
+    } else {
+      trends.workout_consistency = `Inconsistent (${workoutDays}/${weeklyCards.length} days)`
+    }
+  }
+
+  return trends
 }
 
 // Helper function to build conversation state context
