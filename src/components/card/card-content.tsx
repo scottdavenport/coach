@@ -91,8 +91,6 @@ const categorizeMetric = (metricKey: string, value: any): string => {
 
 // Helper function to generate clean, non-redundant labels
 const generateCleanLabel = (key: string, category: string): string => {
-  const lowerKey = key.toLowerCase()
-  
   // Remove redundant words based on category
   let cleanKey = key.replace(/_/g, ' ')
   
