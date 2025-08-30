@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { TrendingUp, Settings, Info } from 'lucide-react'
 
 interface TrendPreferencesProps {
-  userId: string
+  userId?: string
 }
 
 interface TrendPreferences {
@@ -28,7 +28,7 @@ const AVAILABLE_METRICS = [
   { key: 'sleep_quality', label: 'Sleep Quality', description: 'Monitor sleep quality trends' }
 ]
 
-export function TrendPreferences({ userId }: TrendPreferencesProps) {
+export function TrendPreferences({ userId }: TrendPreferencesProps) { // eslint-disable-line @typescript-eslint/no-unused-vars
   const [preferences, setPreferences] = useState<TrendPreferences>({
     enabled_metrics: ['sleep_hours', 'energy', 'mood', 'workout_completed', 'weight'],
     suggested_metrics: [],
@@ -52,7 +52,7 @@ export function TrendPreferences({ userId }: TrendPreferencesProps) {
       } else {
         setError('Failed to load preferences')
       }
-    } catch (err) {
+    } catch {
       setError('Failed to load preferences')
     } finally {
       setLoading(false)
@@ -107,7 +107,7 @@ export function TrendPreferences({ userId }: TrendPreferencesProps) {
         const data = await response.json()
         setError(data.error || 'Failed to save preferences')
       }
-    } catch (err) {
+    } catch {
       setError('Failed to save preferences')
     } finally {
       setSaving(false)

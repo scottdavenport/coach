@@ -39,7 +39,7 @@ export function OuraOAuthFlow({ onSuccess, onCancel }: OuraOAuthFlowProps) {
     } else {
       setError('Oura client ID not configured')
     }
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const generateState = () => {
     // Generate a random state parameter for security

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 interface WeeklySummary {
@@ -17,7 +17,7 @@ export function useWeeklySummary(weekStart?: string) {
   const [error, setError] = useState<string | null>(null)
   const supabase = createClient()
 
-  const fetchWeeklySummary = async (startDate: string) => {
+  const fetchWeeklySummary = useCallback(async (startDate: string) => {
     setLoading(true)
     setError(null)
     
@@ -38,12 +38,12 @@ export function useWeeklySummary(weekStart?: string) {
       } else {
         setSummary(data)
       }
-    } catch (err) {
+    } catch {
       setError('Failed to fetch weekly summary')
     } finally {
       setLoading(false)
     }
-  }
+  }, [supabase])
 
   const generateWeeklySummary = async (startDate: string) => {
     setLoading(true)
@@ -64,7 +64,7 @@ export function useWeeklySummary(weekStart?: string) {
 
       const result = await response.json()
       setSummary(result.summary)
-    } catch (err) {
+    } catch {
       setError('Failed to generate weekly summary')
     } finally {
       setLoading(false)
@@ -75,7 +75,7 @@ export function useWeeklySummary(weekStart?: string) {
     if (weekStart) {
       fetchWeeklySummary(weekStart)
     }
-  }, [weekStart])
+  }, [weekStart, fetchWeeklySummary])
 
   return {
     summary,

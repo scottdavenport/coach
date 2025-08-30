@@ -118,7 +118,7 @@ Deno.serve(async (req: Request) => {
 
     // Extract text from Vision API response
     let extractedText = '';
-    let confidence = 0.95; // Mock confidence
+    const confidence = 0.95; // Mock confidence
     let textBlocks = 1; // Mock text blocks
 
     if (visionResult.responses && visionResult.responses[0]) {

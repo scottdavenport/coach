@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { Mic, Send, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ChatMessage } from './chat-message'
@@ -38,14 +38,7 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Load conversation history on mount
-  useEffect(() => {
-    if (userId) {
-      loadConversationHistory()
-    }
-  }, [userId])
-
-  const loadConversationHistory = async () => {
+  const loadConversationHistory = useCallback(async () => {
     try {
       setIsLoadingHistory(true)
       const supabase = createClient()
@@ -78,7 +71,14 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
     } finally {
       setIsLoadingHistory(false)
     }
-  }
+  }, [userId])
+
+  // Load conversation history on mount
+  useEffect(() => {
+    if (userId) {
+      loadConversationHistory()
+    }
+  }, [userId, loadConversationHistory])
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })

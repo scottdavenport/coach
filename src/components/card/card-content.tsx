@@ -16,7 +16,7 @@ import {
   Plane
 } from 'lucide-react'
 
-import type { WeeklyCard, WeeklySummary, ContextValue } from '@/types'
+// Types are used in the interface definitions
 
 interface CardContentProps {
   userId: string

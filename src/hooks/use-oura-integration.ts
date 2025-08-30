@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 interface OuraIntegration {
@@ -23,7 +23,7 @@ export function useOuraIntegration({ userId }: UseOuraIntegrationProps) {
   const [error, setError] = useState<string | null>(null)
 
   // Fetch integration status
-  const fetchIntegration = async () => {
+  const fetchIntegration = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
@@ -47,7 +47,7 @@ export function useOuraIntegration({ userId }: UseOuraIntegrationProps) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [userId])
 
   // Connect Oura account
   const connectOura = async (accessToken: string, refreshToken?: string) => {
@@ -168,7 +168,7 @@ export function useOuraIntegration({ userId }: UseOuraIntegrationProps) {
     if (userId) {
       fetchIntegration()
     }
-  }, [userId])
+  }, [userId, fetchIntegration])
 
   return {
     integration,

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 interface UseCardModalProps {
@@ -13,7 +13,7 @@ export function useCardModal({ userId }: UseCardModalProps) {
   const [availableDates, setAvailableDates] = useState<string[]>([])
 
   // Fetch available dates
-  const fetchAvailableDates = async () => {
+  const fetchAvailableDates = useCallback(async () => {
     try {
       console.log('fetchAvailableDates called for userId:', userId)
       const supabase = createClient()
@@ -46,10 +46,10 @@ export function useCardModal({ userId }: UseCardModalProps) {
     } catch (error) {
       console.error('Error fetching available dates:', error)
     }
-  }
+  }, [userId, selectedDate])
 
   // Fetch card data for a specific date
-  const fetchCardData = async (date: string) => {
+  const fetchCardData = useCallback(async (date: string) => {
     if (!date) return
     
     console.log('Fetching data for date:', date)
@@ -79,7 +79,7 @@ export function useCardModal({ userId }: UseCardModalProps) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [userId])
 
   // Open modal with specific date
   const openCard = async (date?: string) => {
@@ -148,14 +148,14 @@ export function useCardModal({ userId }: UseCardModalProps) {
   // Initialize
   useEffect(() => {
     fetchAvailableDates()
-  }, [userId])
+  }, [userId, fetchAvailableDates])
 
   // Fetch data when date changes
   useEffect(() => {
     if (selectedDate) {
       fetchCardData(selectedDate)
     }
-  }, [selectedDate])
+  }, [selectedDate, fetchCardData])
 
   return {
     isOpen,
