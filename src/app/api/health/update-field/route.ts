@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch card' }, { status: 500 })
     }
 
-    let updatedSummary = existingCard?.summary || {}
+    const updatedSummary = existingCard?.summary || {}
 
     // Update the specific field based on the path
     const pathParts = fieldPath.split('.')

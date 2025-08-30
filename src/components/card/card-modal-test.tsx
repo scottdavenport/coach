@@ -12,7 +12,7 @@ interface CardModalTestProps {
   userId: string
 }
 
-export const CardModalTest = forwardRef<{ refreshData: () => void }, CardModalTestProps>(({ userId }, ref) => {
+const CardModalTest = forwardRef<{ refreshData: () => void }, CardModalTestProps>(({ userId }, ref) => {
   const [showDatePicker, setShowDatePicker] = useState(false)
   
   const {
@@ -149,3 +149,7 @@ export const CardModalTest = forwardRef<{ refreshData: () => void }, CardModalTe
     </>
   )
 })
+
+CardModalTest.displayName = 'CardModalTest'
+
+export { CardModalTest }
