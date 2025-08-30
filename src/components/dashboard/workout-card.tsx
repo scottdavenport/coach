@@ -88,10 +88,7 @@ export function WorkoutCard({ title, steps, totalTime, onComplete }: WorkoutCard
     return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 
-  const parseDuration = (duration: string): number => {
-    const match = duration.match(/(\d+)/)
-    return match ? parseInt(match[1]) : 1
-  }
+
 
   // Check if step mentions equipment or weights
   const hasEquipment = (description: string): boolean => {

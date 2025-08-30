@@ -31,7 +31,7 @@ export function AuthForm() {
       } else {
         setMessage('Check your email for the magic link!')
       }
-    } catch (error) {
+    } catch {
       setMessage('An unexpected error occurred')
     } finally {
       setIsLoading(false)

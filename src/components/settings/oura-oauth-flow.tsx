@@ -70,7 +70,7 @@ export function OuraOAuthFlow({ onSuccess, onCancel }: OuraOAuthFlowProps) {
               setTimeout(() => {
                 onSuccess(access_token, refresh_token)
               }, 1000)
-            } catch (err) {
+            } catch {
               setError('Failed to parse Oura tokens')
               setStep('error')
             }

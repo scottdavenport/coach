@@ -34,7 +34,6 @@ export function SettingsModal({ isOpen, onClose, userId }: SettingsModalProps) {
     loading: ouraLoading,
     error: ouraError,
     isConnected: ouraConnected,
-    connectionStatus: ouraStatus,
     connectOura,
     disconnectOura,
     syncOuraData
@@ -49,11 +48,7 @@ export function SettingsModal({ isOpen, onClose, userId }: SettingsModalProps) {
     }
   }
 
-  const handleEscape = (e: KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      onClose()
-    }
-  }
+
 
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {

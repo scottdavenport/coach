@@ -24,16 +24,10 @@ export function SimpleTile({
   icon,
   unit,
   source,
-  confidence,
-  className = ''
+  confidence
 }: SimpleTileProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [editValue, setEditValue] = useState(value)
-
-  const handleEdit = () => {
-    setIsEditing(true)
-    setEditValue(value)
-  }
 
   const handleSave = async () => {
     try {

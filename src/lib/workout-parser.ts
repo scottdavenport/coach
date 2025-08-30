@@ -26,7 +26,7 @@ export function parseWorkoutFromMarkdown(markdown: string): ParsedWorkout | null
     
     let match
     while ((match = stepRegex.exec(markdown)) !== null) {
-      const [, number, title, duration, description] = match
+      const [, , title, duration, description] = match
       steps.push({
         title: title.trim(),
         duration: duration.trim(),
@@ -38,7 +38,7 @@ export function parseWorkoutFromMarkdown(markdown: string): ParsedWorkout | null
     if (steps.length === 0) {
       const altStepRegex = /(\d+)\.\s*(.+?)\s*\(([^)]+)\)\s*-\s*(.+?)(?=\n\d+\.|$)/gs
       while ((match = altStepRegex.exec(markdown)) !== null) {
-        const [, number, title, duration, description] = match
+        const [, , title, duration, description] = match
         steps.push({
           title: title.trim(),
           duration: duration.trim(),
