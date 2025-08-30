@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useRef } from 'react'
 import { ChatInterface } from '@/components/chat/chat-interface'
-import { CardModalTest } from '@/components/card/card-modal-test'
+
 import { DashboardHeader } from '@/components/dashboard/dashboard-header'
 
 interface DashboardClientProps {

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Paperclip, Mic, Send, Plus } from 'lucide-react'
+import { Mic, Send, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ChatMessage } from './chat-message'
 import { FileUploadMenu } from './file-upload-menu'

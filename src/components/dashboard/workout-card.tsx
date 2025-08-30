@@ -1,9 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { Clock, CheckCircle, Play, Pause, RotateCcw, Check, Edit2 } from 'lucide-react'
+import { Clock, CheckCircle, Play, Pause, RotateCcw, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+
 import { EditableField } from './editable-field'
 
 interface WorkoutStep {

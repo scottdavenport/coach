@@ -1,4 +1,4 @@
-import { ChevronRight, Upload, Camera, Monitor, FileText } from 'lucide-react'
+import { ChevronRight, Upload, Camera, Monitor } from 'lucide-react'
 
 interface FileUploadMenuProps {
   onClose: () => void

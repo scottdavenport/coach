@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Button } from '@/components/ui/button'
+
 import { createClient } from '@/lib/supabase/client'
 import { 
   Heart, 
