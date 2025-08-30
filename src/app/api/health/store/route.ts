@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { events, contextData, dailySummary, conversationId } = await request.json()
+    const { events, contextData, dailySummary } = await request.json()
 
     console.log('💾 **STORING RICH CONTEXT DATA:**')
     console.log('User ID:', user.id)
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     console.log('---')
 
     // Ensure user exists in the users table
-    const { data: existingUser, error: userError } = await supabase
+    const { error: userError } = await supabase
       .from('users')
       .select('id')
       .eq('id', user.id)

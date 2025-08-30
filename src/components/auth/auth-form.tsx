@@ -19,15 +19,15 @@ export function AuthForm() {
     setMessage('')
 
     try {
-      const { error } = await supabase.auth.signInWithOtp({
+      const { error: signInError } = await supabase.auth.signInWithOtp({
         email,
         options: {
           emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
       })
 
-      if (error) {
-        setMessage(error.message)
+      if (signInError) {
+        setMessage(signInError.message)
       } else {
         setMessage('Check your email for the magic link!')
       }

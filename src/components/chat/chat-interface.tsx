@@ -23,7 +23,7 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
   const [isLoading, setIsLoading] = useState(false)
   const [isLoadingHistory, setIsLoadingHistory] = useState(true)
   const [conversationState, setConversationState] = useState<'idle' | 'morning_checkin' | 'activity_planning' | 'data_clarification'>('idle')
-  const [checkinProgress, setCheckinProgress] = useState({
+  const [checkinProgress] = useState({
     weight: null as number | null,
     energy: null as number | null,
     mood: null as string | null,
@@ -549,59 +549,7 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
     return correctedData
   }
 
-  // Format corrections for display
-  const formatCorrections = (original: any, corrected: any) => {
-    const changes = []
-    
-    // Helper function to format values
-    const formatValue = (value: any) => {
-      if (value === null || value === undefined) return 'null'
-      return value.toString()
-    }
-    
-    if (original.sleep_score !== corrected.sleep_score) {
-      changes.push(`Sleep Score: ${formatValue(original.sleep_score)} → ${formatValue(corrected.sleep_score)}`)
-    }
-    if (original.sleepScore !== corrected.sleepScore) {
-      changes.push(`Sleep Score (alt): ${formatValue(original.sleepScore)} → ${formatValue(corrected.sleepScore)}`)
-    }
-    if (original.readiness_score !== corrected.readiness_score) {
-      changes.push(`Readiness Score: ${formatValue(original.readiness_score)} → ${formatValue(corrected.readiness_score)}`)
-    }
-    if (original.activity_score !== corrected.activity_score) {
-      changes.push(`Activity Score: ${formatValue(original.activity_score)} → ${formatValue(corrected.activity_score)}`)
-    }
-    if (original.heartRate !== corrected.heartRate) {
-      changes.push(`Heart Rate: ${formatValue(original.heartRate)} → ${formatValue(corrected.heartRate)} bpm`)
-    }
-    if (original.resting_heart_rate !== corrected.resting_heart_rate) {
-      changes.push(`Resting Heart Rate: ${formatValue(original.resting_heart_rate)} → ${formatValue(corrected.resting_heart_rate)} bpm`)
-    }
-    if (original.glucose_level !== corrected.glucose_level) {
-      changes.push(`Glucose: ${formatValue(original.glucose_level)} → ${formatValue(corrected.glucose_level)} mg/dL`)
-    }
-    if (original.heartRateVariability !== corrected.heartRateVariability) {
-      changes.push(`Heart Rate Variability: ${formatValue(original.heartRateVariability)} → ${formatValue(corrected.heartRateVariability)} ms`)
-    }
-    if (original.bodyTemperature !== corrected.bodyTemperature) {
-      changes.push(`Body Temperature: ${formatValue(original.bodyTemperature)} → ${formatValue(corrected.bodyTemperature)}°F`)
-    }
-    if (original.respiratoryRate !== corrected.respiratoryRate) {
-      changes.push(`Respiratory Rate: ${formatValue(original.respiratoryRate)} → ${formatValue(corrected.respiratoryRate)} /min`)
-    }
-    if (original.totalSleep !== corrected.totalSleep) {
-      const originalMinutes = original.totalSleep || 0
-      const correctedMinutes = corrected.totalSleep || 0
-      changes.push(`Total Sleep: ${Math.floor(originalMinutes/60)}h ${originalMinutes%60}m → ${Math.floor(correctedMinutes/60)}h ${correctedMinutes%60}m`)
-    }
-    if (original.deepSleep !== corrected.deepSleep) {
-      const originalMinutes = original.deepSleep || 0
-      const correctedMinutes = corrected.deepSleep || 0
-      changes.push(`Deep Sleep: ${Math.floor(originalMinutes/60)}h ${originalMinutes%60}m → ${Math.floor(correctedMinutes/60)}h ${correctedMinutes%60}m`)
-    }
-    
-    return changes.length > 0 ? changes.join('\n') : 'No changes detected'
-  }
+
 
   // Send error to OpenAI for natural conversational response
   const sendErrorToAI = async (errorType: string, context: string = '') => {

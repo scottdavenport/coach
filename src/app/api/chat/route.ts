@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
     const { message, conversationId, conversationState, checkinProgress } = await request.json()
 
     // Ensure user exists in the users table
-    const { data: existingUser, error: userError } = await supabase
+    const { error: userError } = await supabase
       .from('users')
       .select('id')
       .eq('id', user.id)

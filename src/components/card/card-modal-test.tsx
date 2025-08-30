@@ -20,7 +20,6 @@ export const CardModalTest = forwardRef<{ refreshData: () => void }, CardModalTe
     selectedDate,
     cardData,
     loading,
-    availableDates,
     openCard,
     closeCard,
     navigateToDate,
