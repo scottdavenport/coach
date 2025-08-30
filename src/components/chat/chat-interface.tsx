@@ -814,7 +814,7 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`
       const filePath = `${userId}/uploads/${fileName}`
 
-      const { data, error } = await supabase.storage
+      const { error } = await supabase.storage
         .from('user-uploads')
         .upload(filePath, file, {
           cacheControl: '3600',

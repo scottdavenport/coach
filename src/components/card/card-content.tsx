@@ -39,7 +39,7 @@ const CATEGORY_CONFIG = {
 }
 
 // Helper function to categorize any metric
-const categorizeMetric = (metricKey: string, value: any): string => {
+const categorizeMetric = (metricKey: string): string => {
   // AI-powered categorization based on metric name and value
   const lowerKey = metricKey.toLowerCase()
   
@@ -302,7 +302,7 @@ export function CardContent({ userId, date, data, onDataUpdate }: CardContentPro
             Object.entries(categoryData).forEach(([metricKey, metricData]: [string, any]) => {
               if (typeof metricData === 'object' && metricData !== null && metricData.value !== undefined) {
                 const fullKey = `${categoryKey}_${metricKey}`
-                const category = categorizeMetric(fullKey, metricData.value)
+                const category = categorizeMetric(fullKey)
                 console.log(`🔍 Categorized ${fullKey} (${metricData.value}) as ${category}`)
                 if (!categories[category]) {
                   categories[category] = []
@@ -323,7 +323,7 @@ export function CardContent({ userId, date, data, onDataUpdate }: CardContentPro
         return
       }
       
-      const category = categorizeMetric(key, value)
+              const category = categorizeMetric(key)
       if (!categories[category]) {
         categories[category] = []
       }
