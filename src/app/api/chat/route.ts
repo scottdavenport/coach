@@ -9,7 +9,7 @@ const openai = new OpenAI({
 // Enhanced types for rich context extraction
 interface HealthData {
   event_type: 'checkin' | 'workout' | 'biometric' | 'meal' | 'note'
-  data: any
+  data: Record<string, unknown>
   confidence: number
   should_store: boolean
 }
@@ -17,7 +17,7 @@ interface HealthData {
 interface ContextData {
   category: 'health' | 'activity' | 'preference' | 'goal' | 'challenge' | 'pattern' | 'mood' | 'energy' | 'sleep' | 'nutrition' | 'workout' | 'social' | 'work' | 'other'
   key: string
-  value: any
+  value: string | number | boolean | null
   confidence: number
   should_store: boolean
   source: 'explicit' | 'inferred' | 'asked'
@@ -241,7 +241,7 @@ Always be curious and supportive, building a rich understanding of the user's co
 }
 
 // Helper function to build conversation context
-function buildConversationContext(conversationHistory: any[]): any[] {
+function buildConversationContext(conversationHistory: Array<{message: string, metadata?: {role?: string}}>): Array<{role: string, content: string}> {
   if (!conversationHistory || conversationHistory.length === 0) {
     return []
   }
@@ -256,7 +256,7 @@ function buildConversationContext(conversationHistory: any[]): any[] {
 }
 
 // Helper function to build user context
-function buildUserContext(dailyCard: any, recentContext: any[]): string {
+function buildUserContext(dailyCard: {summary?: Record<string, unknown>} | null, recentContext: Array<{data: Record<string, unknown>}>): string {
   let context = ""
 
   // Add daily card context
@@ -274,8 +274,8 @@ function buildUserContext(dailyCard: any, recentContext: any[]): string {
     // Add context data
     if (summary.context_data) {
       context += "\nRECENT CONTEXT:\n"
-      Object.entries(summary.context_data).forEach(([category, data]: [string, any]) => {
-        Object.entries(data).forEach(([key, value]: [string, any]) => {
+          Object.entries(summary.context_data).forEach(([category, data]: [string, Record<string, unknown>]) => {
+      Object.entries(data).forEach(([key, value]: [string, unknown]) => {
           if (value && typeof value === 'object' && value.value) {
             context += `- ${category}.${key}: ${JSON.stringify(value.value)}\n`
           }
@@ -299,7 +299,7 @@ function buildUserContext(dailyCard: any, recentContext: any[]): string {
 }
 
 // Helper function to build conversation state context
-function buildStateContext(conversationState: string, checkinProgress: any): string {
+function buildStateContext(conversationState: string, checkinProgress: Record<string, unknown>): string {
   let context = ""
   
   if (conversationState) {
@@ -317,7 +317,7 @@ function buildStateContext(conversationState: string, checkinProgress: any): str
   return context
 }
 
-async function parseConversationForRichContext(message: string, userId: string, conversationContext: any[], userContext: string): Promise<ParsedConversation> {
+async function parseConversationForRichContext(message: string, userId: string, conversationContext: Array<{role: string, content: string}>, userContext: string): Promise<ParsedConversation> {
   try {
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
