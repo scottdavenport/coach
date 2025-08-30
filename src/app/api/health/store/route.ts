@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
 
       // Build rich daily summary
       const existingContextData = existingCard?.summary?.context_data || {}
-      const newContextData = contextData ? contextData.reduce((acc: any, context) => {
+      const newContextData = contextData ? contextData.reduce((acc: any, context: any) => {
         if (!acc[context.category]) acc[context.category] = {}
         acc[context.category][context.key] = {
           value: context.value,
