@@ -1108,7 +1108,6 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
               
               {isUploadMenuOpen && (
                 <FileUploadMenu 
-                  onClose={() => setIsUploadMenuOpen(false)}
                   onFileSelect={() => fileInputRef.current?.click()}
                 />
               )}
