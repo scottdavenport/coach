@@ -16,10 +16,12 @@ import {
   Plane
 } from 'lucide-react'
 
+import type { WeeklyCard, WeeklySummary, ContextValue } from '@/types'
+
 interface CardContentProps {
   userId: string
   date: string
-  data: any
+  data: Record<string, unknown>
   onDataUpdate: () => void
 }
 
@@ -237,7 +239,7 @@ export function CardContent({ userId, date, data, onDataUpdate }: CardContentPro
         if (!current[fieldPath[i]]) {
           current[fieldPath[i]] = {}
         }
-        current = current[fieldPath[i]]
+        current = current[fieldPath[i]] as Record<string, unknown>
       }
       
       current[fieldPath[fieldPath.length - 1]] = editValue
@@ -442,7 +444,7 @@ export function CardContent({ userId, date, data, onDataUpdate }: CardContentPro
             {/* Last Updated */}
             {data?.last_updated && (
               <div className="text-xs text-muted-foreground text-center pt-4 border-t border-line/20">
-                Last updated: {new Date(data.last_updated).toLocaleString()}
+                Last updated: {new Date(data.last_updated as string).toLocaleString()}
               </div>
             )}
           </div>

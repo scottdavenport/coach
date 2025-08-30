@@ -76,7 +76,7 @@ export function WorkoutCard({ title, steps, totalTime, onComplete }: WorkoutCard
     }
   }
 
-  const updateStepData = (index: number, field: keyof WorkoutStep, value: string) => {
+  const updateStepData = async (index: number, field: keyof WorkoutStep, value: string) => {
     setStepData(prev => prev.map((step, i) => 
       i === index ? { ...step, [field]: value } : step
     ))

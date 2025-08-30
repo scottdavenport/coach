@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import { Button } from '@/components/ui/button'
 import { useOuraIntegration } from '@/hooks/use-oura-integration'
 import { OuraOAuthFlow } from './oura-oauth-flow'
+import { TrendPreferences } from './trend-preferences'
 import { 
   Settings, 
   X, 
@@ -195,7 +196,7 @@ export function SettingsModal({ isOpen, onClose, userId }: SettingsModalProps) {
                           size="sm" 
                           variant="outline" 
                           className="flex items-center gap-2"
-                          onClick={syncOuraData}
+                          onClick={() => syncOuraData()}
                           disabled={ouraLoading}
                         >
                           <RefreshCw className={`h-3 w-3 ${ouraLoading ? 'animate-spin' : ''}`} />
@@ -262,9 +263,12 @@ export function SettingsModal({ isOpen, onClose, userId }: SettingsModalProps) {
 
           {activeTab === 'preferences' && (
             <div className="space-y-6">
-              <h3 className="text-lg font-semibold">Sync Preferences</h3>
+              <TrendPreferences userId={userId} />
               
-              <div className="space-y-4">
+              <div className="border-t border-line/40 pt-6">
+                <h3 className="text-lg font-semibold mb-4">Sync Preferences</h3>
+                
+                <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <h4 className="font-medium">Auto-sync frequency</h4>
@@ -302,6 +306,7 @@ export function SettingsModal({ isOpen, onClose, userId }: SettingsModalProps) {
                 </div>
               </div>
             </div>
+          </div>
           )}
 
           {activeTab === 'data' && (

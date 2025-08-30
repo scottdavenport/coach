@@ -2,9 +2,10 @@ import { ChevronRight, Upload, Camera, Monitor } from 'lucide-react'
 
 interface FileUploadMenuProps {
   onFileSelect: () => void
+  onClose?: () => void
 }
 
-export function FileUploadMenu({ onFileSelect }: FileUploadMenuProps) {
+export function FileUploadMenu({ onFileSelect, onClose }: FileUploadMenuProps) {
   return (
     <div className="absolute bottom-full left-0 mb-2 bg-card border border-line rounded-xl shadow-card2 p-2 min-w-[200px]">
       <div className="space-y-1">

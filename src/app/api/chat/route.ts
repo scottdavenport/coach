@@ -241,7 +241,7 @@ Always be curious and supportive, building a rich understanding of the user's co
 }
 
 // Helper function to build conversation context
-function buildConversationContext(conversationHistory: Array<{message: string, metadata?: {role?: string}}>): Array<{role: string, content: string}> {
+function buildConversationContext(conversationHistory: Array<{message: string, metadata?: {role?: string}}>): Array<{role: 'system' | 'user' | 'assistant', content: string}> {
   if (!conversationHistory || conversationHistory.length === 0) {
     return []
   }
@@ -278,23 +278,17 @@ function buildEnhancedUserContext(weeklyCards: Array<{summary?: Record<string, u
         context += "\nRECENT CONTEXT:\n"
         Object.entries(summary.context_data).forEach(([category, data]: [string, Record<string, unknown>]) => {
           Object.entries(data).forEach(([key, value]: [string, unknown]) => {
-            if (value && typeof value === 'object' && value.value) {
-              context += `- ${category}.${key}: ${JSON.stringify(value.value)}\n`
+            if (value && typeof value === 'object' && value !== null && 'value' in value) {
+              const valueObj = value as { value: unknown }
+              context += `- ${category}.${key}: ${JSON.stringify(valueObj.value)}\n`
             }
           })
         })
       }
     }
 
-    // Add weekly trends if we have multiple days
-    if (weeklyCards.length > 1) {
-      context += "\nWEEKLY TRENDS:\n"
-      const trends = analyzeWeeklyTrends(weeklyCards)
-      if (trends.sleep_trend) context += `- Sleep: ${trends.sleep_trend}\n`
-      if (trends.energy_trend) context += `- Energy: ${trends.energy_trend}\n`
-      if (trends.mood_trend) context += `- Mood: ${trends.mood_trend}\n`
-      if (trends.workout_consistency) context += `- Workouts: ${trends.workout_consistency}\n`
-    }
+    // Note: Weekly trends are stored in database but not included in AI context
+    // to keep responses focused and avoid overwhelming the user
   }
 
   // Add recent context from events
@@ -311,87 +305,8 @@ function buildEnhancedUserContext(weeklyCards: Array<{summary?: Record<string, u
   return context || "No previous context available."
 }
 
-// Helper function to analyze weekly trends
-function analyzeWeeklyTrends(weeklyCards: Array<{summary?: Record<string, unknown>, log_date: string}>): Record<string, string> {
-  const trends: Record<string, string> = {}
-  
-  if (weeklyCards.length < 2) return trends
-
-  // Analyze sleep trends
-  const sleepHours = weeklyCards
-    .map(card => card.summary?.sleep_hours)
-    .filter(hours => hours !== undefined && hours !== null)
-    .map(hours => Number(hours))
-  
-  if (sleepHours.length > 1) {
-    const avgSleep = sleepHours.reduce((a, b) => a + b, 0) / sleepHours.length
-    const minSleep = Math.min(...sleepHours)
-    const maxSleep = Math.max(...sleepHours)
-    
-    if (maxSleep - minSleep > 2) {
-      trends.sleep_trend = `Variable (${minSleep.toFixed(1)}-${maxSleep.toFixed(1)}h avg)`
-    } else {
-      trends.sleep_trend = `Consistent (${avgSleep.toFixed(1)}h avg)`
-    }
-  }
-
-  // Analyze energy trends
-  const energyLevels = weeklyCards
-    .map(card => card.summary?.energy)
-    .filter(energy => energy !== undefined && energy !== null)
-    .map(energy => Number(energy))
-  
-  if (energyLevels.length > 1) {
-    const avgEnergy = energyLevels.reduce((a, b) => a + b, 0) / energyLevels.length
-    const recentEnergy = energyLevels[0]
-    
-    if (recentEnergy > avgEnergy + 1) {
-      trends.energy_trend = `Improving (${recentEnergy}/10, up from ${avgEnergy.toFixed(1)}/10 avg)`
-    } else if (recentEnergy < avgEnergy - 1) {
-      trends.energy_trend = `Declining (${recentEnergy}/10, down from ${avgEnergy.toFixed(1)}/10 avg)`
-    } else {
-      trends.energy_trend = `Stable (${avgEnergy.toFixed(1)}/10 avg)`
-    }
-  }
-
-  // Analyze mood trends
-  const moods = weeklyCards
-    .map(card => card.summary?.mood)
-    .filter(mood => mood !== undefined && mood !== null)
-    .map(mood => Number(mood))
-  
-  if (moods.length > 1) {
-    const avgMood = moods.reduce((a, b) => a + b, 0) / moods.length
-    const recentMood = moods[0]
-    
-    if (recentMood > avgMood + 1) {
-      trends.mood_trend = `Improving (${recentMood}/10, up from ${avgMood.toFixed(1)}/10 avg)`
-    } else if (recentMood < avgMood - 1) {
-      trends.mood_trend = `Declining (${recentMood}/10, down from ${avgMood.toFixed(1)}/10 avg)`
-    } else {
-      trends.mood_trend = `Stable (${avgMood.toFixed(1)}/10 avg)`
-    }
-  }
-
-  // Analyze workout consistency
-  const workoutDays = weeklyCards.filter(card => 
-    card.summary?.context_data?.workout || 
-    card.summary?.workout_completed
-  ).length
-  
-  if (workoutDays > 0) {
-    const consistency = (workoutDays / weeklyCards.length) * 100
-    if (consistency >= 70) {
-      trends.workout_consistency = `Excellent (${workoutDays}/${weeklyCards.length} days)`
-    } else if (consistency >= 50) {
-      trends.workout_consistency = `Good (${workoutDays}/${weeklyCards.length} days)`
-    } else {
-      trends.workout_consistency = `Inconsistent (${workoutDays}/${weeklyCards.length} days)`
-    }
-  }
-
-  return trends
-}
+// Note: Weekly trend analysis is now handled by PostgreSQL functions
+// for better performance and automatic updates
 
 // Helper function to build conversation state context
 function buildStateContext(conversationState: string, checkinProgress: Record<string, unknown>): string {

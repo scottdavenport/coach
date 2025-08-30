@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 
 interface SimpleTileProps {
   label: string
@@ -28,6 +28,7 @@ export function SimpleTile({
 }: SimpleTileProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [editValue, setEditValue] = useState(value)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   const handleSave = async () => {
     try {
@@ -104,8 +105,8 @@ export function SimpleTile({
             <input
               ref={inputRef}
               type={fieldType === 'number' ? 'number' : 'text'}
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
               onBlur={handleSave}
               onKeyDown={handleKeyDown}
               placeholder={placeholder}

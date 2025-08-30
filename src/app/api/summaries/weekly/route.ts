@@ -80,8 +80,14 @@ ${JSON.stringify(summaryData, null, 2)}`
 
     const summary = completion.choices[0].message.content
 
-    // Extract trends from the data
-    const trends = extractWeeklyTrends(weeklyCards)
+    // Get trends from database (automatically calculated)
+    const { data: trendsResult } = await supabase
+      .rpc('get_or_create_weekly_summary', {
+        user_id_param: user.id,
+        week_start_date: weekStart
+      })
+    
+    const trends = trendsResult || {}
 
     // Store the weekly summary
     const { data: storedSummary, error: storeError } = await supabase
@@ -117,84 +123,5 @@ ${JSON.stringify(summaryData, null, 2)}`
   }
 }
 
-function extractWeeklyTrends(weeklyCards: Array<{summary?: Record<string, unknown>, log_date: string}>): Record<string, any> {
-  const trends: Record<string, any> = {}
-  
-  if (weeklyCards.length === 0) return trends
-
-  // Sleep trends
-  const sleepHours = weeklyCards
-    .map(card => card.summary?.sleep_hours)
-    .filter(hours => hours !== undefined && hours !== null)
-    .map(hours => Number(hours))
-  
-  if (sleepHours.length > 0) {
-    const avgSleep = sleepHours.reduce((a, b) => a + b, 0) / sleepHours.length
-    const minSleep = Math.min(...sleepHours)
-    const maxSleep = Math.max(...sleepHours)
-    
-    trends.sleep_trend = {
-      average: avgSleep.toFixed(1),
-      range: `${minSleep.toFixed(1)}-${maxSleep.toFixed(1)}`,
-      consistency: maxSleep - minSleep <= 2 ? 'consistent' : 'variable',
-      days_tracked: sleepHours.length
-    }
-  }
-
-  // Energy trends
-  const energyLevels = weeklyCards
-    .map(card => card.summary?.energy)
-    .filter(energy => energy !== undefined && energy !== null)
-    .map(energy => Number(energy))
-  
-  if (energyLevels.length > 0) {
-    const avgEnergy = energyLevels.reduce((a, b) => a + b, 0) / energyLevels.length
-    const recentEnergy = energyLevels[energyLevels.length - 1]
-    
-    trends.energy_trend = {
-      average: avgEnergy.toFixed(1),
-      recent: recentEnergy,
-      direction: recentEnergy > avgEnergy + 1 ? 'improving' : 
-                 recentEnergy < avgEnergy - 1 ? 'declining' : 'stable',
-      days_tracked: energyLevels.length
-    }
-  }
-
-  // Mood trends
-  const moods = weeklyCards
-    .map(card => card.summary?.mood)
-    .filter(mood => mood !== undefined && mood !== null)
-    .map(mood => Number(mood))
-  
-  if (moods.length > 0) {
-    const avgMood = moods.reduce((a, b) => a + b, 0) / moods.length
-    const recentMood = moods[moods.length - 1]
-    
-    trends.mood_trend = {
-      average: avgMood.toFixed(1),
-      recent: recentMood,
-      direction: recentMood > avgMood + 1 ? 'improving' : 
-                 recentMood < avgMood - 1 ? 'declining' : 'stable',
-      days_tracked: moods.length
-    }
-  }
-
-  // Workout consistency
-  const workoutDays = weeklyCards.filter(card => 
-    card.summary?.context_data?.workout || 
-    card.summary?.workout_completed
-  ).length
-  
-  if (workoutDays > 0) {
-    const consistency = (workoutDays / weeklyCards.length) * 100
-    trends.workout_consistency = {
-      days: workoutDays,
-      total_days: weeklyCards.length,
-      percentage: consistency.toFixed(1),
-      rating: consistency >= 70 ? 'excellent' : 
-              consistency >= 50 ? 'good' : 'needs_improvement'
-    }
-  }
-
-  return trends
-}
+// Note: Trend calculation is now handled by PostgreSQL functions
+// for better performance and consistency

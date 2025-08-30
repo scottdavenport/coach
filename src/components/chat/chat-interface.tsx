@@ -797,16 +797,17 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
     const file = event.target.files?.[0]
     if (!file) return
 
+    // Show uploading message
+    const uploadingMessage = {
+      id: Date.now(),
+      content: `📤 Uploading: ${file.name}...`,
+      role: 'user',
+      timestamp: new Date(),
+      isUploading: true
+    }
+    setMessages(prev => [...prev, uploadingMessage])
+
     try {
-      // Show uploading message
-      const uploadingMessage = {
-        id: Date.now(),
-        content: `📤 Uploading: ${file.name}...`,
-        role: 'user',
-        timestamp: new Date(),
-        isUploading: true
-      }
-      setMessages(prev => [...prev, uploadingMessage])
 
       // Upload to Supabase Storage
       const supabase = createClient()
