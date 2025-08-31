@@ -1,5 +1,4 @@
 import ReactMarkdown from 'react-markdown'
-import Image from 'next/image'
 
 
 interface ChatMessageProps {

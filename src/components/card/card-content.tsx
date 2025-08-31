@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react'
 
 import { createClient } from '@/lib/supabase/client'
-import { separateDataByType, ClassifiedData } from '@/lib/data-classification'
+import { ClassifiedData } from '@/lib/data-classification'
 import { DailyJournal } from './daily-journal'
 import { 
   Heart, 
@@ -65,56 +65,7 @@ const CATEGORY_CONFIG = {
   data_sources: { title: 'Data Sources', icon: Coffee, color: 'text-blue-400' }
 }
 
-// Helper function to categorize any metric
-const categorizeMetric = (metricKey: string): string => {
-  // AI-powered categorization based on metric name and value
-  const lowerKey = metricKey.toLowerCase()
-  
-  if (lowerKey.includes('sleep') || lowerKey.includes('bed') || lowerKey.includes('rem') || lowerKey.includes('deep')) {
-    return 'sleep'
-  }
-  if (lowerKey.includes('heart') || lowerKey.includes('hr') || lowerKey.includes('hrv') || lowerKey.includes('bpm')) {
-    return 'heart'
-  }
-  if (lowerKey.includes('readiness') || lowerKey.includes('recovery')) {
-    return 'readiness'
-  }
-  if (lowerKey.includes('activity') || lowerKey.includes('steps') || lowerKey.includes('calories') || lowerKey.includes('exercise_completed')) {
-    return 'activity'
-  }
-  if (lowerKey.includes('temp') || lowerKey.includes('respiratory') || lowerKey.includes('glucose') || lowerKey.includes('oxygen')) {
-    return 'biometrics'
-  }
-  if (lowerKey.includes('weight') || lowerKey.includes('body') || lowerKey.includes('congestion') || lowerKey.includes('health_status')) {
-    return 'body'
-  }
-  if (lowerKey.includes('mood') || lowerKey.includes('energy') || lowerKey.includes('stress') || lowerKey.includes('anxiety') || lowerKey.includes('focus')) {
-    return 'wellness'
-  }
-  if (lowerKey.includes('nutrition') || lowerKey.includes('food') || lowerKey.includes('water') || lowerKey.includes('vitamin')) {
-    return 'nutrition'
-  }
-  if (lowerKey.includes('workout') || lowerKey.includes('exercise_plan') || lowerKey.includes('training') || lowerKey.includes('gym')) {
-    return 'workout'
-  }
-  if (lowerKey.includes('travel') || lowerKey.includes('location') || lowerKey.includes('timezone')) {
-    return 'travel'
-  }
-  if (lowerKey.includes('oura') || lowerKey.includes('apple_health') || lowerKey.includes('google_fit') || lowerKey.includes('samsung_health') || 
-      lowerKey.includes('fitbit') || lowerKey.includes('garmin') || lowerKey.includes('whoop') || lowerKey.includes('polar') || 
-      lowerKey.includes('suunto') || lowerKey.includes('coros') || lowerKey.includes('strava') || lowerKey.includes('nike_run_club') || 
-      lowerKey.includes('mapmyrun') || lowerKey.includes('myfitnesspal') || lowerKey.includes('cronometer') || lowerKey.includes('lose_it') || 
-      lowerKey.includes('noom') || lowerKey.includes('weight_watchers') || lowerKey.includes('peloton') || lowerKey.includes('zwift') || 
-      lowerKey.includes('fitness_plus') || lowerKey.includes('fiton') || lowerKey.includes('freeletics') || lowerKey.includes('strong') || 
-      lowerKey.includes('jefit') || lowerKey.includes('sleep_cycle') || lowerKey.includes('sleepscore') || lowerKey.includes('pillow') || 
-      lowerKey.includes('autosleep') || lowerKey.includes('cal_ai') || lowerKey.includes('manual_entry') ||
-      lowerKey.includes('data_source')) {
-    return 'data_sources'
-  }
-  
-  // Default to wellness for unknown metrics
-  return 'wellness'
-}
+
 
 // Helper function to generate clean, non-redundant labels
 const generateCleanLabel = (key: string, category: string): string => {
@@ -295,7 +246,7 @@ export function CardContent({ userId, date, data, onDataUpdate }: CardContentPro
   }
 
   // Helper functions for categorization
-  const getMetricCategory = (metricType: string): string => {
+  const getMetricCategory = (metricType: string): 'health' | 'fitness' | 'wellness' | 'lifestyle' | 'biometric' | 'sleep' | 'activity' => {
     if (['weight', 'heart_rate', 'blood_pressure', 'temperature', 'glucose'].includes(metricType)) {
       return 'biometric'
     }
@@ -365,8 +316,8 @@ export function CardContent({ userId, date, data, onDataUpdate }: CardContentPro
       key: `${entry.entry_type}_${entry.id}`,
       value: entry.content,
       classification: {
-        type: entry.entry_type as any,
-        category: entry.category as any,
+        type: entry.entry_type as 'metric' | 'journal' | 'goal' | 'note',
+        category: entry.category as 'health' | 'fitness' | 'wellness' | 'lifestyle' | 'biometric' | 'sleep' | 'activity',
         displayType: 'journal',
         priority: getJournalPriority(entry.entry_type),
         editable: entry.entry_type !== 'tip', // Tips are read-only

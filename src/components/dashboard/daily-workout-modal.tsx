@@ -4,7 +4,6 @@ import { useState, forwardRef, useImperativeHandle, useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
 import { useDailyActivities } from '@/hooks/use-daily-activities'
 import { 
   Calendar, 
@@ -37,12 +36,8 @@ export const DailyWorkoutModal = forwardRef<DailyWorkoutModalRef, DailyWorkoutMo
     const [showDatePicker, setShowDatePicker] = useState(false)
     
     const {
-      activities,
-      loading,
       selectedDate: hookDate,
       setSelectedDate: setHookDate,
-      fetchActivities,
-      createPlannedActivity,
       markActivityCompleted,
       deleteActivity,
       getPlannedActivities,
