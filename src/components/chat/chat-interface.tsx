@@ -670,7 +670,10 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
   // Send OCR data to OpenAI for natural conversational response
   const sendToAIWithOcrData = async (structuredData: any, context: string, fileName: string) => {
     try {
-      // Create a summary of the detected data for the AI
+      // Send the RAW OCR text to the AI for dynamic parsing
+      const rawOcrText = structuredData.rawOcrText || 'No OCR text available'
+      
+      // Create a summary of any regex-detected data as fallback
       const detectedMetrics = []
       if (structuredData.readiness_score) detectedMetrics.push(`readiness score: ${structuredData.readiness_score}`)
       if (structuredData.sleepScore) detectedMetrics.push(`sleep score: ${structuredData.sleepScore}`)
@@ -695,7 +698,7 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          message: `I just uploaded a screenshot (${fileName}) and the OCR detected: ${dataSummary}. ${context ? `Context: ${context}` : ''} Please give me a natural, conversational response about this health data. Don't be robotic or templated - just talk to me like a friend would about my health data.`,
+          message: `I just uploaded a screenshot (${fileName}) and the OCR extracted this raw text: "${rawOcrText}". ${context ? `Context: ${context}` : ''} Please analyze this OCR text and extract ALL the health metrics you can find. Don't just look for the ones I've already detected (${dataSummary}) - look for everything! Extract metrics like oxygen saturation, breathing regularity, average heart rate, lowest heart rate, sleep stages, etc. Give me a natural, conversational response about this health data. Don't be robotic or templated - just talk to me like a friend would about my health data.`,
           conversationId: Date.now().toString(),
           conversationState: 'ocr_analysis',
           checkinProgress: {}

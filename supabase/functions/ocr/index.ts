@@ -152,8 +152,9 @@ Deno.serve(async (req: Request) => {
       try {
         const lowerCaseText = extractedText.toLowerCase();
         
-        // Initialize structured data object
+        // Initialize structured data object with raw OCR text
         aiParsedData = {
+          rawOcrText: extractedText, // Store the raw OCR text for dynamic parsing
           readiness: null,
           readiness_score: null,
           sleepScore: null,
@@ -176,6 +177,10 @@ Deno.serve(async (req: Request) => {
           date: new Date().toISOString().split('T')[0],
           appName: null,
           context: null,
+          // Add new fields for dynamic parsing
+          oxygenSaturation: null,
+          breathingRegularity: null,
+          averageHeartRate: null,
         };
 
         // App Name Detection - Only detect if we see the actual app name
@@ -300,18 +305,49 @@ Deno.serve(async (req: Request) => {
           aiParsedData.sleepEfficiency = parseInt(sleepEfficiencyMatch[1], 10);
         }
 
-        // Resting Heart Rate
+        // Resting Heart Rate - multiple patterns
         const restingHeartRateMatch = extractedText.match(/resting heart rate\s*(\d+)\s*bpm/i);
         if (restingHeartRateMatch) {
           aiParsedData.restingHeartRate = parseInt(restingHeartRateMatch[1], 10);
           aiParsedData.heartRate = aiParsedData.restingHeartRate;
         } else {
-          // Fallback: look for "59 bpm" pattern
-          const heartRateFallback = extractedText.match(/(\d+)\s*bpm/i);
-          if (heartRateFallback) {
-            aiParsedData.restingHeartRate = parseInt(heartRateFallback[1], 10);
+          // Look for "Lowest heart rate" pattern
+          const lowestHeartRateMatch = extractedText.match(/lowest heart rate\s*(\d+)\s*bpm/i);
+          if (lowestHeartRateMatch) {
+            aiParsedData.restingHeartRate = parseInt(lowestHeartRateMatch[1], 10);
             aiParsedData.heartRate = aiParsedData.restingHeartRate;
+          } else {
+            // Fallback: look for "59 bpm" pattern
+            const heartRateFallback = extractedText.match(/(\d+)\s*bpm/i);
+            if (heartRateFallback) {
+              aiParsedData.restingHeartRate = parseInt(heartRateFallback[1], 10);
+              aiParsedData.heartRate = aiParsedData.restingHeartRate;
+            }
           }
+        }
+
+        // Average Heart Rate (separate from resting)
+        const averageHeartRateMatch = extractedText.match(/average\s*(\d+)\s*bpm/i);
+        if (averageHeartRateMatch) {
+          aiParsedData.averageHeartRate = parseInt(averageHeartRateMatch[1], 10);
+        }
+
+        // Oxygen Saturation
+        const oxygenSaturationMatch = extractedText.match(/oxygen saturation\s*(\d+)\s*%/i);
+        if (oxygenSaturationMatch) {
+          aiParsedData.oxygenSaturation = parseInt(oxygenSaturationMatch[1], 10);
+        } else {
+          // Look for "Average oxygen saturation" pattern
+          const avgOxygenMatch = extractedText.match(/average oxygen saturation\s*(\d+)\s*%/i);
+          if (avgOxygenMatch) {
+            aiParsedData.oxygenSaturation = parseInt(avgOxygenMatch[1], 10);
+          }
+        }
+
+        // Breathing Regularity
+        const breathingRegularityMatch = extractedText.match(/breathing regularity\s*(optimal|good|fair|poor)/i);
+        if (breathingRegularityMatch) {
+          aiParsedData.breathingRegularity = breathingRegularityMatch[1];
         }
 
         // Heart Rate Variability - multiple patterns
@@ -367,6 +403,15 @@ Deno.serve(async (req: Request) => {
         }
         if (aiParsedData.heartRate) {
           aiParsedData.resting_heart_rate = aiParsedData.heartRate;
+        }
+        if (aiParsedData.oxygenSaturation) {
+          aiParsedData.oxygen_saturation = aiParsedData.oxygenSaturation;
+        }
+        if (aiParsedData.breathingRegularity) {
+          aiParsedData.breathing_regularity = aiParsedData.breathingRegularity;
+        }
+        if (aiParsedData.averageHeartRate) {
+          aiParsedData.average_heart_rate = aiParsedData.averageHeartRate;
         }
 
         // REM Sleep
@@ -514,6 +559,9 @@ Deno.serve(async (req: Request) => {
         if (aiParsedData.bodyTemperature !== undefined) dataPoints.push(`• Body Temperature: ${aiParsedData.bodyTemperature}°F`);
         if (aiParsedData.respiratoryRate !== undefined) dataPoints.push(`• Respiratory Rate: ${aiParsedData.respiratoryRate}/min`);
         if (aiParsedData.restingHeartRate !== undefined) dataPoints.push(`• Resting Heart Rate: ${aiParsedData.restingHeartRate} bpm`);
+        if (aiParsedData.averageHeartRate !== undefined) dataPoints.push(`• Average Heart Rate: ${aiParsedData.averageHeartRate} bpm`);
+        if (aiParsedData.oxygenSaturation !== undefined) dataPoints.push(`• Oxygen Saturation: ${aiParsedData.oxygenSaturation}%`);
+        if (aiParsedData.breathingRegularity !== undefined) dataPoints.push(`• Breathing Regularity: ${aiParsedData.breathingRegularity}`);
         if (aiParsedData.totalSleep !== undefined) dataPoints.push(`• Total Sleep: ${aiParsedData.totalSleep} minutes`);
         if (aiParsedData.sleepEfficiency !== undefined) dataPoints.push(`• Sleep Efficiency: ${aiParsedData.sleepEfficiency}%`);
         if (aiParsedData.mood !== undefined) dataPoints.push(`• Mood: ${aiParsedData.mood}/10`);
@@ -521,6 +569,9 @@ Deno.serve(async (req: Request) => {
 
         if (dataPoints.length > 0) {
           conversationalResponse += `\n\nHere's what I found:\n${dataPoints.join('\n')}`;
+        } else {
+          // If no specific metrics were parsed, let the AI handle it dynamically
+          conversationalResponse += `\n\nI've captured the raw data from your screenshot. I'll analyze it and extract all the relevant health metrics to update your daily card.`;
         }
 
         // Add a natural closing

@@ -3,6 +3,8 @@
 import { useState, useMemo } from 'react'
 
 import { createClient } from '@/lib/supabase/client'
+import { separateDataByType, ClassifiedData } from '@/lib/data-classification'
+import { DailyJournal } from './daily-journal'
 import { 
   Heart, 
   Activity, 
@@ -13,7 +15,9 @@ import {
   Moon,
   Dumbbell,
   Utensils,
-  Plane
+  Plane,
+  Edit3,
+  Trash2
 } from 'lucide-react'
 
 // Types are used in the interface definitions
@@ -21,7 +25,28 @@ import {
 interface CardContentProps {
   userId: string
   date: string
-  data: Record<string, unknown>
+  data: {
+    metrics: Array<{
+      id: string
+      metric_type: string
+      metric_value: number
+      metric_unit: string
+      source: string
+      confidence: number
+      created_at: string
+    }>
+    journalEntries: Array<{
+      id: string
+      entry_type: string
+      category: string
+      content: string
+      source: string
+      confidence: number
+      created_at: string
+    }>
+    goals: any[]
+    date: string
+  } | null
   onDataUpdate: () => void
 }
 
@@ -140,11 +165,16 @@ const generateCleanLabel = (key: string, category: string): string => {
 
 // Helper function to format metric values
 const formatMetricValue = (key: string, value: any): { displayValue: string, unit: string } => {
-  if (!value || value === '—') {
+  if (value === null || value === undefined || value === '—') {
     return { displayValue: '—', unit: '' }
   }
   
   const lowerKey = key.toLowerCase()
+  
+  // Boolean values (like workout_completed)
+  if (typeof value === 'boolean') {
+    return { displayValue: value ? 'Completed' : 'Not Completed', unit: '' }
+  }
   
   // Time-based metrics
   if ((lowerKey.includes('sleep') || lowerKey.includes('bed') || lowerKey.includes('rem') || lowerKey.includes('deep')) && 
@@ -231,30 +261,19 @@ export function CardContent({ userId, date, data, onDataUpdate }: CardContentPro
     try {
       const supabase = createClient()
       
-      const updatedSummary = { ...data }
-      const fieldPath = field.split('.')
-      let current = updatedSummary
-      
-      for (let i = 0; i < fieldPath.length - 1; i++) {
-        if (!current[fieldPath[i]]) {
-          current[fieldPath[i]] = {}
-        }
-        current = current[fieldPath[i]] as Record<string, unknown>
-      }
-      
-      current[fieldPath[fieldPath.length - 1]] = editValue
-
+      // Update the metric in the daily_metrics table
       const { error } = await supabase
-        .from('daily_log_cards')
+        .from('daily_metrics')
         .update({ 
-          summary: updatedSummary,
-          last_updated: new Date().toISOString()
+          metric_value: parseFloat(editValue),
+          updated_at: new Date().toISOString()
         })
         .eq('user_id', userId)
-        .eq('log_date', date)
+        .eq('metric_date', date)
+        .eq('metric_type', field)
 
       if (error) {
-        console.error('Error updating field:', error)
+        console.error('Error updating metric:', error)
         return
       }
 
@@ -262,7 +281,7 @@ export function CardContent({ userId, date, data, onDataUpdate }: CardContentPro
       setEditValue('')
       onDataUpdate()
     } catch (error) {
-      console.error('Error saving field:', error)
+      console.error('Error saving metric:', error)
     }
   }
 
@@ -275,80 +294,179 @@ export function CardContent({ userId, date, data, onDataUpdate }: CardContentPro
     }
   }
 
-  // Dynamic metric categorization
-  const categorizedMetrics = useMemo(() => {
-    if (!data) return {}
+  // Helper functions for categorization
+  const getMetricCategory = (metricType: string): string => {
+    if (['weight', 'heart_rate', 'blood_pressure', 'temperature', 'glucose'].includes(metricType)) {
+      return 'biometric'
+    }
+    if (['mood', 'energy', 'stress', 'readiness', 'sleep_hours', 'sleep_quality'].includes(metricType)) {
+      return 'wellness'
+    }
+    if (['steps', 'calories', 'workout_duration', 'workout_intensity'].includes(metricType)) {
+      return 'fitness'
+    }
+    return 'wellness'
+  }
+
+  const getMetricPriority = (metricType: string): number => {
+    const priorities: Record<string, number> = {
+      weight: 1,
+      heart_rate: 1,
+      mood: 2,
+      energy: 2,
+      stress: 2,
+      readiness: 2,
+      sleep_hours: 2,
+      sleep_quality: 2,
+      steps: 3,
+      calories: 3
+    }
+    return priorities[metricType] || 10
+  }
+
+  const getJournalPriority = (entryType: string): number => {
+    const priorities: Record<string, number> = {
+      goal: 1,
+      tip: 2,
+      advice: 3,
+      note: 4,
+      reflection: 5
+    }
+    return priorities[entryType] || 10
+  }
+
+  // Process structured data from new schema
+  const { dailyCard, journal } = useMemo(() => {
+    if (!data) return { dailyCard: [], journal: [] }
     
+    console.log('🔍 Processing structured data:', data)
+    
+    // Convert metrics to ClassifiedData format
+    const dailyCard: ClassifiedData[] = data.metrics.map(metric => ({
+      key: metric.metric_type,
+      value: metric.metric_value,
+      classification: {
+        type: 'metric',
+        category: getMetricCategory(metric.metric_type),
+        displayType: 'card',
+        priority: getMetricPriority(metric.metric_type),
+        editable: true,
+        deletable: true
+      },
+      metadata: {
+        source: metric.source,
+        confidence: metric.confidence,
+        timestamp: metric.created_at
+      }
+    }))
+    
+    // Convert journal entries to ClassifiedData format
+    const journal: ClassifiedData[] = data.journalEntries.map(entry => ({
+      key: `${entry.entry_type}_${entry.id}`,
+      value: entry.content,
+      classification: {
+        type: entry.entry_type as any,
+        category: entry.category as any,
+        displayType: 'journal',
+        priority: getJournalPriority(entry.entry_type),
+        editable: entry.entry_type !== 'tip', // Tips are read-only
+        deletable: true
+      },
+      metadata: {
+        source: entry.source,
+        confidence: entry.confidence,
+        timestamp: entry.created_at
+      }
+    }))
+    
+    console.log('🔍 Processed structured data:', { dailyCard, journal })
+    return { dailyCard, journal }
+  }, [data])
+
+  // Group daily card data by category for display
+  const categorizedMetrics = useMemo(() => {
     const categories: any = {}
     
-    // Fields to exclude from categorization (metadata, not actual metrics)
-    const excludedFields = [
-      'context', 'created_at', 'updated_at', 'id', 'user_id', 'log_date',
-      'source', 'app_name', 'last_updated', 'ocr_confidence', 'data_quality'
-    ]
+    console.log('🔍 Processing dailyCard items:', dailyCard)
     
-    console.log('🔍 Processing data for categorization:', data)
-    
-    // Process all data fields
-    Object.entries(data).forEach(([key, value]) => {
-      // Skip excluded fields and null/undefined values
-      if (excludedFields.includes(key) || value === null || value === undefined || value === '—') {
-        return
-      }
-      
-      // Handle context_data specially - extract nested metrics
-      if (key === 'context_data' && typeof value === 'object' && value !== null) {
-        console.log('🔍 Processing context_data:', value)
-        Object.entries(value).forEach(([categoryKey, categoryData]: [string, any]) => {
-          if (typeof categoryData === 'object' && categoryData !== null) {
-            Object.entries(categoryData).forEach(([metricKey, metricData]: [string, any]) => {
-              if (typeof metricData === 'object' && metricData !== null && metricData.value !== undefined) {
-                const fullKey = `${categoryKey}_${metricKey}`
-                const category = categorizeMetric(fullKey)
-                console.log(`🔍 Categorized ${fullKey} (${metricData.value}) as ${category}`)
-                if (!categories[category]) {
-                  categories[category] = []
-                }
-                categories[category].push({
-                  key: fullKey,
-                  value: metricData.value
-                })
-              }
-            })
-          }
-        })
-        return
-      }
-      
-      // Skip other complex objects
-      if (typeof value === 'object' && value !== null) {
-        return
-      }
-      
-              const category = categorizeMetric(key)
+    dailyCard.forEach((item: ClassifiedData) => {
+      const category = item.classification.category
       if (!categories[category]) {
         categories[category] = []
       }
-      categories[category].push({ key, value })
+      categories[category].push({
+        key: item.key,
+        value: item.value,
+        classification: item.classification,
+        metadata: item.metadata
+      })
     })
     
     console.log('🔍 Final categorized metrics:', categories)
     return categories
-  }, [data])
+  }, [dailyCard])
 
-  const MetricCard = ({ icon: Icon, label, value, unit, field, category }: any) => {
+  const MetricCard = ({ icon: Icon, label, value, unit, field, category, classification, metadata }: any) => {
     const isEditing = editingField === field
     const hasData = value && value !== '—'
     const categoryConfig = CATEGORY_CONFIG[category as keyof typeof CATEGORY_CONFIG]
     
+    const handleDelete = async () => {
+      if (!classification?.deletable) return
+      
+      try {
+        const supabase = createClient()
+        
+        // Delete from daily_metrics table
+        const { error } = await supabase
+          .from('daily_metrics')
+          .delete()
+          .eq('user_id', userId)
+          .eq('metric_date', date)
+          .eq('metric_type', field)
+        
+        if (error) {
+          console.error('Error deleting metric:', error)
+        } else {
+          onDataUpdate()
+        }
+      } catch (error) {
+        console.error('Error deleting metric:', error)
+      }
+    }
+    
     return (
-      <div className="bg-card/60 backdrop-blur-sm border border-line/40 rounded-lg p-3 hover:border-primary/30 transition-colors min-h-[80px] max-h-[120px] flex flex-col overflow-hidden">
-        {/* Header with icon and label */}
-        <div className="flex items-center gap-2 mb-2 min-h-[20px]">
-          <Icon className={`h-3 w-3 flex-shrink-0 ${categoryConfig?.color || 'text-primary'}`} />
-          <span className="text-xs font-medium text-muted uppercase tracking-wide truncate">
-            {label}
-          </span>
+      <div className="bg-card/60 backdrop-blur-sm border border-line/40 rounded-lg p-3 hover:border-primary/30 transition-colors min-h-[80px] max-h-[120px] flex flex-col overflow-hidden relative group">
+        {/* Header with icon, label, and action buttons */}
+        <div className="flex items-center justify-between mb-2 min-h-[20px]">
+          <div className="flex items-center gap-2">
+            <Icon className={`h-3 w-3 flex-shrink-0 ${categoryConfig?.color || 'text-primary'}`} />
+            <span className="text-xs font-medium text-muted uppercase tracking-wide truncate">
+              {label}
+            </span>
+          </div>
+          
+          {/* Action buttons - only show on hover */}
+          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            {classification?.editable && (
+              <button
+                onClick={() => handleEdit(field, value)}
+                className="p-1 hover:bg-primary/10 rounded transition-colors"
+                title="Edit"
+              >
+                <Edit3 className="h-3 w-3 text-muted-foreground hover:text-primary" />
+              </button>
+            )}
+            {classification?.deletable && (
+              <button
+                onClick={handleDelete}
+                className="p-1 hover:bg-destructive/10 rounded transition-colors"
+                title="Delete"
+              >
+                <Trash2 className="h-3 w-3 text-muted-foreground hover:text-destructive" />
+              </button>
+            )}
+          </div>
         </div>
         
         {/* Value section - takes remaining space */}
@@ -428,42 +546,94 @@ export function CardContent({ userId, date, data, onDataUpdate }: CardContentPro
     <div className="h-full flex flex-col">
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-6">
-        {data ? (
-          <div className="space-y-8">
-            {/* Dynamic Category Sections */}
-            {Object.entries(categorizedMetrics).map(([category, metrics]) => (
-              <CategorySection
-                key={category}
-                category={category}
-                metrics={metrics as any[]}
-              />
-            ))}
+        <div className="space-y-12">
+          {/* Daily Card Metrics Section */}
+          <div className="space-y-6">
+            <div className="flex items-center gap-3">
+              <div className="h-px flex-1 bg-gradient-to-r from-transparent via-line/30 to-transparent"></div>
+              <h2 className="text-lg font-semibold text-primary px-4">Daily Metrics</h2>
+              <div className="h-px flex-1 bg-gradient-to-r from-transparent via-line/30 to-transparent"></div>
+            </div>
             
-
-
-            {/* Last Updated */}
-            {data?.last_updated && (
-              <div className="text-xs text-muted-foreground text-center pt-4 border-t border-line/20">
-                Last updated: {new Date(data.last_updated as string).toLocaleString()}
+            {data && Object.keys(categorizedMetrics).length > 0 ? (
+              <div className="space-y-8">
+                {/* Dynamic Category Sections */}
+                {Object.entries(categorizedMetrics).map(([category, metrics]) => (
+                  <CategorySection
+                    key={category}
+                    category={category}
+                    metrics={metrics as any[]}
+                  />
+                ))}
+              </div>
+            ) : data ? (
+              // Fallback: Show raw data if classification failed
+              <div className="space-y-4">
+                <div className="text-sm text-muted-foreground mb-4">
+                  Debug: Raw data available but classification failed. Showing fallback view.
+                </div>
+                <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+                  {Object.entries(data).map(([key, value]) => {
+                    if (value !== null && value !== undefined && 
+                        typeof value !== 'object' && 
+                        !['id', 'user_id', 'log_date', 'created_at', 'updated_at', 'last_updated'].includes(key)) {
+                      const { displayValue, unit } = formatMetricValue(key, value)
+                      return (
+                        <div key={key} className="bg-card/60 backdrop-blur-sm border border-line/40 rounded-lg p-3">
+                          <div className="text-xs font-medium text-muted uppercase tracking-wide mb-2">
+                            {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                          </div>
+                          <div className="text-base font-semibold">
+                            {displayValue}
+                            {unit && <span className="text-xs text-muted-foreground ml-1">{unit}</span>}
+                          </div>
+                        </div>
+                      )
+                    }
+                    return null
+                  })}
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center min-h-[200px] bg-card/20 rounded-lg border border-line/20">
+                <div className="text-center text-muted-foreground max-w-md">
+                  <div className="w-16 h-16 bg-card/60 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Activity className="h-8 w-8 text-muted" />
+                  </div>
+                  <p className="text-xl font-medium mb-3">No metrics for this date</p>
+                  <p className="text-base mb-4">Your daily metrics will populate as you share data with Coach!</p>
+                </div>
               </div>
             )}
           </div>
-        ) : (
-          <div className="flex items-center justify-center h-full min-h-[400px]">
-            <div className="text-center text-muted-foreground max-w-md">
-              <div className="w-16 h-16 bg-card/60 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Activity className="h-8 w-8 text-muted" />
-              </div>
-              <p className="text-xl font-medium mb-3">No data for this date</p>
-              <p className="text-base mb-4">Your daily card will populate as soon as you start sharing data with Coach!</p>
-              <div className="text-sm space-y-2">
-                <p>💡 <strong>Get started:</strong></p>
-                <p>• Upload a screenshot from your health app</p>
-                <p>• Or chat with Coach about how you're feeling</p>
-              </div>
+
+          {/* Visual Separator */}
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-line/20"></div>
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-3 text-muted-foreground">Daily Journal</span>
             </div>
           </div>
-        )}
+
+          {/* Daily Journal Section */}
+          <div className="space-y-6">
+            <DailyJournal
+              userId={userId}
+              date={date}
+              journalEntries={journal}
+              onDataUpdate={onDataUpdate}
+            />
+          </div>
+
+          {/* Last Updated */}
+          {data?.metrics.length > 0 && (
+            <div className="text-xs text-muted-foreground text-center pt-4 border-t border-line/20">
+              Last updated: {new Date(data.metrics[0].created_at).toLocaleString()}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

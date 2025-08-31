@@ -1,12 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { SettingsModal } from '@/components/settings/settings-modal'
 import { CardModalTest } from '@/components/card/card-modal-test'
 import { WeeklySummaryModal } from '@/components/card/weekly-summary-modal'
-import { Settings, Calendar } from 'lucide-react'
+import { DailyWorkoutModal, DailyWorkoutModalRef } from '@/components/dashboard/daily-workout-modal'
+import { Settings, Calendar, Dumbbell } from 'lucide-react'
 
 interface DashboardHeaderProps {
   userId: string
@@ -16,6 +17,7 @@ interface DashboardHeaderProps {
 export function DashboardHeader({ userId, cardModalRef }: DashboardHeaderProps) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [isWeeklySummaryOpen, setIsWeeklySummaryOpen] = useState(false)
+  const workoutModalRef = useRef<DailyWorkoutModalRef>(null)
 
   const handleSignOut = async () => {
     const supabase = createClient()
@@ -31,6 +33,15 @@ export function DashboardHeader({ userId, cardModalRef }: DashboardHeaderProps) 
         </div>
         <div className="flex items-center gap-2">
           <CardModalTest userId={userId} ref={cardModalRef} />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => workoutModalRef.current?.openModal()}
+            className="h-8 w-8"
+            title="Daily Workout"
+          >
+            <Dumbbell className="h-4 w-4" />
+          </Button>
           <Button
             variant="ghost"
             size="icon"
@@ -66,6 +77,11 @@ export function DashboardHeader({ userId, cardModalRef }: DashboardHeaderProps) 
       <WeeklySummaryModal
         isOpen={isWeeklySummaryOpen}
         onClose={() => setIsWeeklySummaryOpen(false)}
+      />
+
+      <DailyWorkoutModal
+        userId={userId}
+        ref={workoutModalRef}
       />
     </>
   )

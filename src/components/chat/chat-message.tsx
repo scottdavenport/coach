@@ -54,13 +54,11 @@ export function ChatMessage({ message }: ChatMessageProps) {
                         fileName.toLowerCase().includes('.gif') || 
                         fileName.toLowerCase().includes('.webp')) && (
               <div className="mb-3">
-                <Image 
+                <img 
                   src={fileUrl} 
                   alt={fileName}
-                  width={400}
-                  height={300}
-                  className="max-w-full h-auto rounded-lg border border-black/20"
-                  style={{ maxHeight: '300px' }}
+                  className="max-w-full max-h-96 rounded-lg border border-black/20"
+                  style={{ objectFit: 'contain' }}
                 />
               </div>
             )}

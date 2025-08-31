@@ -207,6 +207,49 @@ Always be curious and supportive, building a rich understanding of the user's co
 
     const aiResponse = completion.choices[0]?.message?.content || "I'm sorry, I couldn't process that request."
 
+    // Store parsed health data to daily card if we have data to store
+    if (parsedData && (parsedData.health_events.length > 0 || parsedData.context_data.length > 0 || parsedData.daily_summary)) {
+      try {
+        console.log('🔍 **EXTRACTED RICH CONTEXT DATA (REVIEW REQUIRED):**')
+        console.log('User ID:', user.id)
+        console.log('Original message:', message)
+        console.log('Health events:', parsedData.health_events)
+        console.log('Context data:', parsedData.context_data)
+        console.log('Daily summary:', parsedData.daily_summary)
+        console.log('Follow-up questions:', parsedData.follow_up_questions)
+        console.log('Should update card:', parsedData.should_update_card)
+        console.log('Clarification needed:', parsedData.clarification_needed)
+        console.log('---')
+
+        // Call the health store API to update the daily card
+        const healthStoreResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/health/store`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            events: parsedData.health_events.filter((e: any) => e.should_store),
+            contextData: parsedData.context_data.filter((c: any) => c.should_store),
+            dailySummary: parsedData.daily_summary,
+            userId: user.id
+          })
+        })
+
+        if (healthStoreResponse.ok) {
+          console.log('💾 **STORING RICH CONTEXT DATA:**')
+          console.log('User ID:', user.id)
+          console.log('Events to store:', parsedData.health_events.filter((e: any) => e.should_store))
+          console.log('Context data to store:', parsedData.context_data.filter((c: any) => c.should_store))
+          console.log('Daily summary to store:', parsedData.daily_summary)
+          console.log('---')
+        } else {
+          console.error('Failed to store health data:', await healthStoreResponse.text())
+        }
+      } catch (error) {
+        console.error('Error storing health data:', error)
+      }
+    }
+
     // Save AI response to database
     const { error: aiConversationError } = await supabase
       .from('conversations')

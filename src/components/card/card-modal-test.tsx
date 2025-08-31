@@ -5,7 +5,7 @@ import { Calendar, ChevronLeft, ChevronRight, Zap } from 'lucide-react'
 import { CardModal } from './card-modal'
 import { CardContent } from './card-content'
 import { useCardModal } from '@/hooks/use-card-modal'
-import { useState, forwardRef, useImperativeHandle } from 'react'
+import { useState, forwardRef, useImperativeHandle, useEffect, useRef } from 'react'
 import { Input } from '@/components/ui/input'
 
 interface CardModalTestProps {
@@ -14,6 +14,7 @@ interface CardModalTestProps {
 
 const CardModalTest = forwardRef<{ refreshData: () => void }, CardModalTestProps>(({ userId }, ref) => {
   const [showDatePicker, setShowDatePicker] = useState(false)
+  const datePickerRef = useRef<HTMLDivElement>(null)
   
   const {
     isOpen,
@@ -25,6 +26,23 @@ const CardModalTest = forwardRef<{ refreshData: () => void }, CardModalTestProps
     navigateToDate,
     refreshData
   } = useCardModal({ userId })
+
+  // Close date picker when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (datePickerRef.current && !datePickerRef.current.contains(event.target as Node)) {
+        setShowDatePicker(false)
+      }
+    }
+
+    if (showDatePicker) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [showDatePicker])
 
   // Expose refreshData function to parent component
   useImperativeHandle(ref, () => ({
@@ -62,17 +80,31 @@ const CardModalTest = forwardRef<{ refreshData: () => void }, CardModalTestProps
 
   const headerContent = (
     <>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={refreshData}
-        className="text-sm"
-      >
-        <Zap className="h-4 w-4 mr-2" />
-        Refresh Data
-      </Button>
-      
       <div className="flex items-center gap-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={refreshData}
+          className="text-sm"
+        >
+          <Zap className="h-4 w-4 mr-2" />
+          Refresh Data
+        </Button>
+        
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            const today = new Date().toISOString().split('T')[0]
+            navigateToDate(today)
+          }}
+          className="text-sm"
+        >
+          Today
+        </Button>
+      </div>
+      
+      <div className="flex items-center gap-2 relative">
         <Button
           variant="ghost"
           size="icon"
@@ -82,23 +114,60 @@ const CardModalTest = forwardRef<{ refreshData: () => void }, CardModalTestProps
           <ChevronLeft className="h-4 w-4" />
         </Button>
         
-        <Button
-          variant="ghost"
-          onClick={() => setShowDatePicker(!showDatePicker)}
-          className="flex items-center gap-2"
-        >
-          <Calendar className="h-4 w-4" />
-          {selectedDate ? formatDate(selectedDate) : 'Today'}
-        </Button>
-        
-        {showDatePicker && (
-          <Input
-            type="date"
-            value={selectedDate}
-            onChange={handleDateChange}
-            className="w-auto"
-          />
-        )}
+        <div className="relative" ref={datePickerRef}>
+          <Button
+            variant="ghost"
+            onClick={() => setShowDatePicker(!showDatePicker)}
+            className="flex items-center gap-2"
+          >
+            <Calendar className="h-4 w-4" />
+            {selectedDate ? formatDate(selectedDate) : 'Today'}
+          </Button>
+          
+          {showDatePicker && (
+            <div className="absolute top-full left-0 mt-1 bg-card border border-line rounded-lg shadow-lg z-50 p-3 min-w-[280px]">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-medium">Select Date</h3>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    const today = new Date().toISOString().split('T')[0]
+                    navigateToDate(today)
+                    setShowDatePicker(false)
+                  }}
+                  className="text-xs"
+                >
+                  Today
+                </Button>
+              </div>
+              <Input
+                type="date"
+                value={selectedDate}
+                onChange={handleDateChange}
+                className="w-full"
+              />
+              <div className="flex justify-between mt-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowDatePicker(false)}
+                  className="text-xs"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowDatePicker(false)}
+                  className="text-xs"
+                >
+                  Done
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
         
         <Button
           variant="ghost"

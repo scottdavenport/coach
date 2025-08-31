@@ -5,23 +5,50 @@ interface UseCardModalProps {
   userId: string
 }
 
+interface DailyMetric {
+  id: string
+  metric_type: string
+  metric_value: number
+  metric_unit: string
+  source: string
+  confidence: number
+  created_at: string
+}
+
+interface DailyJournalEntry {
+  id: string
+  entry_type: string
+  category: string
+  content: string
+  source: string
+  confidence: number
+  created_at: string
+}
+
+interface StructuredCardData {
+  metrics: DailyMetric[]
+  journalEntries: DailyJournalEntry[]
+  goals: any[]
+  date: string
+}
+
 export function useCardModal({ userId }: UseCardModalProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [selectedDate, setSelectedDate] = useState('')
-  const [cardData, setCardData] = useState<any>(null)
+  const [cardData, setCardData] = useState<StructuredCardData | null>(null)
   const [loading, setLoading] = useState(false)
   const [availableDates, setAvailableDates] = useState<string[]>([])
 
-  // Fetch available dates
+  // Fetch available dates from daily_metrics table
   const fetchAvailableDates = useCallback(async () => {
     try {
       console.log('fetchAvailableDates called for userId:', userId)
       const supabase = createClient()
       const { data, error } = await supabase
-        .from('daily_log_cards')
-        .select('log_date')
+        .from('daily_metrics')
+        .select('metric_date')
         .eq('user_id', userId)
-        .order('log_date', { ascending: false })
+        .order('metric_date', { ascending: false })
         .limit(30)
 
       if (error) {
@@ -29,7 +56,7 @@ export function useCardModal({ userId }: UseCardModalProps) {
         return
       }
 
-      const dates = data.map(row => row.log_date)
+      const dates = [...new Set(data.map(row => row.metric_date))] // Remove duplicates
       console.log('Found available dates:', dates)
       setAvailableDates(dates)
       
@@ -48,31 +75,51 @@ export function useCardModal({ userId }: UseCardModalProps) {
     }
   }, [userId, selectedDate])
 
-  // Fetch card data for a specific date
+  // Fetch card data for a specific date from new structured tables
   const fetchCardData = useCallback(async (date: string) => {
     if (!date) return
     
-    console.log('Fetching data for date:', date)
+    console.log('Fetching structured data for date:', date)
     setLoading(true)
     try {
       const supabase = createClient()
-      const { data, error } = await supabase
-        .from('daily_log_cards')
+      
+      // Fetch metrics
+      const { data: metrics, error: metricsError } = await supabase
+        .from('daily_metrics')
         .select('*')
         .eq('user_id', userId)
-        .eq('log_date', date)
-        .single()
+        .eq('metric_date', date)
+        .order('created_at', { ascending: false })
 
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching card data:', error)
-        setCardData(null)
-      } else {
-        console.log('Raw database data:', data)
-        console.log('Summary data:', data?.summary)
-        console.log('Context data from summary:', data?.summary?.context_data)
-        console.log('Workout data from summary:', data?.summary?.context_data?.workout)
-        setCardData(data?.summary || null)
+      if (metricsError) {
+        console.error('Error fetching metrics:', metricsError)
       }
+
+      // Fetch journal entries
+      const { data: journalEntries, error: journalError } = await supabase
+        .from('daily_journal')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('journal_date', date)
+        .order('created_at', { ascending: false })
+
+      if (journalError) {
+        console.error('Error fetching journal entries:', journalError)
+      }
+
+      // Fetch goals (placeholder for now)
+      const goals: any[] = []
+
+      const structuredData: StructuredCardData = {
+        metrics: metrics || [],
+        journalEntries: journalEntries || [],
+        goals,
+        date
+      }
+
+      console.log('Structured card data:', structuredData)
+      setCardData(structuredData)
     } catch (error) {
       console.error('Error fetching card data:', error)
       setCardData(null)
@@ -98,36 +145,13 @@ export function useCardModal({ userId }: UseCardModalProps) {
       setSelectedDate(date)
     } else if (currentAvailableDates.length > 0 && !selectedDate) {
       setSelectedDate(currentAvailableDates[0])
+    } else if (!selectedDate) {
+      // Fallback to today
+      const today = new Date().toISOString().split('T')[0]
+      setSelectedDate(today)
     }
-    setIsOpen(true)
     
-    // Debug logging
-    console.log('openCard called with date:', date)
-    console.log('availableDates:', currentAvailableDates)
-    console.log('selectedDate will be:', date || (currentAvailableDates.length > 0 ? currentAvailableDates[0] : 'none'))
-  }
-  
-  // Helper function to get available dates synchronously
-  const getAvailableDates = async () => {
-    try {
-      const supabase = createClient()
-      const { data, error } = await supabase
-        .from('daily_log_cards')
-        .select('log_date')
-        .eq('user_id', userId)
-        .order('log_date', { ascending: false })
-        .limit(30)
-
-      if (error) {
-        console.error('Error fetching available dates:', error)
-        return []
-      }
-
-      return data.map(row => row.log_date)
-    } catch (error) {
-      console.error('Error fetching available dates:', error)
-      return []
-    }
+    setIsOpen(true)
   }
 
   // Close modal
@@ -135,27 +159,53 @@ export function useCardModal({ userId }: UseCardModalProps) {
     setIsOpen(false)
   }
 
-  // Navigate to different date
-  const navigateToDate = (date: string) => {
+  // Navigate to a specific date
+  const navigateToDate = async (date: string) => {
     setSelectedDate(date)
+    await fetchCardData(date)
   }
 
-  // Refresh data
-  const refreshData = () => {
-    fetchCardData(selectedDate)
+  // Refresh data for current date
+  const refreshData = async () => {
+    if (selectedDate) {
+      await fetchCardData(selectedDate)
+    }
   }
 
-  // Initialize
-  useEffect(() => {
-    fetchAvailableDates()
-  }, [userId, fetchAvailableDates])
+  // Helper function to get available dates
+  const getAvailableDates = async (): Promise<string[]> => {
+    try {
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('daily_metrics')
+        .select('metric_date')
+        .eq('user_id', userId)
+        .order('metric_date', { ascending: false })
+        .limit(30)
 
-  // Fetch data when date changes
+      if (error) {
+        console.error('Error fetching available dates:', error)
+        return []
+      }
+
+      return [...new Set(data.map(row => row.metric_date))]
+    } catch (error) {
+      console.error('Error getting available dates:', error)
+      return []
+    }
+  }
+
+  // Fetch data when selected date changes
   useEffect(() => {
     if (selectedDate) {
       fetchCardData(selectedDate)
     }
   }, [selectedDate, fetchCardData])
+
+  // Fetch available dates on mount
+  useEffect(() => {
+    fetchAvailableDates()
+  }, [fetchAvailableDates])
 
   return {
     isOpen,
@@ -166,7 +216,6 @@ export function useCardModal({ userId }: UseCardModalProps) {
     openCard,
     closeCard,
     navigateToDate,
-    refreshData,
-    fetchAvailableDates
+    refreshData
   }
 }

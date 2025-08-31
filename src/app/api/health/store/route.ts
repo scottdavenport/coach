@@ -50,17 +50,132 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to verify user' }, { status: 500 })
     }
 
-    const storedEvents = []
-    const storedContextData = []
+    const today = new Date().toISOString().split('T')[0]
+    const storedMetrics = []
+    const storedJournalEntries = []
 
-    // Store individual health events
+    // Store metrics in the new daily_metrics table
+    if (dailySummary) {
+      const metricMappings = [
+        { key: 'mood', type: 'mood', unit: '/10' },
+        { key: 'energy', type: 'energy', unit: '/10' },
+        { key: 'stress', type: 'stress', unit: '/10' },
+        { key: 'readiness', type: 'readiness', unit: '' },
+        { key: 'sleep_hours', type: 'sleep_hours', unit: 'hours' },
+        { key: 'sleep_quality', type: 'sleep_quality', unit: '/10' },
+        { key: 'resting_heart_rate', type: 'heart_rate', unit: 'bpm' },
+        { key: 'weight', type: 'weight', unit: 'lbs' }
+      ]
+
+      for (const mapping of metricMappings) {
+        if (dailySummary[mapping.key] !== null && dailySummary[mapping.key] !== undefined) {
+          const { data: metricData, error: metricError } = await supabase
+            .from('daily_metrics')
+            .upsert({
+              user_id: user.id,
+              metric_date: today,
+              metric_type: mapping.type,
+              metric_value: dailySummary[mapping.key],
+              metric_unit: mapping.unit,
+              source: 'conversation',
+              confidence: 1.0
+            }, {
+              onConflict: 'user_id,metric_date,metric_type'
+            })
+            .select()
+            .single()
+
+          if (metricError) {
+            console.error(`Error storing metric ${mapping.key}:`, metricError)
+          } else {
+            storedMetrics.push(metricData)
+          }
+        }
+      }
+    }
+
+    // Store context data as journal entries
+    if (contextData && contextData.length > 0) {
+      for (const context of contextData) {
+        // Determine entry type based on category and key
+        let entryType = 'note'
+        if (context.key.includes('tip') || context.key.includes('advice')) {
+          entryType = 'tip'
+        } else if (context.key.includes('goal') || context.key.includes('intention')) {
+          entryType = 'goal'
+        }
+
+        // Determine category
+        let category = 'lifestyle'
+        if (context.category === 'sleep' || context.category === 'wellness') {
+          category = 'wellness'
+        } else if (context.category === 'workout' || context.category === 'fitness') {
+          category = 'fitness'
+        } else if (context.category === 'biometric' || context.category === 'health') {
+          category = 'health'
+        }
+
+        const { data: journalData, error: journalError } = await supabase
+          .from('daily_journal')
+          .insert({
+            user_id: user.id,
+            journal_date: today,
+            entry_type: entryType,
+            category: category,
+            content: Array.isArray(context.value) ? context.value.join('\n') : context.value,
+            source: 'conversation',
+            confidence: context.confidence || 0.8
+          })
+          .select()
+          .single()
+
+        if (journalError) {
+          console.error('Error storing journal entry:', journalError)
+        } else {
+          storedJournalEntries.push(journalData)
+        }
+      }
+    }
+
+    // Store workout events as daily activities
+    const storedActivities = []
+    if (events && events.length > 0) {
+      for (const event of events) {
+        if (event.event_type === 'workout') {
+          // Create a completed activity from workout event
+          const { data: activityData, error: activityError } = await supabase
+            .from('daily_activities')
+            .insert({
+              user_id: user.id,
+              activity_date: today,
+              activity_type: 'workout',
+              status: 'completed',
+              title: `Workout - ${event.data.duration || 'Unknown duration'}`,
+              description: `Completed workout from conversation`,
+              completed_data: event.data,
+              source: 'conversation'
+            })
+            .select()
+            .single()
+
+          if (activityError) {
+            console.error('Error storing workout activity:', activityError)
+          } else {
+            storedActivities.push(activityData)
+          }
+        }
+      }
+    }
+
+    // Store individual health events (keep for historical tracking)
+    const storedEvents = []
     if (events && events.length > 0) {
       for (const event of events) {
         const { data: eventData, error: eventError } = await supabase
           .from('events')
           .insert({
             user_id: user.id,
-            conversation_id: null, // Don't link to conversation for now since conversationId is not a UUID
+            conversation_id: null,
             event_type: event.event_type,
             data: event.data
           })
@@ -69,115 +184,25 @@ export async function POST(request: NextRequest) {
 
         if (eventError) {
           console.error('Error storing event:', eventError)
-          return NextResponse.json({ error: 'Failed to store event' }, { status: 500 })
-        }
-
-        storedEvents.push(eventData)
-      }
-    }
-
-    // Store context data as events with special type
-    if (contextData && contextData.length > 0) {
-      for (const context of contextData) {
-        const { data: contextEventData, error: contextError } = await supabase
-          .from('events')
-          .insert({
-            user_id: user.id,
-            conversation_id: null,
-            event_type: 'note', // Use note type for context data
-            data: {
-              context_category: context.category,
-              context_key: context.key,
-              context_value: context.value,
-              confidence: context.confidence,
-              source: context.source,
-              timestamp: new Date().toISOString()
-            }
-          })
-          .select()
-          .single()
-
-        if (contextError) {
-          console.error('Error storing context data:', contextError)
-          return NextResponse.json({ error: 'Failed to store context data' }, { status: 500 })
-        }
-
-        storedContextData.push(contextEventData)
-      }
-    }
-
-    // Store or update daily log card with rich context
-    if (dailySummary || (contextData && contextData.length > 0)) {
-      const today = new Date().toISOString().split('T')[0]
-      
-      // Check if we already have a log card for today
-      const { data: existingCard } = await supabase
-        .from('daily_log_cards')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('log_date', today)
-        .single()
-
-      // Build rich daily summary
-      const existingContextData = existingCard?.summary?.context_data || {}
-      const newContextData = contextData ? contextData.reduce((acc: any, context: any) => {
-        if (!acc[context.category]) acc[context.category] = {}
-        acc[context.category][context.key] = {
-          value: context.value,
-          confidence: context.confidence,
-          source: context.source,
-          timestamp: new Date().toISOString()
-        }
-        return acc
-      }, existingContextData) : existingContextData
-
-      const richSummary = {
-        ...(existingCard?.summary || {}),
-        ...(dailySummary || {}),
-        context_data: newContextData,
-        last_updated: new Date().toISOString()
-      }
-
-      console.log('🔧 **MERGING CONTEXT DATA:**')
-      console.log('Existing context data:', JSON.stringify(existingContextData, null, 2))
-      console.log('New context data:', JSON.stringify(contextData, null, 2))
-      console.log('Merged context data:', JSON.stringify(newContextData, null, 2))
-      console.log('---')
-
-      if (existingCard) {
-        // Update existing card
-        const { error: updateError } = await supabase
-          .from('daily_log_cards')
-          .update({
-            summary: richSummary,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', existingCard.id)
-
-        if (updateError) {
-          console.error('Error updating daily log card:', updateError)
-        }
-      } else {
-        // Create new card
-        const { error: insertError } = await supabase
-          .from('daily_log_cards')
-          .insert({
-            user_id: user.id,
-            log_date: today,
-            summary: richSummary
-          })
-
-        if (insertError) {
-          console.error('Error creating daily log card:', insertError)
+        } else {
+          storedEvents.push(eventData)
         }
       }
     }
+
+    console.log('✅ **STORAGE COMPLETE:**')
+    console.log(`Stored ${storedMetrics.length} metrics`)
+    console.log(`Stored ${storedJournalEntries.length} journal entries`)
+    console.log(`Stored ${storedActivities.length} activities`)
+    console.log(`Stored ${storedEvents.length} events`)
 
     return NextResponse.json({ 
       success: true,
+      storedMetrics,
+      storedJournalEntries,
+      storedActivities,
       storedEvents,
-      storedContextData,
-      message: `Successfully stored ${storedEvents.length} health events and ${storedContextData.length} context data points`
+      message: `Successfully stored ${storedMetrics.length} metrics, ${storedJournalEntries.length} journal entries, ${storedActivities.length} activities, and ${storedEvents.length} events`
     })
 
   } catch (error) {
