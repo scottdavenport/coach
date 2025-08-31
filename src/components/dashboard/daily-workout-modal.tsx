@@ -36,7 +36,7 @@ export const DailyWorkoutModal = forwardRef<DailyWorkoutModalRef, DailyWorkoutMo
     const [showDatePicker, setShowDatePicker] = useState(false)
     
     const {
-      selectedDate: hookDate,
+      loading,
       setSelectedDate: setHookDate,
       markActivityCompleted,
       deleteActivity,

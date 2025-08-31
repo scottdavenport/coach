@@ -357,7 +357,7 @@ export function CardContent({ userId, date, data, onDataUpdate }: CardContentPro
     return categories
   }, [dailyCard])
 
-  const MetricCard = ({ icon: Icon, label, value, unit, field, category, classification, metadata }: any) => {
+  const MetricCard = ({ icon: Icon, label, value, unit, field, category, classification }: any) => {
     const isEditing = editingField === field
     const hasData = value && value !== '—'
     const categoryConfig = CATEGORY_CONFIG[category as keyof typeof CATEGORY_CONFIG]
