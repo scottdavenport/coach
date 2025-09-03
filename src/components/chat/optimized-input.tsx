@@ -20,17 +20,8 @@ export const OptimizedInput = memo(function OptimizedInput({
 }: OptimizedInputProps) {
   
   const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const start = performance.now()
     onChange(e.target.value)
-    const end = performance.now()
-    
-    if (end - start > 10) {
-      console.warn('🐌 SLOW ISOLATED INPUT:', end - start + 'ms', {
-        hasFiles,
-        inputLength: e.target.value.length
-      })
-    }
-  }, [onChange, hasFiles])
+  }, [onChange])
 
   return (
     <textarea

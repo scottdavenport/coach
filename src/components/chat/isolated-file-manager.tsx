@@ -14,13 +14,7 @@ export const IsolatedFileManager = memo(function IsolatedFileManager({
 }: IsolatedFileManagerProps) {
   
   const handleRemove = useCallback((fileId: string) => {
-    const start = performance.now()
     onRemoveFile(fileId)
-    const end = performance.now()
-    
-    if (end - start > 10) {
-      console.warn('🐌 SLOW FILE REMOVAL:', end - start + 'ms')
-    }
   }, [onRemoveFile])
 
   if (files.length === 0) return null;
