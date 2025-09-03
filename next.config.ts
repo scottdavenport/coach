@@ -11,14 +11,24 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  experimental: {
-    serverExternalPackages: ['@supabase/supabase-js'],
-  },
-  api: {
-    bodyParser: {
-      sizeLimit: '10mb',
-    },
-    responseLimit: '10mb',
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      // These packages should only be used on the server side
+      config.externals = config.externals || [];
+      config.externals.push('pdf-parse', 'mammoth', 'xlsx');
+    } else {
+      // For client-side, ignore these server-only packages
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        path: false,
+        stream: false,
+        crypto: false,
+        util: false,
+        buffer: false,
+      };
+    }
+    return config;
   },
 };
 

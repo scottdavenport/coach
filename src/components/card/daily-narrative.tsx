@@ -32,17 +32,27 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
   const [isGenerating, setIsGenerating] = useState(false)
   const [showPatterns, setShowPatterns] = useState(false)
 
-  // Pattern recognition hook
-  const {
-    patterns,
-    isLoading: patternsLoading,
-    error: patternsError,
-    refreshPatterns,
-    getTopTopics,
-    getTopActivities,
-    getTopMoods,
-    getSleepInsights
-  } = usePatternRecognition(userId)
+  // Pattern recognition hook - TEMPORARILY DISABLED for performance debugging
+  // const {
+  //   patterns,
+  //   isLoading: patternsLoading,
+  //   error: patternsError,
+  //   refreshPatterns,
+  //   getTopTopics,
+  //   getTopActivities,
+  //   getTopMoods,
+  //   getSleepInsights
+  // } = usePatternRecognition(userId)
+  
+  // Temporary mock data while pattern recognition is disabled
+  const patterns = null
+  const patternsLoading = false
+  const patternsError = null
+  const refreshPatterns = async () => {}
+  const getTopTopics = () => []
+  const getTopActivities = () => []
+  const getTopMoods = () => []
+  const getSleepInsights = () => []
 
   // Update currentDate when selectedDate prop changes
   useEffect(() => {
@@ -369,66 +379,11 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
   }, [isOpen, currentDate, loadNarrativeData])
 
   // Real-time updates: Listen for new conversation insights and update narrative
-  useEffect(() => {
-    if (!isOpen || !userId) return
-
-    console.log('🔍 DailyNarrative: Real-time effect triggered with currentDate:', currentDate.toISOString().split('T')[0])
-
-    const supabase = createClient()
-    
-    // Subscribe to new conversation insights for the currently selected date
-    const startOfDay = new Date(currentDate)
-    startOfDay.setHours(0, 0, 0, 0)
-    const endOfDay = new Date(currentDate)
-    endOfDay.setHours(23, 59, 59, 999)
-
-    console.log('Setting up real-time subscription for date:', currentDate.toISOString().split('T')[0])
-    console.log('Date range:', startOfDay.toISOString(), 'to', endOfDay.toISOString())
-
-    const channelName = `narrative-updates-${currentDate.toISOString().split('T')[0]}-${userId}`
-    
-    const channel = supabase
-      .channel(channelName)
-      .on(
-        'postgres_changes',
-        {
-          event: '*', // Listen to ALL events (INSERT, UPDATE, DELETE)
-          schema: 'public',
-          table: 'conversation_insights',
-          filter: `user_id=eq.${userId}`
-        },
-        async (payload) => {
-          console.log('Real-time event detected:', payload.eventType, (payload.new as any)?.message?.substring(0, 50))
-          
-          // Check if this insight is for the currently selected date
-          const insightDate = new Date((payload.new as any)?.conversation_date || (payload.old as any)?.conversation_date)
-          console.log('Insight date:', insightDate.toISOString())
-          
-          if (insightDate >= startOfDay && insightDate <= endOfDay) {
-            console.log('Insight matches selected date - triggering narrative update')
-            // Wait a moment for the insight to be fully processed
-            setTimeout(async () => {
-              await loadNarrativeData(currentDate)
-            }, 1000)
-          } else {
-            console.log('Insight not for selected date:', insightDate.toISOString(), 'vs', startOfDay.toISOString(), 'to', endOfDay.toISOString())
-          }
-        }
-      )
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          console.log('Real-time subscription active for narrative updates on date:', currentDate.toISOString().split('T')[0])
-        }
-      })
-
-    // Only cleanup when component unmounts or dependencies change
-    return () => {
-      if (channel) {
-        console.log('Cleaning up real-time subscription for date:', currentDate.toISOString().split('T')[0])
-        supabase.removeChannel(channel)
-      }
-    }
-  }, [isOpen, userId, currentDate, loadNarrativeData])
+  // TEMPORARILY DISABLED - Real-time subscriptions causing performance issues
+  // useEffect(() => {
+  //   if (!isOpen || !userId) return
+  //   // Real-time subscription logic disabled for performance debugging
+  // }, [isOpen, userId, currentDate, loadNarrativeData])
 
   // Refresh current narrative
   const handleRefresh = () => {

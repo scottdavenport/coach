@@ -37,6 +37,18 @@ export function DashboardHeader({ userId, selectedDate }: DashboardHeaderProps) 
       
       console.log('🧹 Starting user data reset...')
       
+      // Clear conversation history (main chat messages)
+      const { error: conversationsError } = await supabase
+        .from('conversations')
+        .delete()
+        .eq('user_id', userId)
+      
+      if (conversationsError) {
+        console.error('Error clearing conversations:', conversationsError)
+      } else {
+        console.log('✅ Cleared conversation history')
+      }
+
       // Clear conversation insights
       const { error: insightsError } = await supabase
         .from('conversation_insights')
@@ -49,8 +61,29 @@ export function DashboardHeader({ userId, selectedDate }: DashboardHeaderProps) 
         console.log('✅ Cleared conversation insights')
       }
 
-      // Clear any other user-specific data tables
-      // Add more tables here as needed
+      // Clear user uploads (files)
+      const { error: uploadsError } = await supabase
+        .from('user_uploads')
+        .delete()
+        .eq('user_id', userId)
+      
+      if (uploadsError) {
+        console.error('Error clearing uploads:', uploadsError)
+      } else {
+        console.log('✅ Cleared user uploads')
+      }
+
+      // Clear events (health data)
+      const { error: eventsError } = await supabase
+        .from('events')
+        .delete()
+        .eq('user_id', userId)
+      
+      if (eventsError) {
+        console.error('Error clearing events:', eventsError)
+      } else {
+        console.log('✅ Cleared events')
+      }
       
       // Clear pattern recognition cache by refreshing the page
       console.log('🔄 Refreshing page to clear all cached data...')
