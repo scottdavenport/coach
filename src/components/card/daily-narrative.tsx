@@ -117,47 +117,18 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
     return !isToday() && !isFutureDate()
   }
 
-  // Load narrative data for a specific date
-  const loadNarrativeData = useCallback(async (date: Date) => {
-    setIsLoading(true)
-    try {
-      const supabase = createClient()
-      const dateString = date.toISOString().split('T')[0]
-      
-      console.log('🔍 Loading narrative data for date:', dateString)
-      
-      // Load conversation insights from the new simplified table
-      const { data: conversationInsights, error: insightsError } = await supabase
-        .from('conversation_insights')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('conversation_date', dateString)
-        .order('created_at', { ascending: true })
-
-      if (insightsError) {
-        console.error('Error fetching conversation insights:', insightsError)
-        throw insightsError
-      }
-
-      console.log('🔍 Found conversation insights:', conversationInsights?.length || 0)
-
-      if (conversationInsights && conversationInsights.length > 0) {
-        // Build narrative from natural conversation flow
-        const narrativeData = buildNarrativeFromConversations(conversationInsights)
-        setNarrativeData(narrativeData)
-      } else {
-        // No conversation insights found
-        console.log('🔍 No conversation insights found for this date')
-        setNarrativeData(null)
-      }
-    } catch (error) {
-      console.error('Error loading narrative data:', error)
-      // Set empty state on error
-      setNarrativeData(null)
-    } finally {
-      setIsLoading(false)
+  // Helper function to get natural activity descriptions
+  const getActivityDescription = useCallback((activity: string): string => {
+    const descriptions: { [key: string]: string } = {
+      'Outdoor activity': 'Time spent in nature and fresh air',
+      'Exercise session': 'Physical activity and movement',
+      'Pool time': 'Relaxing by the water',
+      'Relaxation time': 'Taking time to unwind and enjoy',
+      'Coffee run': 'Morning coffee and energy boost',
+      'Resort time': 'Enjoying the beautiful resort surroundings'
     }
-  }, [userId, buildNarrativeFromConversations])
+    return descriptions[activity] || 'Activity from natural conversation'
+  }, [])
 
   // Build narrative from natural conversation flow
   const buildNarrativeFromConversations = useCallback((insights: any[]) => {
@@ -298,18 +269,47 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
     return narrative
   }, [getActivityDescription])
 
-  // Helper function to get natural activity descriptions
-  const getActivityDescription = useCallback((activity: string): string => {
-    const descriptions: { [key: string]: string } = {
-      'Outdoor activity': 'Time spent in nature and fresh air',
-      'Exercise session': 'Physical activity and movement',
-      'Pool time': 'Relaxing by the water',
-      'Relaxation time': 'Taking time to unwind and enjoy',
-      'Coffee run': 'Morning coffee and energy boost',
-      'Resort time': 'Enjoying the beautiful resort surroundings'
+  // Load narrative data for a specific date
+  const loadNarrativeData = useCallback(async (date: Date) => {
+    setIsLoading(true)
+    try {
+      const supabase = createClient()
+      const dateString = date.toISOString().split('T')[0]
+      
+      console.log('🔍 Loading narrative data for date:', dateString)
+      
+      // Load conversation insights from the new simplified table
+      const { data: conversationInsights, error: insightsError } = await supabase
+        .from('conversation_insights')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('conversation_date', dateString)
+        .order('created_at', { ascending: true })
+
+      if (insightsError) {
+        console.error('Error fetching conversation insights:', insightsError)
+        throw insightsError
+      }
+
+      console.log('🔍 Found conversation insights:', conversationInsights?.length || 0)
+
+      if (conversationInsights && conversationInsights.length > 0) {
+        // Build narrative from natural conversation flow
+        const narrativeData = buildNarrativeFromConversations(conversationInsights)
+        setNarrativeData(narrativeData)
+      } else {
+        // No conversation insights found
+        console.log('🔍 No conversation insights found for this date')
+        setNarrativeData(null)
+      }
+    } catch (error) {
+      console.error('Error loading narrative data:', error)
+      // Set empty state on error
+      setNarrativeData(null)
+    } finally {
+      setIsLoading(false)
     }
-    return descriptions[activity] || 'Activity from natural conversation'
-  }, [])
+  }, [userId, buildNarrativeFromConversations])
 
   // Generate narrative using conversation insights (simplified approach)
   const generateNarrative = async (date: Date) => {

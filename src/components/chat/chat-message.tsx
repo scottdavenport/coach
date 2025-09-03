@@ -1,4 +1,5 @@
 import ReactMarkdown from 'react-markdown'
+import Image from 'next/image'
 
 
 interface ChatMessageProps {
@@ -53,11 +54,12 @@ export function ChatMessage({ message }: ChatMessageProps) {
                         fileName.toLowerCase().includes('.gif') || 
                         fileName.toLowerCase().includes('.webp')) && (
               <div className="mb-3">
-                <img 
+                <Image 
                   src={fileUrl} 
                   alt={fileName}
-                  className="max-w-full max-h-96 rounded-lg border border-black/20"
-                  style={{ objectFit: 'contain' }}
+                  width={500}
+                  height={384}
+                  className="max-w-full max-h-96 rounded-lg border border-black/20 object-contain"
                 />
               </div>
             )}

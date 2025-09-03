@@ -40,18 +40,6 @@ export function JournalMetrics({ userId, date }: JournalMetricsProps) {
   })
   const [loading, setLoading] = useState(true)
 
-  // Load user preferences
-  useEffect(() => {
-    loadUserPreferences()
-  }, [loadUserPreferences])
-
-  // Load metrics data
-  useEffect(() => {
-    if (isExpanded) {
-      loadMetricsData()
-    }
-  }, [isExpanded, loadMetricsData])
-
   const loadUserPreferences = useCallback(async () => {
     try {
       const supabase = createClient()
@@ -117,6 +105,18 @@ export function JournalMetrics({ userId, date }: JournalMetricsProps) {
       setLoading(false)
     }
   }, [userId, date])
+
+  // Load user preferences
+  useEffect(() => {
+    loadUserPreferences()
+  }, [loadUserPreferences])
+
+  // Load metrics data
+  useEffect(() => {
+    if (isExpanded) {
+      loadMetricsData()
+    }
+  }, [isExpanded, loadMetricsData])
 
   const updatePreference = async (key: keyof UserMetricPreferences, value: boolean) => {
     try {
