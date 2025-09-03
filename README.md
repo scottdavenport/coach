@@ -1,36 +1,146 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Coach - AI Health & Fitness Companion
 
-## Getting Started
+Coach is an intelligent AI-powered health and fitness companion that helps users track, analyze, and improve their wellness journey through natural conversation and data insights.
 
-First, run the development server:
+## 🚀 Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+### Core Functionality
+- **AI-Powered Coaching**: GPT-4 powered conversations for personalized health guidance
+- **Pattern Recognition**: Advanced analysis of user behavior across health, activity, mood, and sleep
+- **Multi-Modal Input**: Support for text conversations, photo uploads (OCR), and file uploads
+- **Health Data Integration**: Oura Ring integration for sleep and activity tracking
+- **Conversation Insights**: Automatic extraction and storage of health-related data from conversations
+
+### File Upload Support
+- **Images**: OCR processing for workout screenshots and health data
+- **Documents**: CSV, PDF, DOC, DOCX, TXT, MD, XLSX, ODS, PPTX
+- **Smart Processing**: AI-powered content analysis and data extraction
+- **Combined Limits**: Up to 10 files total with intelligent type detection
+
+### Data Management
+- **Conversation History**: Persistent chat history with context awareness
+- **Health Metrics**: Daily, weekly, and trend-based health insights
+- **Pattern Analysis**: Recognition of user behavior patterns and trends
+- **Personalized Recommendations**: AI-generated insights based on user data
+
+## 🛠 Tech Stack
+
+- **Frontend**: Next.js 15, React 18, TypeScript
+- **Backend**: Next.js API Routes, Supabase
+- **Database**: PostgreSQL with Row Level Security (RLS)
+- **Authentication**: Supabase Auth
+- **Storage**: Supabase Storage for file uploads
+- **AI**: OpenAI GPT-4 for conversation and analysis
+- **Health Integration**: Oura Ring API
+- **Styling**: Tailwind CSS with custom UI components
+- **Testing**: Jest with React Testing Library
+
+## 🏗 Project Structure
+
+```
+src/
+├── app/                    # Next.js App Router
+│   ├── api/               # API endpoints
+│   ├── auth/              # Authentication flows
+│   └── dashboard/         # Main dashboard interface
+├── components/            # React components
+│   ├── auth/             # Authentication components
+│   ├── card/             # Data display cards
+│   ├── chat/             # Chat interface
+│   ├── dashboard/        # Dashboard components
+│   └── ui/               # Reusable UI components
+├── hooks/                 # Custom React hooks
+├── lib/                   # Utility libraries
+│   ├── supabase/         # Database client and schema
+│   ├── oura/             # Oura Ring integration
+│   └── pattern-recognition/ # AI pattern analysis
+└── types/                 # TypeScript type definitions
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🚀 Getting Started
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Prerequisites
+- Node.js 18+ 
+- npm or yarn
+- Supabase account and project
+- OpenAI API key
+- Oura Ring account (optional)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Environment Setup
+1. Clone the repository
+2. Copy `env.example` to `.env.local`
+3. Fill in your environment variables:
+   ```bash
+   NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+   OPENAI_API_KEY=your_openai_api_key
+   OURA_CLIENT_ID=your_oura_client_id
+   OURA_CLIENT_SECRET=your_oura_client_secret
+   ```
 
-## Learn More
+### Installation
+```bash
+npm install
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+Open [http://localhost:3000](http://localhost:3000) to see the app.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 📊 Database Schema
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The app uses several key tables:
+- `users`: User profiles and preferences
+- `conversations`: Chat history and metadata
+- `conversation_insights`: Extracted health data from conversations
+- `events`: User activity and health events
+- `weekly_cards`: Weekly health summaries and insights
 
-## Deploy on Vercel
+## 🧪 Testing
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+npm test           # Run all tests
+npm run test:watch # Run tests in watch mode
+npm run lint       # Run ESLint
+npm run build      # Build for production
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 🔧 Development
+
+### Code Quality
+- ESLint configuration for consistent code style
+- TypeScript for type safety
+- Pre-commit hooks for code quality
+
+### API Development
+- RESTful API routes in `/app/api`
+- Supabase client for database operations
+- OpenAI integration for AI features
+
+### File Processing
+- OCR processing for images using Supabase Edge Functions
+- Document parsing for various file types
+- Intelligent content extraction and analysis
+
+## 🚀 Deployment
+
+The app is configured for deployment on Vercel with:
+- Automatic builds and deployments
+- Environment variable management
+- Edge function support for OCR processing
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+## 📝 License
+
+This project is licensed under the MIT License.
+
+## 🆘 Support
+
+For questions or issues, please check the existing issues or create a new one in the GitHub repository.
