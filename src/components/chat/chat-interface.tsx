@@ -6,11 +6,15 @@ import { Button } from '@/components/ui/button'
 import { ChatMessage } from './chat-message'
 import { FileUploadMenu } from './file-upload-menu'
 import { FilePreviewList } from './file-preview-chip'
+import { OptimizedInput } from './optimized-input'
+import { IsolatedFileManager } from './isolated-file-manager'
+import { PerformanceTestInput } from './performance-test-input'
+import { EmergencyChatInput } from './emergency-chat-input'
 import { createClient } from '@/lib/supabase/client'
 import { FileAttachment, SupportedFileType } from '@/types'
 import { FileProcessor } from '@/lib/file-processing'
 import { processFileContentClient } from '@/lib/file-processing/client'
-import { createFileWithCorrectType, getFallbackMimeType } from '@/lib/file-processing/mime-type-fixes'
+import { useFileManager } from '@/hooks/use-file-manager'
 
 interface ChatInterfaceProps {
   userId: string
@@ -23,6 +27,7 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
   
   const [messages, setMessages] = useState<any[]>([])
   const [inputValue, setInputValue] = useState('')
+  const [debouncedInputValue, setDebouncedInputValue] = useState('')
   const [isUploadMenuOpen, setIsUploadMenuOpen] = useState(false)
   const [isRecording, setIsRecording] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -34,10 +39,42 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
     mood: null as string | null,
     physical_notes: null as string | null
   })
-  const [attachedFiles, setAttachedFiles] = useState<FileAttachment[]>([])
   const [isDragging, setIsDragging] = useState(false)
+  const [useEmergencyMode, setUseEmergencyMode] = useState(false)
+  const fileManager = useFileManager(userId)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const renderCountRef = useRef(0)
+
+  // Debounce input value to reduce re-renders
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedInputValue(inputValue)
+    }, 100) // 100ms debounce
+
+    return () => clearTimeout(timer)
+  }, [inputValue])
+
+  // Performance debugging
+  useEffect(() => {
+    renderCountRef.current += 1
+    const startTime = performance.now()
+    
+    console.log('🐌 PERFORMANCE DEBUG - Render #', renderCountRef.current, {
+      attachedFilesCount: fileManager.files.length,
+      inputValueLength: inputValue.length,
+      debouncedInputLength: debouncedInputValue.length,
+      isLoading,
+      timestamp: Date.now()
+    })
+
+    return () => {
+      const endTime = performance.now()
+      if (endTime - startTime > 16) { // > 1 frame at 60fps
+        console.warn('⚠️ SLOW RENDER detected:', endTime - startTime + 'ms')
+      }
+    }
+  })
 
 
 
@@ -111,10 +148,10 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
   }, [pendingQuestions, isLoading, onQuestionAsked])
 
   const handleSendMessage = useCallback(async () => {
-    if ((!inputValue.trim() && attachedFiles.length === 0) || isLoading) return
+    if ((!inputValue.trim() && fileManager.files.length === 0) || isLoading) return
 
     // If we have attached files, process them with context
-    if (attachedFiles.length > 0) {
+    if (fileManager.files.length > 0) {
       await handleFilesWithContext()
       return
     }
@@ -199,10 +236,10 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
     } finally {
       setIsLoading(false)
     }
-  }, [inputValue, attachedFiles, isLoading, conversationState, checkinProgress, messages, userId, onDataStored])
+  }, [inputValue, fileManager.files, isLoading, conversationState, checkinProgress, messages, userId, onDataStored])
 
   const handleFilesWithContext = useCallback(async () => {
-    if (attachedFiles.length === 0) return
+    if (fileManager.files.length === 0) return
 
     setIsLoading(true)
 
@@ -210,7 +247,7 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
       const contextText = inputValue.trim() || 'No additional context provided'
       
       // Create file summary for user message
-      const fileSummary = attachedFiles.map(file => 
+      const fileSummary = fileManager.files.map(file => 
         `📎 ${file.fileName} (${FileProcessor.formatFileSize(file.fileSize)})`
       ).join('\n')
       
@@ -222,15 +259,15 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
         role: 'user',
         timestamp: new Date(),
         hasFiles: true,
-        fileAttachments: attachedFiles
+        fileAttachments: fileManager.files
       }
 
       setMessages(prev => [...prev, userMessage])
       setInputValue('')
 
       // Process files by type
-      const imageFiles = attachedFiles.filter(file => file.fileType.startsWith('image/'))
-      const documentFiles = attachedFiles.filter(file => !file.fileType.startsWith('image/'))
+      const imageFiles = fileManager.files.filter(file => file.fileType.startsWith('image/'))
+      const documentFiles = fileManager.files.filter(file => !file.fileType.startsWith('image/'))
 
       const allProcessedContent: any = {
         images: [],
@@ -334,7 +371,7 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
       setMessages(prev => [...prev, aiMessage])
 
       // Clear attached files
-      setAttachedFiles([])
+      fileManager.clearFiles()
 
     } catch (error) {
       console.error('Error processing files with context:', error)
@@ -349,7 +386,7 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
     } finally {
       setIsLoading(false)
     }
-  }, [attachedFiles, inputValue, userId])
+  }, [fileManager.files, inputValue, userId])
 
   // Detect if user is correcting OCR data
   const detectOcrCorrection = (message: string, messageHistory: any[]) => {
@@ -816,7 +853,18 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
     const files = Array.from(event.target.files || [])
     if (files.length === 0) return
 
-    await handleMultipleFileUpload(files)
+    try {
+      await fileManager.addFiles(files)
+    } catch (error) {
+      const errorMessage = {
+        id: Date.now(),
+        content: `❌ ${error instanceof Error ? error.message : 'Upload failed'}`,
+        role: 'assistant',
+        timestamp: new Date(),
+      }
+      setMessages(prev => [...prev, errorMessage])
+    }
+    
     event.target.value = ''
   }
 
@@ -1015,14 +1063,88 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
 
     const files = Array.from(e.dataTransfer.files)
     if (files.length > 0) {
-      await handleMultipleFileUpload(files)
+      try {
+        await fileManager.addFiles(files)
+      } catch (error) {
+        const errorMessage = {
+          id: Date.now(),
+          content: `❌ ${error instanceof Error ? error.message : 'Upload failed'}`,
+          role: 'assistant',
+          timestamp: new Date(),
+        }
+        setMessages(prev => [...prev, errorMessage])
+      }
     }
-  }, [handleMultipleFileUpload])
+  }, [fileManager])
 
   const handleVoiceRecord = () => {
     setIsRecording(!isRecording)
     // TODO: Implement voice recording
   }
+
+  const handleEmergencyMessage = useCallback(async (message: string) => {
+    if (isLoading) return;
+
+    // Simple message handling without file complexity
+    const userMessage = {
+      id: Date.now(),
+      content: message,
+      role: 'user',
+      timestamp: new Date(),
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setIsLoading(true);
+
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message,
+          conversationId: Date.now().toString(),
+          conversationState: 'emergency_mode'
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to send message: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      const aiMessage = {
+        id: Date.now() + 1,
+        content: data.message,
+        role: 'assistant',
+        timestamp: new Date(),
+      };
+      
+      setMessages(prev => [...prev, aiMessage]);
+
+    } catch (error) {
+      console.error('Error sending message:', error);
+      const errorMessage = {
+        id: Date.now() + 1,
+        content: "I'm having trouble responding right now. Please try again.",
+        role: 'assistant',
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [isLoading])
+
+  const handleEmergencyFileUpload = useCallback(() => {
+    // Simple file upload trigger
+    if (fileInputRef.current) {
+      fileInputRef.current.accept = FileProcessor.getAcceptString();
+      fileInputRef.current.click();
+    }
+  }, [])
 
   // TODO: Replace mock with real OCR function
   const callOcrFunction = async (imageUrl: string, userId: string) => {
@@ -1126,24 +1248,43 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
         </div>
       </div>
 
-      {/* Input Area - Pinned to Bottom */}
-      <div className="border-t border-line p-4 bg-background">
-        <div className="max-w-4xl mx-auto">
-          {/* File Attachments Preview */}
-          {attachedFiles.length > 0 && (
-            <div className="mb-3 p-3 bg-primary/10 border border-primary/30 rounded-lg">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-sm font-medium">
-                  {attachedFiles.length} file{attachedFiles.length > 1 ? 's' : ''} attached
-                </p>
-                <p className="text-xs text-muted">Add context and click Send to process</p>
-              </div>
-              <FilePreviewList 
-                files={attachedFiles} 
-                onRemoveFile={handleRemoveFile}
+      {/* Performance Toggle */}
+      <div className="border-b border-line p-2 bg-yellow-50">
+        <div className="max-w-4xl mx-auto flex items-center justify-between">
+          <span className="text-xs text-yellow-800">
+            🐌 Performance Debug Mode - Files: {fileManager.files.length}
+          </span>
+          <button
+            onClick={() => setUseEmergencyMode(!useEmergencyMode)}
+            className="text-xs bg-yellow-200 px-2 py-1 rounded"
+          >
+            {useEmergencyMode ? 'Use Normal Input' : 'Use Emergency Input'}
+          </button>
+        </div>
+      </div>
+
+      {/* Emergency Input Mode */}
+      {useEmergencyMode ? (
+        <EmergencyChatInput
+          onSendMessage={handleEmergencyMessage}
+          onFileUpload={handleEmergencyFileUpload}
+          disabled={isLoading}
+          isLoading={isLoading}
+          fileCount={fileManager.files.length}
+        />
+      ) : (
+        <>
+          {/* Input Area - Pinned to Bottom */}
+          <div className="border-t border-line p-4 bg-background">
+            <div className="max-w-4xl mx-auto">
+              {/* Performance Test - Remove after debugging */}
+              <PerformanceTestInput />
+              
+              {/* File Attachments Preview - Isolated */}
+              <IsolatedFileManager 
+                files={fileManager.files}
+                onRemoveFile={fileManager.removeFile}
               />
-            </div>
-          )}
 
           <div className="flex items-center space-x-3">
             {/* Attachment Button */}
@@ -1153,7 +1294,7 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
                 size="sm"
                 onClick={() => setIsUploadMenuOpen(!isUploadMenuOpen)}
                 className="p-2 text-muted hover:text-text"
-                disabled={attachedFiles.length >= 10}
+                disabled={fileManager.files.length >= 10}
               >
                 <Plus className="h-4 w-4" />
               </Button>
@@ -1161,22 +1302,20 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
               {isUploadMenuOpen && (
                 <FileUploadMenu 
                   onFileSelect={handleFileSelectType}
-                  disabled={attachedFiles.length >= 10}
+                  disabled={fileManager.files.length >= 10}
                 />
               )}
             </div>
 
-            {/* Text Input */}
+            {/* Text Input - Optimized */}
             <div className="flex-1">
-              <textarea
+              <OptimizedInput
                 value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
+                onChange={setInputValue}
                 onKeyPress={handleKeyPress}
-                placeholder={attachedFiles.length > 0 ? "Add context about these files..." : "Ask anything..."}
-                className="w-full bg-card border border-line rounded-xl px-4 py-3 text-text placeholder:text-muted resize-none focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/30"
-                rows={1}
-                style={{ minHeight: '44px', maxHeight: '120px' }}
+                placeholder={fileManager.files.length > 0 ? "Add context about these files..." : "Ask anything..."}
                 disabled={isLoading}
+                hasFiles={fileManager.files.length > 0}
               />
             </div>
 
@@ -1187,7 +1326,7 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
                 size="sm"
                 onClick={handleVoiceRecord}
                 className={`p-2 ${isRecording ? 'text-destructive' : 'text-muted hover:text-text'}`}
-                disabled={attachedFiles.length >= 10}
+                disabled={fileManager.files.length >= 10}
               >
                 {isRecording ? (
                   <div className="w-4 h-4 bg-destructive rounded-full flex items-center justify-center">
@@ -1200,7 +1339,7 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
               
               <Button
                 onClick={handleSendMessage}
-                disabled={(!inputValue.trim() && attachedFiles.length === 0) || isLoading}
+                disabled={(!inputValue.trim() && fileManager.files.length === 0) || isLoading}
                 className="bg-primary text-black hover:bg-primary/90 disabled:opacity-50"
                 size="sm"
               >
@@ -1210,6 +1349,8 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
           </div>
         </div>
       </div>
+        </>
+      )}
 
       {/* Hidden file input */}
       <input
