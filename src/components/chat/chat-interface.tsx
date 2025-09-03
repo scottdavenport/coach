@@ -820,53 +820,6 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
     event.target.value = ''
   }
 
-  const handleMultipleFileUpload = useCallback(async (files: File[]) => {
-    // Validate files
-    const existingCount = attachedFiles.length
-    const totalCount = existingCount + files.length
-    
-    if (totalCount > 10) {
-      const errorMessage = {
-        id: Date.now(),
-        content: `❌ Too many files: ${totalCount} total. Maximum is 10 files.`,
-        role: 'assistant',
-        timestamp: new Date(),
-      }
-      setMessages(prev => [...prev, errorMessage])
-      return
-    }
-
-    // Validate each file
-    const validationResult = FileProcessor.validateFileList(files)
-    if (!validationResult.isValid) {
-      const errorMessage = {
-        id: Date.now(),
-        content: `❌ ${validationResult.error}`,
-        role: 'assistant',
-        timestamp: new Date(),
-      }
-      setMessages(prev => [...prev, errorMessage])
-      return
-    }
-
-    // Create file attachments with pending status (don't start uploading immediately)
-    const newAttachments: FileAttachment[] = files.map(file => ({
-      id: `${Date.now()}-${Math.random().toString(36).substring(2)}`,
-      file,
-      fileName: file.name,
-      fileSize: file.size,
-      fileType: file.type as SupportedFileType,
-      uploadStatus: 'pending'
-    }))
-
-    // Add to attached files list immediately for UI responsiveness
-    setAttachedFiles(prev => [...prev, ...newAttachments])
-    setIsUploadMenuOpen(false)
-
-    // Process uploads in background without blocking UI
-    uploadFilesInBackground(newAttachments)
-  }, [attachedFiles.length, userId, uploadFilesInBackground])
-
   const uploadFilesInBackground = useCallback(async (attachments: FileAttachment[]) => {
     const supabase = createClient()
     
@@ -973,6 +926,53 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
       }
     }
   }, [userId])
+
+  const handleMultipleFileUpload = useCallback(async (files: File[]) => {
+    // Validate files
+    const existingCount = attachedFiles.length
+    const totalCount = existingCount + files.length
+    
+    if (totalCount > 10) {
+      const errorMessage = {
+        id: Date.now(),
+        content: `❌ Too many files: ${totalCount} total. Maximum is 10 files.`,
+        role: 'assistant',
+        timestamp: new Date(),
+      }
+      setMessages(prev => [...prev, errorMessage])
+      return
+    }
+
+    // Validate each file
+    const validationResult = FileProcessor.validateFileList(files)
+    if (!validationResult.isValid) {
+      const errorMessage = {
+        id: Date.now(),
+        content: `❌ ${validationResult.error}`,
+        role: 'assistant',
+        timestamp: new Date(),
+      }
+      setMessages(prev => [...prev, errorMessage])
+      return
+    }
+
+    // Create file attachments with pending status (don't start uploading immediately)
+    const newAttachments: FileAttachment[] = files.map(file => ({
+      id: `${Date.now()}-${Math.random().toString(36).substring(2)}`,
+      file,
+      fileName: file.name,
+      fileSize: file.size,
+      fileType: file.type as SupportedFileType,
+      uploadStatus: 'pending'
+    }))
+
+    // Add to attached files list immediately for UI responsiveness
+    setAttachedFiles(prev => [...prev, ...newAttachments])
+    setIsUploadMenuOpen(false)
+
+    // Process uploads in background without blocking UI
+    uploadFilesInBackground(newAttachments)
+  }, [attachedFiles.length, userId, uploadFilesInBackground])
 
   const handleRemoveFile = useCallback((fileId: string) => {
     setAttachedFiles(prev => prev.filter(file => file.id !== fileId))
