@@ -75,55 +75,49 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ User verified in database')
 
-    // Fetch conversation history (last 30 messages for context)
+    // Fetch conversation history (last 6 messages for context)
     const { data: conversationHistory } = await supabase
       .from('conversations')
       .select('message, message_type, metadata, created_at')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
-      .limit(30)
+      .limit(6)
 
-    // Fetch last 7 days of structured metrics for context
-    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    // Fetch last 2 days of structured metrics for context (minimal)
+    const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
     const { data: weeklyMetrics } = await supabase
       .from('user_daily_metrics')
       .select(`
         metric_date,
         metric_value,
         text_value,
-        boolean_value,
-        source,
         standard_metrics (
           metric_key,
-          display_name,
-          unit,
-          metric_categories (
-            name,
-            display_name
-          )
+          display_name
         )
       `)
       .eq('user_id', user.id)
-      .gte('metric_date', sevenDaysAgo)
+      .gte('metric_date', twoDaysAgo)
       .order('metric_date', { ascending: false })
+      .limit(10)
 
     // Transform metrics to match expected format
-    const weeklyCards = weeklyMetrics ? weeklyMetrics.map(metric => ({
+    const weeklyCards = weeklyMetrics ? weeklyMetrics.map((metric: any) => ({
       summary: {
-        [metric.standard_metrics?.[0]?.metric_key || 'unknown']: metric.metric_value || metric.text_value || metric.boolean_value
+        [metric.standard_metrics?.[0]?.metric_key || 'unknown']: metric.metric_value || metric.text_value
       },
       log_date: metric.metric_date
     })) : []
 
-    // Fetch recent user context data (last 7 days)
+    // Fetch recent user context data (last 1 day only)
     const { data: recentContext } = await supabase
       .from('events')
       .select('data, created_at')
       .eq('user_id', user.id)
       .eq('event_type', 'note')
-      .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
+      .gte('created_at', new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString())
       .order('created_at', { ascending: false })
-      .limit(20)
+      .limit(5)
 
     // Build context for the AI
     const conversationContext = buildConversationContext(conversationHistory || [])
@@ -185,87 +179,101 @@ export async function POST(request: NextRequest) {
       console.log('---')
     }
 
-    // Create OpenAI chat completion with enhanced system prompt
+    // Build system prompt with token counting
+    const baseSystemPrompt = `You are Coach, an AI health and fitness companion. You're warm, encouraging, and help users achieve their health goals through actionable insights and personalized coaching.`
+    
+    // Build context sections with strict limits
+    const limitedUserContext = userContext.length > 1000 ? userContext.substring(0, 1000) + '...' : userContext
+    const limitedStateContext = stateContext.length > 500 ? stateContext.substring(0, 500) + '...' : stateContext
+    
+    // Handle OCR data with strict limits
+    const ocrSection = ocrData ? `OCR DATA: ${JSON.stringify(ocrData).substring(0, 1000)}${JSON.stringify(ocrData).length > 1000 ? '...' : ''}` : ''
+    
+    // Handle multi-file data with very strict limits
+    let multiFileSection = ''
+    if (multiFileData) {
+      const imagesSummary = multiFileData.images?.map((img: any) => 
+        `${img.fileName}: ${img.error || 'OCR data available'}`
+      ).join(', ') || ''
+      
+      const docsSummary = multiFileData.documents?.map((doc: any) => 
+        `${doc.fileName}: ${doc.error || doc.content?.substring(0, 50) + '...' || 'Content available'}`
+      ).join(', ') || ''
+      
+      multiFileSection = `FILES: Images: ${imagesSummary} Documents: ${docsSummary}`
+      if (multiFileSection.length > 1000) {
+        multiFileSection = multiFileSection.substring(0, 1000) + '...'
+      }
+    }
+
+    const systemPrompt = [baseSystemPrompt, limitedUserContext, limitedStateContext, ocrSection, multiFileSection]
+      .filter(Boolean)
+      .join('\n\n')
+
+    // Token counting and logging
+    const estimatedTokens = Math.ceil(systemPrompt.length / 4) + 
+                           Math.ceil(message.length / 4) + 
+                           (conversationContext.length * 50) // rough estimate per message
+    
+    console.log('🔍 TOKEN USAGE ESTIMATE:', {
+      systemPromptChars: systemPrompt.length,
+      systemPromptTokens: Math.ceil(systemPrompt.length / 4),
+      messageTokens: Math.ceil(message.length / 4),
+      conversationMessages: conversationContext.length,
+      totalEstimatedTokens: estimatedTokens,
+      isOverLimit: estimatedTokens > 150000
+    })
+
+    // Emergency fallback if still too large
+    if (estimatedTokens > 150000) {
+      console.log('⚠️ EMERGENCY: Using minimal prompt due to token limit')
+      const minimalPrompt = `You are Coach, a helpful AI fitness companion. Respond naturally to: "${message}"`
+      
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: minimalPrompt },
+          { role: "user", content: message }
+        ],
+        max_tokens: 400,
+        temperature: 0.7,
+      })
+      
+      const aiResponse = completion.choices[0]?.message?.content || "I'm having trouble processing that request right now."
+      
+      // Save minimal response
+      const { error: aiConversationError } = await supabase
+        .from('conversations')
+        .insert({
+          user_id: user.id,
+          message: aiResponse,
+          message_type: 'text',
+          metadata: { 
+            conversation_id: conversationId,
+            role: 'assistant',
+            emergency_mode: true
+          }
+        })
+
+      if (aiConversationError) {
+        console.error('Error saving AI response:', aiConversationError)
+      }
+
+      return NextResponse.json({ 
+        message: aiResponse,
+        conversationId: conversationData?.id,
+        emergencyMode: true
+      })
+    }
+
+    // Create OpenAI chat completion with reduced context
     console.log('🤖 Starting OpenAI completion...')
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
         {
           role: "system",
-          content: `You are Coach, an AI health and fitness companion with specialized expertise in personal training, weight loss, longevity, and holistic wellness. You're warm, encouraging, and genuinely interested in helping users achieve their health goals. You ask thoughtful questions, provide actionable insights, and build comprehensive training plans.
-
-${userContext}
-
-${stateContext}
-
-${ocrData ? `OCR DATA AVAILABLE: The user has uploaded a screenshot with workout/health data. Here is the extracted data: ${JSON.stringify(ocrData)}. IMPORTANT: This OCR data contains the user's actual workout information. You MUST acknowledge and analyze this data in your response. Do NOT say you don't see the data - it's right here in the OCR data. Process this data naturally and conversationally without mentioning the technical OCR process. Focus on the health insights and provide natural coaching responses based on the actual workout metrics.` : ''}
-
-${multiFileData ? `MULTI-FILE DATA AVAILABLE: The user has uploaded multiple files. Here is the processed content:
-
-IMAGES WITH OCR DATA:
-${multiFileData.images?.map((img: any) => `
-- ${img.fileName}: ${img.error ? `Error: ${img.error}` : `OCR Data: ${JSON.stringify(img.ocrData)}`}
-`).join('') || 'No images uploaded'}
-
-DOCUMENTS:
-${multiFileData.documents?.map((doc: any) => `
-- ${doc.fileName}: ${doc.error ? `Error: ${doc.error}` : `Content: ${doc.content?.substring(0, 500)}${doc.content?.length > 500 ? '...' : ''}`}
-`).join('') || 'No documents uploaded'}
-
-IMPORTANT: Process all this data naturally and provide comprehensive coaching insights based on ALL the uploaded content. Reference specific files when relevant and provide actionable advice based on the combined information.` : ''}
-
-SPECIALIZED EXPERTISE:
-- PERSONAL TRAINING: Design progressive, safe, and effective workout programs
-- WEIGHT LOSS: Provide evidence-based nutrition and exercise strategies
-- LONGEVITY: Focus on sustainable health practices for long-term wellness
-- HOLISTIC WELLNESS: Address physical, mental, and emotional health integration
-
-CONVERSATION STYLE:
-- Be conversational and engaging, like a supportive friend who's also a fitness expert
-- Ask follow-up questions to build complete context
-- Provide actionable insights based on the data you collect
-- Suggest specific activities, mobility work, and nutrition strategies
-- Reference previous conversations and build on established patterns
-- Use the user's name when appropriate and maintain a personal connection
-- Adapt your coaching style based on the user's energy, mood, and current situation
-
-ENGAGING QUESTION APPROACH:
-- ALWAYS end your responses with an engaging question or suggestion to deepen the conversation
-- Ask ONE thoughtful question that goes to the next level of depth
-- Questions should be natural and conversational, not interrogative
-- Examples: "What was the highlight of your hike today?", "How are you feeling about tomorrow's plans?", "What's on your mind for the rest of the day?"
-- Don't require answers - this is just to keep the conversation flowing naturally
-- Questions should relate to what you just discussed or suggest next steps
-
-COACHING APPROACH:
-- Start with broad questions and get more specific
-- Acknowledge the user's current state and provide context for why it matters
-- Suggest practical next steps based on their goals and current situation
-- Integrate activities into broader training plans
-- Provide encouragement and celebrate progress
-- Consider the user's age, fitness level, and health history when making recommendations
-
-MORNING CHECK-IN FLOW:
-When users start a conversation, guide them through a structured check-in:
-1. "Good morning! How are you feeling today? Let's do a quick check-in - what's your weight today?"
-2. "Got it. How's your energy level on a scale of 1-10?"
-3. "What's your mood like today?"
-4. "Any congestion, soreness, or other physical notes?"
-5. Provide a summary and actionable insights
-
-HISTORICAL CONTEXT HANDLING:
-- When users mention past events ("I forgot to tell you yesterday..."), acknowledge and integrate that information
-- Update your understanding of previous days based on new context
-- Maintain continuity in your coaching approach
-- Reference past conversations and patterns to provide personalized insights
-
-EXAMPLE RESPONSES:
-- "Perfect, thanks — here's your morning check-in summary for today: Weight: 254 lbs, Energy: 5/10. Given that you're feeling groggy and in vacation mode, your body is clearly in recovery reserves mode. That's actually fine heading into vacation — today should be about pacing, not pushing."
-- "Want me to suggest a light pre-golf mobility and warm-up flow so you're loose on the course?"
-- "Your training log has been updated with today's weight, sleep data, glucose notes, and BM update. The plan now centers around golf as your main activity, with a light recovery-focused morning."
-- "Ah, you mentioned that scenic drive yesterday - that's great! Outdoor activities like that can really help with stress reduction and mood. Let me update yesterday's journal with that context."
-
-Always be curious and supportive, building a rich understanding of the user's context while providing practical, actionable coaching. Remember that you're not just tracking data - you're building a relationship and helping them create sustainable, long-term health habits.`
+          content: systemPrompt
         },
         ...conversationContext,
         ...(ocrData ? [{
@@ -378,85 +386,45 @@ function buildConversationContext(conversationHistory: Array<{message: string, m
     return []
   }
 
-  // Reverse to get chronological order and limit to last 20 messages (10 exchanges)
-  const recentMessages = conversationHistory.slice(0, 20).reverse()
+  // Reverse to get chronological order and limit to last 4 messages (2 exchanges) for token savings
+  const recentMessages = conversationHistory.slice(0, 4).reverse()
   
   return recentMessages.map(msg => ({
     role: msg.metadata?.role === 'assistant' ? 'assistant' : 'user',
-    content: msg.message
+    content: msg.message.length > 500 ? msg.message.substring(0, 500) + '...' : msg.message
   }))
 }
 
-// Helper function to build enhanced user context with weekly data
+// Helper function to build enhanced user context with weekly data (MINIMAL VERSION)
 function buildEnhancedUserContext(weeklyCards: Array<{summary?: Record<string, unknown>, log_date: string}>, recentContext: Array<{data: Record<string, unknown>}>): string {
-  let context = ""
-
+  // Drastically reduced context to save tokens
   if (weeklyCards && weeklyCards.length > 0) {
-    // Add today's context (most recent card)
     const todayCard = weeklyCards[0]
     if (todayCard?.summary) {
       const summary = todayCard.summary
-      context += "TODAY'S CONTEXT:\n"
+      const metrics = []
       
-      if (summary.sleep_hours) context += `- Sleep: ${summary.sleep_hours} hours\n`
-      if (summary.sleep_quality) context += `- Sleep Quality: ${summary.sleep_quality}/10\n`
-      if (summary.mood) context += `- Mood: ${summary.mood}/10\n`
-      if (summary.energy) context += `- Energy: ${summary.energy}/10\n`
-      if (summary.stress) context += `- Stress: ${summary.stress}/10\n`
-      if (summary.readiness) context += `- Readiness: ${summary.readiness}/10\n`
-
-      // Add context data
-      if (summary.context_data) {
-        context += "\nRECENT CONTEXT:\n"
-        Object.entries(summary.context_data).forEach(([category, data]: [string, Record<string, unknown>]) => {
-          Object.entries(data).forEach(([key, value]: [string, unknown]) => {
-            if (value && typeof value === 'object' && value !== null && 'value' in value) {
-              const valueObj = value as { value: unknown }
-              context += `- ${category}.${key}: ${JSON.stringify(valueObj.value)}\n`
-            }
-          })
-        })
-      }
+      if (summary.sleep_hours) metrics.push(`Sleep: ${summary.sleep_hours}h`)
+      if (summary.energy) metrics.push(`Energy: ${summary.energy}/10`)
+      if (summary.mood) metrics.push(`Mood: ${summary.mood}/10`)
+      
+      return metrics.length > 0 ? `TODAY: ${metrics.join(', ')}` : ""
     }
-
-    // Note: Weekly trends are stored in database but not included in AI context
-    // to keep responses focused and avoid overwhelming the user
   }
-
-  // Add recent context from events
-  if (recentContext && recentContext.length > 0) {
-    context += "\nRECENT PATTERNS:\n"
-    recentContext.slice(0, 5).forEach(event => {
-      const data = event.data
-      if (data.context_category && data.context_key && data.context_value) {
-        context += `- ${data.context_category}.${data.context_key}: ${JSON.stringify(data.context_value)}\n`
-      }
-    })
-  }
-
-  return context || "No previous context available."
+  
+  return ""
 }
 
 // Note: Weekly trend analysis is now handled by PostgreSQL functions
 // for better performance and automatic updates
 
-// Helper function to build conversation state context
+// Helper function to build conversation state context (MINIMAL VERSION)
 function buildStateContext(conversationState: string, checkinProgress: Record<string, unknown>): string {
-  let context = ""
-  
-  if (conversationState) {
-    context += `CURRENT CONVERSATION STATE: ${conversationState}\n`
+  // Minimal state context to save tokens
+  if (conversationState && conversationState !== 'idle') {
+    return `STATE: ${conversationState}`
   }
-  
-  if (checkinProgress) {
-    context += "CHECK-IN PROGRESS:\n"
-    if (checkinProgress.weight) context += `- Weight: ${checkinProgress.weight}\n`
-    if (checkinProgress.energy) context += `- Energy: ${checkinProgress.energy}/10\n`
-    if (checkinProgress.mood) context += `- Mood: ${checkinProgress.mood}\n`
-    if (checkinProgress.physical_notes) context += `- Physical Notes: ${checkinProgress.physical_notes}\n`
-  }
-  
-  return context
+  return ""
 }
 
 async function parseConversationForRichContext(message: string): Promise<ParsedConversation> {

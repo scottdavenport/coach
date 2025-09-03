@@ -22,10 +22,11 @@ export async function processFileContentClient(file: File): Promise<FileProcessi
     // Handle text files
     if (mimeType === 'text/plain' || mimeType === 'text/markdown') {
       const content = await file.text();
+      const truncatedContent = content.length > 2000 ? content.substring(0, 2000) + '...' : content;
       return {
         success: true,
         fileId,
-        content: `Text Document\n\nContent:\n${content}`,
+        content: `Text Document\n\nContent:\n${truncatedContent}`,
         metadata: {
           wordCount: content.split(/\s+/).length
         }
@@ -36,23 +37,24 @@ export async function processFileContentClient(file: File): Promise<FileProcessi
     if (mimeType === 'text/csv') {
       const text = await file.text();
       try {
-        // Simple CSV parsing for client-side
+        // Simple CSV parsing for client-side (TRUNCATED for tokens)
         const lines = text.split('\n').filter(line => line.trim());
         const headers = lines[0]?.split(',').map(h => h.trim().replace(/"/g, ''));
-        const dataRows = lines.slice(1, 11); // Show first 10 rows
+        const dataRows = lines.slice(1, 4); // Show only first 3 rows
 
-        let content = `CSV Data (${lines.length - 1} rows, ${headers?.length || 0} columns)\n\n`;
+        let content = `CSV (${lines.length - 1} rows, ${headers?.length || 0} cols)\n`;
         if (headers) {
-          content += `Headers: ${headers.join(', ')}\n\n`;
-          content += `First ${dataRows.length} rows:\n`;
+          content += `Headers: ${headers.slice(0, 5).join(', ')}${headers.length > 5 ? '...' : ''}\n`;
+          content += `Sample:\n`;
           
           dataRows.forEach((row, index) => {
             const values = row.split(',').map(v => v.trim().replace(/"/g, ''));
-            content += `Row ${index + 1}: ${values.join(' | ')}\n`;
+            const rowStr = values.slice(0, 3).join(' | ') + (values.length > 3 ? '...' : '');
+            content += `${index + 1}: ${rowStr}\n`;
           });
 
-          if (lines.length > 11) {
-            content += `\n... and ${lines.length - 11} more rows`;
+          if (lines.length > 4) {
+            content += `... +${lines.length - 4} rows`;
           }
         }
 
