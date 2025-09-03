@@ -28,7 +28,33 @@ export function DashboardHeader({ userId, selectedDate, onDateChange }: Dashboar
   }
 
   const handleResetUserData = async () => {
-    if (!confirm('⚠️ This will permanently delete ALL your conversation history, patterns, and personal data. This action cannot be undone. Are you sure you want to continue?')) {
+    // Enhanced confirmation dialog with more specific warnings
+    const confirmMessage = `⚠️ DANGER: DATA RESET CONFIRMATION ⚠️
+
+This will permanently delete ALL of your data EXCEPT the scott@thinkcode.com user account:
+
+📋 Data that will be DELETED:
+• All conversation history and insights
+• All daily journal entries
+• All workout activities and goals
+• All health metrics and patterns
+• All file uploads and OCR data
+• All weekly/monthly summaries
+• All Oura integration data
+• All user preferences
+
+🔒 Data that will be PRESERVED:
+• The scott@thinkcode.com user account
+• Core metric categories and standard metrics
+
+⚠️ THIS ACTION CANNOT BE UNDONE ⚠️
+
+Type "RESET" to confirm you want to proceed:`
+
+    const userInput = prompt(confirmMessage)
+    
+    if (userInput !== 'RESET') {
+      alert('Reset cancelled. No data was modified.')
       return
     }
 
@@ -36,35 +62,89 @@ export function DashboardHeader({ userId, selectedDate, onDateChange }: Dashboar
     try {
       const supabase = createClient()
       
-      console.log('🧹 Starting user data reset...')
+      console.log('🧹 Starting comprehensive user data reset...')
       
-      // Clear conversation insights
-      const { error: insightsError } = await supabase
-        .from('conversation_insights')
-        .delete()
-        .eq('user_id', userId)
-      
-      if (insightsError) {
-        console.error('Error clearing conversation insights:', insightsError)
-      } else {
-        console.log('✅ Cleared conversation insights')
+      // Get the user's email to check if they're scott@thinkcode.com
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
+      if (userError || !user) {
+        throw new Error('Unable to verify user identity')
       }
 
-      // Clear any other user-specific data tables
-      // Add more tables here as needed
+      // Prevent scott@thinkcode.com from being reset
+      if (user.email === 'scott@thinkcode.com') {
+        alert('❌ Cannot reset data for scott@thinkcode.com user account. This account is protected.')
+        return
+      }
+
+      // Also check if there's a users table entry to get the user ID for tables that reference users(id)
+      const { data: userProfile } = await supabase
+        .from('users')
+        .select('id, email')
+        .eq('id', userId)
+        .single()
       
-      // Clear pattern recognition cache by refreshing the page
-      console.log('🔄 Refreshing page to clear all cached data...')
+      // Double-check protection for scott@thinkcode.com in users table as well
+      if (userProfile?.email === 'scott@thinkcode.com') {
+        alert('❌ Cannot reset data for scott@thinkcode.com user account. This account is protected.')
+        return
+      }
+
+      // List of all user-specific tables to clear (excluding scott@thinkcode.com)
+      const tablesToReset = [
+        'conversation_insights',
+        'conversations', 
+        'events',
+        'user_uploads',
+        'oura_integrations',
+        'oura_data',
+        'ocr_feedback',
+        'weekly_summaries',
+        'monthly_trends',
+        'daily_journal',
+        'daily_goals',
+        'daily_activities',
+        'user_daily_metrics',
+        'user_metric_preferences'
+      ]
+
+      let successCount = 0
+      let errorCount = 0
+
+      // Reset each table
+      for (const tableName of tablesToReset) {
+        try {
+          const { error } = await supabase
+            .from(tableName)
+            .delete()
+            .eq('user_id', userId)
+          
+          if (error) {
+            console.error(`Error clearing ${tableName}:`, error)
+            errorCount++
+          } else {
+            console.log(`✅ Cleared ${tableName}`)
+            successCount++
+          }
+        } catch (err) {
+          console.error(`Failed to clear ${tableName}:`, err)
+          errorCount++
+        }
+      }
+
+      console.log(`🔄 Reset complete: ${successCount} tables cleared, ${errorCount} errors`)
       
-      // Show success message
-      alert('✅ User data reset complete! The page will refresh to clear all cached data.')
+      if (errorCount > 0) {
+        alert(`⚠️ Data reset completed with ${errorCount} errors. Check console for details. The page will refresh to clear cached data.`)
+      } else {
+        alert('✅ User data reset complete! The page will refresh to clear all cached data.')
+      }
       
-      // Refresh the page to clear all cached data
+      // Refresh the page to clear all cached data and return to default state
       window.location.reload()
       
     } catch (error) {
       console.error('Error resetting user data:', error)
-      alert('❌ Error resetting user data. Please try again.')
+      alert('❌ Error resetting user data. Please try again or check the console for details.')
     } finally {
       setIsResetting(false)
     }
