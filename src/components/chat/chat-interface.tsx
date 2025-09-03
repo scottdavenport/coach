@@ -170,12 +170,13 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
       
       setMessages(prev => [...prev, aiMessage])
 
-      // Automatically store data if we have parsed data (no review needed)
-      if (data.parsedData && (data.parsedData.health_events.length > 0 || data.parsedData.context_data.length > 0)) {
-        console.log('🔍 Attempting to store conversation data:', data.parsedData)
-        await storeDataAutomatically(data.parsedData)
+      // Check if we have conversation insights
+      if (data.parsedData && (data.parsedData.has_health_data || data.parsedData.has_activity_data || data.parsedData.has_mood_data || data.parsedData.has_nutrition_data || data.parsedData.has_sleep_data || data.parsedData.has_workout_data)) {
+        console.log('🔍 Conversation insights detected:', data.parsedData)
+        // The backend now handles storing conversation insights automatically
+        // No need for complex frontend data storage logic
       } else {
-        console.log('🔍 No parsed data to store or data is empty')
+        console.log('🔍 No conversation insights to store')
       }
 
     } catch (error) {
@@ -225,18 +226,8 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
         console.log('OCR Result:', ocrResult)
         
         if (ocrResult.success) {
-          // Store the structured data first
-          if (ocrResult.structuredData) {
-            console.log('🔍 Storing structured OCR data:', ocrResult.structuredData);
-            try {
-              await storeOcrData(ocrResult.structuredData, userId);
-              console.log('✅ OCR data stored successfully');
-            } catch (error) {
-              console.error('❌ Failed to store OCR data:', error);
-            }
-          } else {
-            console.log('🔍 No structured data in OCR result')
-          }
+          // The backend now handles storing conversation insights automatically
+          console.log('🔍 OCR data processed:', ocrResult.structuredData);
           
           // Send to OpenAI for natural conversational response
           const aiResponse = await sendToAIWithOcrData(ocrResult.structuredData, contextText, pendingFile.fileName)
@@ -357,8 +348,8 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
       // Extract corrected values from user message
       const correctedData = extractCorrections(userMessage, correction.originalData)
       
-      // Update the database with corrected data
-      await storeOcrData(correctedData, userId)
+      // The backend now handles storing conversation insights automatically
+      console.log('🔍 Data correction processed:', correctedData)
       
       // Store training data (original OCR vs user correction)
       await storeTrainingData(correction.originalData, correctedData, userMessage)
@@ -558,33 +549,19 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
 
 
 
-  // Send error to OpenAI for natural conversational response
+  // Handle errors gracefully without calling the AI API
   const sendErrorToAI = async (errorType: string, context: string = '') => {
-    try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          message: `I encountered an error: ${errorType}. ${context} Please give me a natural, conversational response to apologize to the user and suggest what they can do. Be friendly and helpful, but don't be robotic or templated.`,
-          conversationId: Date.now().toString(),
-          conversationState: 'error',
-          checkinProgress: {}
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error(`Failed to get AI response: ${response.status}`)
-      }
-
-      const data = await response.json()
-      return data.message || "I'm having some technical difficulties right now. Could you try again in a moment?"
-    } catch (error) {
-      console.error('Error getting AI response for error:', error)
-      // Minimal fallback if AI completely fails
-      return "I'm having some technical difficulties right now. Could you try again in a moment?"
+    // Provide natural, friendly error messages directly
+    const errorMessages = {
+      'connection issue': "I'm having trouble connecting right now. Could you try sending your message again? Sometimes a quick refresh helps clear up connection issues.",
+      'OCR processing failure': "I had trouble processing that file. Could you try uploading it again? Make sure the image is clear and readable.",
+      'file processing issue': "I'm having trouble with that file right now. Could you try again in a moment?",
+      'data update issue': "I had trouble updating that data. Could you try again?",
+      'correction response generation': "I've updated your data, but I'm having trouble generating a response right now. The changes have been saved though!",
+      'OCR response generation': "I processed your health data, but I'm having trouble responding right now. Your data has been saved though!"
     }
+    
+    return errorMessages[errorType] || "I'm having some technical difficulties right now. Could you try again in a moment?"
   }
 
   // Send correction to OpenAI for natural conversational response
@@ -677,38 +654,19 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
   // Send OCR data to OpenAI for natural conversational response
   const sendToAIWithOcrData = async (structuredData: any, context: string, fileName: string) => {
     try {
-      // Send the RAW OCR text to the AI for dynamic parsing
-      const rawOcrText = structuredData.rawOcrText || 'No OCR text available'
-      
-      // Create a summary of any regex-detected data as fallback
-      const detectedMetrics = []
-      if (structuredData.readiness_score) detectedMetrics.push(`readiness score: ${structuredData.readiness_score}`)
-      if (structuredData.sleepScore) detectedMetrics.push(`sleep score: ${structuredData.sleepScore}`)
-      if (structuredData.restingHeartRate) detectedMetrics.push(`resting heart rate: ${structuredData.restingHeartRate} bpm`)
-      if (structuredData.heartRateVariability) detectedMetrics.push(`HRV: ${structuredData.heartRateVariability} ms`)
-      if (structuredData.bodyTemperature) detectedMetrics.push(`body temperature: ${structuredData.bodyTemperature}°F`)
-      if (structuredData.respiratoryRate) detectedMetrics.push(`respiratory rate: ${structuredData.respiratoryRate}/min`)
-      if (structuredData.totalSleep) detectedMetrics.push(`total sleep: ${Math.floor(structuredData.totalSleep / 60)}h ${structuredData.totalSleep % 60}m`)
-      if (structuredData.timeInBed) detectedMetrics.push(`time in bed: ${Math.floor(structuredData.timeInBed / 60)}h ${structuredData.timeInBed % 60}m`)
-      if (structuredData.sleepEfficiency) detectedMetrics.push(`sleep efficiency: ${structuredData.sleepEfficiency}%`)
-      if (structuredData.remSleep) detectedMetrics.push(`REM sleep: ${Math.floor(structuredData.remSleep / 60)}h ${structuredData.remSleep % 60}m`)
-      if (structuredData.deepSleep) detectedMetrics.push(`deep sleep: ${Math.floor(structuredData.deepSleep / 60)}h ${structuredData.deepSleep % 60}m`)
-      if (structuredData.steps) detectedMetrics.push(`steps: ${structuredData.steps}`)
-      if (structuredData.calories) detectedMetrics.push(`calories: ${structuredData.calories}`)
-      if (structuredData.glucose) detectedMetrics.push(`glucose: ${structuredData.glucose} mg/dL`)
-
-      const dataSummary = detectedMetrics.length > 0 ? detectedMetrics.join(', ') : 'some health data'
-      
+      // Process OCR data directly without creating fake user messages
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          message: `I just uploaded a screenshot (${fileName}) and the OCR extracted this raw text: "${rawOcrText}". ${context ? `Context: ${context}` : ''} Please analyze this OCR text and extract ALL the health metrics you can find. Don't just look for the ones I've already detected (${dataSummary}) - look for everything! Extract metrics like oxygen saturation, breathing regularity, average heart rate, lowest heart rate, sleep stages, etc. Give me a natural, conversational response about this health data. Don't be robotic or templated - just talk to me like a friend would about my health data.`,
+          message: context || 'I uploaded a screenshot of my workout data',
           conversationId: Date.now().toString(),
           conversationState: 'ocr_analysis',
-          checkinProgress: {}
+          checkinProgress: {},
+          // Pass OCR data separately so it can be processed without fake messages
+          ocrData: structuredData
         }),
       })
 
@@ -765,46 +723,9 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
     }
   }
 
-  const storeDataAutomatically = async (parsedData: any) => {
-    try {
-      console.log('🔍 storeDataAutomatically called with:', parsedData)
-      
-      const requestBody = {
-        events: parsedData.health_events.filter((e: any) => e.should_store),
-        contextData: parsedData.context_data.filter((c: any) => c.should_store),
-        dailySummary: parsedData.daily_summary,
-        conversationId: Date.now().toString(),
-      }
-      
-      console.log('🔍 Request body:', requestBody)
-      
-      const response = await fetch('/api/health/store', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
-      })
-
-      console.log('🔍 Response status:', response.status)
-      
-      if (!response.ok) {
-        const errorText = await response.text()
-        console.error('Failed to store data automatically:', response.status, errorText)
-      } else {
-        const result = await response.json()
-        console.log('✅ Data stored successfully:', result)
-        // Trigger daily card refresh via callback
-        if (onDataStored) {
-          setTimeout(() => {
-            onDataStored()
-          }, 500) // Small delay to ensure database write is complete
-        }
-      }
-    } catch (error) {
-      console.error('❌ Error storing data automatically:', error)
-    }
-  }
+  // REMOVED: storeDataAutomatically function - now handled by backend
+  // REMOVED: storeOcrData function - now handled by backend
+  // REMOVED: mapOcrToStructuredMetrics function - no longer needed
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -817,7 +738,7 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
     const file = event.target.files?.[0]
     if (!file) return
 
-    // Show uploading message
+    // Show uploading message - declare outside try block so it's accessible in catch
     const uploadingMessage = {
       id: Date.now(),
       content: `📤 Uploading: ${file.name}...`,
@@ -883,7 +804,7 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
       console.error('File upload error:', error)
       // Update message to show error
       setMessages(prev => prev.map(msg => 
-        msg.id === uploadingMessage?.id 
+        msg.id === uploadingMessage.id 
           ? { ...msg, content: `❌ Upload failed: ${file.name}`, isUploading: false }
           : msg
       ))
@@ -931,142 +852,8 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
     }
   }
 
-  // Store structured OCR data in the new structured metrics system
-  const storeOcrData = async (structuredData: any, userId: string) => {
-    try {
-      console.log('🔍 storeOcrData called with:', structuredData)
-      const today = new Date().toISOString().split('T')[0] // YYYY-MM-DD format
-      
-      // Map OCR data to our structured metrics using the mapping function
-      const mappedMetrics = await mapOcrToStructuredMetrics(structuredData)
-      console.log('🔍 Mapped metrics:', mappedMetrics)
-      
-      // Store using the new structured metrics API
-      console.log('🔍 Sending request to /api/metrics/daily with:', { date: today, metrics: mappedMetrics })
-      
-      const response = await fetch('/api/metrics/daily', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          date: today,
-          metrics: mappedMetrics
-        }),
-      })
-
-      console.log('🔍 Response status:', response.status)
-      
-      if (!response.ok) {
-        const errorData = await response.json()
-        console.error('❌ Failed to store OCR data in structured system:', errorData)
-        throw new Error(`Failed to store data: ${errorData.error || 'Unknown error'}`)
-      }
-
-      const result = await response.json()
-      console.log('✅ OCR data stored successfully in structured system:', result)
-      
-      // Trigger daily card refresh
-      if (onDataStored) {
-        console.log('Triggering daily card refresh...')
-        setTimeout(() => {
-          onDataStored()
-        }, 1000) // Increased delay to ensure database write completes
-      }
-      
-      return result
-    } catch (error) {
-      console.error('Failed to store OCR data:', error)
-      throw error
-    }
-  }
-
-  // Helper function to map OCR data to structured metrics
-  const mapOcrToStructuredMetrics = async (ocrData: any) => {
-    const supabase = createClient()
-    const today = new Date().toISOString().split('T')[0]
-    
-    console.log('🔍 mapOcrToStructuredMetrics called with:', ocrData)
-    
-    // Handle different OCR data formats
-    let mappings = {}
-    
-    // If ocrData has context_data (from conversation parsing)
-    if (ocrData.context_data && Array.isArray(ocrData.context_data)) {
-      console.log('🔍 Processing context_data format')
-      ocrData.context_data.forEach((item: any) => {
-        if (item.should_store) {
-          mappings[item.key] = item.value
-        }
-      })
-    }
-    // If ocrData has daily_summary (from conversation parsing)
-    else if (ocrData.daily_summary) {
-      console.log('🔍 Processing daily_summary format')
-      mappings = { ...ocrData.daily_summary }
-    }
-    // If ocrData is a flat object (direct OCR result)
-    else {
-      console.log('🔍 Processing flat object format')
-      mappings = {
-        // Sleep metrics
-        'readiness_score': ocrData.readiness || ocrData.readiness_score,
-        'sleep_score': ocrData.sleepScore || ocrData.sleep,
-        'sleep_duration': ocrData.totalSleep,
-        'time_in_bed': ocrData.timeInBed,
-        'sleep_efficiency': ocrData.sleepEfficiency,
-        'rem_sleep': ocrData.remSleep,
-        'deep_sleep': ocrData.deepSleep,
-        
-        // Health metrics
-        'resting_heart_rate': ocrData.restingHeartRate || ocrData.heartRate,
-        'heart_rate_variability': ocrData.heartRateVariability,
-        'body_temperature': ocrData.bodyTemperature,
-        'glucose': ocrData.glucose,
-        
-        // Activity metrics
-        'steps': ocrData.steps,
-        'calories_burned': ocrData.calories,
-        
-        // Wellness metrics
-        'energy': ocrData.energy,
-        'mood': ocrData.mood,
-        'stress': ocrData.stress
-      }
-    }
-    
-    console.log('🔍 Final mappings:', mappings)
-    
-    const metrics = []
-    
-    // Get metric IDs for each metric key
-    for (const [metricKey, value] of Object.entries(mappings)) {
-      if (value !== null && value !== undefined) {
-        // Get the metric ID from the database
-        const { data: metricData, error } = await supabase
-          .from('standard_metrics')
-          .select('id')
-          .eq('metric_key', metricKey)
-          .single()
-        
-        if (metricData) {
-          metrics.push({
-            metric_id: metricData.id,
-            metric_date: today,
-            metric_value: typeof value === 'number' ? value : null,
-            text_value: typeof value === 'string' ? value : null,
-            boolean_value: typeof value === 'boolean' ? value : null,
-            source: 'ocr',
-            confidence: 0.9 // High confidence for OCR data
-          })
-        } else {
-          console.warn(`Metric key not found: ${metricKey}`)
-        }
-      }
-    }
-    
-    return metrics
-  }
+  // REMOVED: Complex data storage functions - now handled by backend
+  // The backend automatically stores conversation insights in a simplified way
 
   return (
     <div className="flex flex-col h-full">

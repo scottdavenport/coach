@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { mapToStructuredMetrics } from '@/lib/metric-mapping'
 
 export async function POST(request: NextRequest) {
@@ -54,6 +54,12 @@ export async function POST(request: NextRequest) {
     const today = new Date().toISOString().split('T')[0]
     const storedMetrics = []
     const storedJournalEntries = []
+    
+    // Use service client for data storage operations
+    const serviceSupabase = await createServiceClient()
+    console.log('🔍 Service client created:', !!serviceSupabase)
+    console.log('🔍 Service client URL:', process.env.NEXT_PUBLIC_SUPABASE_URL)
+    console.log('🔍 Service role key exists:', !!process.env.SUPABASE_SERVICE_ROLE_KEY)
 
     // Store metrics using new structured system
     if (dailySummary) {
@@ -61,7 +67,7 @@ export async function POST(request: NextRequest) {
       const parsedMetrics = mapToStructuredMetrics(dailySummary, 'conversation')
       
       // Get standard metrics to find metric IDs
-      const { data: standardMetrics, error: metricsError } = await supabase
+      const { data: standardMetrics, error: metricsError } = await serviceSupabase
         .from('standard_metrics')
         .select('id, metric_key')
       
@@ -76,7 +82,7 @@ export async function POST(request: NextRequest) {
           const metricId = metricIdMap.get(parsedMetric.metric)
           
           if (metricId) {
-            const { data: metricData, error: metricError } = await supabase
+            const { data: metricData, error: metricError } = await serviceSupabase
               .from('user_daily_metrics')
               .upsert({
                 user_id: user.id,
@@ -124,7 +130,7 @@ export async function POST(request: NextRequest) {
           category = 'health'
         }
 
-        const { data: journalData, error: journalError } = await supabase
+        const { data: journalData, error: journalError } = await serviceSupabase
           .from('daily_journal')
           .insert({
             user_id: user.id,
@@ -150,15 +156,15 @@ export async function POST(request: NextRequest) {
     const storedActivities = []
     if (events && events.length > 0) {
       for (const event of events) {
-        if (event.event_type === 'workout') {
-          const { data: activityData, error: activityError } = await supabase
+        if (event.event_type === 'workout' || event.event_type === 'activity') {
+          const { data: activityData, error: activityError } = await serviceSupabase
             .from('daily_activities')
             .insert({
               user_id: user.id,
               activity_date: today,
-              activity_type: 'workout',
+              activity_type: event.data.activity_type || 'workout',
               status: 'completed',
-              title: event.data.workout_type || 'Workout',
+              title: event.data.workout_type || event.data.activity_type || 'Workout',
               description: event.data.description || '',
               completed_data: event.data,
               source: 'conversation',
