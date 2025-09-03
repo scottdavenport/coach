@@ -868,163 +868,28 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
     event.target.value = ''
   }
 
-  const uploadFilesInBackground = useCallback(async (attachments: FileAttachment[]) => {
-    const supabase = createClient()
-    
-    // Batch update all files to uploading status at once (non-urgent)
-    startTransition(() => {
-      setAttachedFiles(prev => prev.map(file => 
-        attachments.find(att => att.id === file.id) 
-          ? { ...file, uploadStatus: 'uploading' }
-          : file
-      ))
-    })
-    
-    // Process files one by one to avoid overwhelming the system
-    for (const attachment of attachments) {
 
-      try {
-        const fileExt = attachment.file.name.split('.').pop()
-        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`
-        const filePath = `${userId}/uploads/${fileName}`
-
-        // Try with correct MIME type first
-        const correctedFile = createFileWithCorrectType(attachment.file)
-        let uploadError = null
-
-        const { error } = await supabase.storage
-          .from('user-uploads')
-          .upload(filePath, correctedFile, {
-            cacheControl: '3600',
-            upsert: false
-          })
-
-        uploadError = error
-
-        // If MIME type still not supported, try with fallback
-        if (uploadError?.message?.includes('mime type') && uploadError?.message?.includes('not supported')) {
-          console.log(`⚠️ Trying fallback MIME type for ${attachment.fileName}`)
-          const fallbackType = getFallbackMimeType(correctedFile.type)
-          const fallbackFile = new File([correctedFile], correctedFile.name, {
-            type: fallbackType,
-            lastModified: correctedFile.lastModified
-          })
-
-          const { error: fallbackError } = await supabase.storage
-            .from('user-uploads')
-            .upload(filePath, fallbackFile, {
-              cacheControl: '3600',
-              upsert: false
-            })
-
-          uploadError = fallbackError
-        }
-
-        if (uploadError) {
-          console.error('Upload error:', uploadError)
-          let errorMessage = 'Upload failed'
-          
-          if (uploadError.message?.includes('mime type') && uploadError.message?.includes('not supported')) {
-            errorMessage = `File type not supported: ${attachment.file.type}`
-          } else if (uploadError.message?.includes('size')) {
-            errorMessage = 'File too large (max 10MB)'
-          }
-          
-          // Use startTransition for non-urgent error updates
-          startTransition(() => {
-            setAttachedFiles(prev => prev.map(file => 
-              file.id === attachment.id 
-                ? { ...file, uploadStatus: 'error', errorMessage }
-                : file
-            ))
-          })
-          continue
-        }
-
-        // Get signed URL
-        const { data: { signedUrl } } = await supabase.storage
-          .from('user-uploads')
-          .createSignedUrl(filePath, 3600)
-
-        if (!signedUrl) {
-          throw new Error('Failed to create signed URL')
-        }
-
-        // Use startTransition to mark as non-urgent update
-        startTransition(() => {
-          setAttachedFiles(prev => prev.map(file => 
-            file.id === attachment.id 
-              ? { ...file, uploadStatus: 'uploaded', fileUrl: signedUrl }
-              : file
-          ))
-        })
-
-        // Small delay to prevent overwhelming the UI and allow typing
-        await new Promise(resolve => setTimeout(resolve, 50))
-
-      } catch (error) {
-        console.error('File upload error:', error)
-        startTransition(() => {
-          setAttachedFiles(prev => prev.map(file => 
-            file.id === attachment.id 
-              ? { ...file, uploadStatus: 'error', errorMessage: 'Upload failed' }
-              : file
-          ))
-        })
-      }
-    }
-  }, [userId])
 
   const handleMultipleFileUpload = useCallback(async (files: File[]) => {
-    // Validate files
-    const existingCount = attachedFiles.length
-    const totalCount = existingCount + files.length
-    
-    if (totalCount > 10) {
+    try {
+      // File manager handles validation and uploads automatically
+      await fileManager.addFiles(files)
+      setIsUploadMenuOpen(false)
+    } catch (error) {
+      // Show error message if validation fails
       const errorMessage = {
         id: Date.now(),
-        content: `❌ Too many files: ${totalCount} total. Maximum is 10 files.`,
+        content: `❌ ${error instanceof Error ? error.message : 'File upload failed'}`,
         role: 'assistant',
         timestamp: new Date(),
       }
       setMessages(prev => [...prev, errorMessage])
-      return
     }
-
-    // Validate each file
-    const validationResult = FileProcessor.validateFileList(files)
-    if (!validationResult.isValid) {
-      const errorMessage = {
-        id: Date.now(),
-        content: `❌ ${validationResult.error}`,
-        role: 'assistant',
-        timestamp: new Date(),
-      }
-      setMessages(prev => [...prev, errorMessage])
-      return
-    }
-
-    // Create file attachments with pending status (don't start uploading immediately)
-    const newAttachments: FileAttachment[] = files.map(file => ({
-      id: `${Date.now()}-${Math.random().toString(36).substring(2)}`,
-      file,
-      fileName: file.name,
-      fileSize: file.size,
-      fileType: file.type as SupportedFileType,
-      uploadStatus: 'pending'
-    }))
-
-    // Add to attached files list immediately for UI responsiveness
-    setAttachedFiles(prev => [...prev, ...newAttachments])
-    setIsUploadMenuOpen(false)
-
-    // Process uploads in background without blocking UI
-    uploadFilesInBackground(newAttachments)
-  }, [attachedFiles.length, userId, uploadFilesInBackground])
+  }, [fileManager])
 
   const handleRemoveFile = useCallback((fileId: string) => {
-    setAttachedFiles(prev => prev.filter(file => file.id !== fileId))
-  }, [])
+    fileManager.removeFile(fileId)
+  }, [fileManager])
 
   const handleFileSelectType = useCallback((type: 'all' | 'images' | 'documents') => {
     if (fileInputRef.current) {
