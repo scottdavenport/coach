@@ -816,7 +816,7 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
       e.preventDefault()
       handleSendMessage()
     }
-  }, [handleSendMessage])
+  }, [])
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || [])
@@ -1114,15 +1114,17 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
               )}
             </div>
 
-            {/* Text Input - Optimized */}
+            {/* Text Input - Use Emergency Mode Input for Performance */}
             <div className="flex-1">
-              <OptimizedInput
+              <textarea
                 value={inputValue}
-                onChange={setInputValue}
+                onChange={(e) => setInputValue(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder={fileManager.files.length > 0 ? "Add context about these files..." : "Ask anything..."}
+                className="w-full bg-card border border-line rounded-xl px-4 py-3 text-text placeholder:text-muted resize-none focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/30"
+                rows={1}
+                style={{ minHeight: '44px', maxHeight: '120px' }}
                 disabled={isLoading}
-                hasFiles={fileManager.files.length > 0}
               />
             </div>
 
