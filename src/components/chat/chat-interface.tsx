@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, startTransition } from 'react'
 import { Mic, Send, Plus, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ChatMessage } from './chat-message'
@@ -110,7 +110,7 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
     }
   }, [pendingQuestions, isLoading, onQuestionAsked])
 
-  const handleSendMessage = async () => {
+  const handleSendMessage = useCallback(async () => {
     if ((!inputValue.trim() && attachedFiles.length === 0) || isLoading) return
 
     // If we have attached files, process them with context
@@ -199,9 +199,9 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [inputValue, attachedFiles, isLoading, conversationState, checkinProgress, messages, userId, onDataStored])
 
-  const handleFilesWithContext = async () => {
+  const handleFilesWithContext = useCallback(async () => {
     if (attachedFiles.length === 0) return
 
     setIsLoading(true)
@@ -349,7 +349,7 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [attachedFiles, inputValue, userId])
 
   // Detect if user is correcting OCR data
   const detectOcrCorrection = (message: string, messageHistory: any[]) => {
@@ -805,12 +805,12 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
   // REMOVED: storeOcrData function - now handled by backend
   // REMOVED: mapOcrToStructuredMetrics function - no longer needed
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       handleSendMessage()
     }
-  }
+  }, [handleSendMessage])
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || [])
@@ -820,7 +820,7 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
     event.target.value = ''
   }
 
-  const handleMultipleFileUpload = async (files: File[]) => {
+  const handleMultipleFileUpload = useCallback(async (files: File[]) => {
     // Validate files
     const existingCount = attachedFiles.length
     const totalCount = existingCount + files.length
@@ -849,24 +849,39 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
       return
     }
 
-    // Create file attachments with uploading status
+    // Create file attachments with pending status (don't start uploading immediately)
     const newAttachments: FileAttachment[] = files.map(file => ({
       id: `${Date.now()}-${Math.random().toString(36).substring(2)}`,
       file,
       fileName: file.name,
       fileSize: file.size,
       fileType: file.type as SupportedFileType,
-      uploadStatus: 'uploading'
+      uploadStatus: 'pending'
     }))
 
-    // Add to attached files list
+    // Add to attached files list immediately for UI responsiveness
     setAttachedFiles(prev => [...prev, ...newAttachments])
     setIsUploadMenuOpen(false)
 
-    // Upload files to Supabase Storage
+    // Process uploads in background without blocking UI
+    uploadFilesInBackground(newAttachments)
+  }, [attachedFiles.length, userId, uploadFilesInBackground])
+
+  const uploadFilesInBackground = useCallback(async (attachments: FileAttachment[]) => {
     const supabase = createClient()
     
-    for (const attachment of newAttachments) {
+    // Batch update all files to uploading status at once (non-urgent)
+    startTransition(() => {
+      setAttachedFiles(prev => prev.map(file => 
+        attachments.find(att => att.id === file.id) 
+          ? { ...file, uploadStatus: 'uploading' }
+          : file
+      ))
+    })
+    
+    // Process files one by one to avoid overwhelming the system
+    for (const attachment of attachments) {
+
       try {
         const fileExt = attachment.file.name.split('.').pop()
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`
@@ -908,25 +923,24 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
           console.error('Upload error:', uploadError)
           let errorMessage = 'Upload failed'
           
-          // Provide specific error messages for common issues
           if (uploadError.message?.includes('mime type') && uploadError.message?.includes('not supported')) {
             errorMessage = `File type not supported: ${attachment.file.type}`
           } else if (uploadError.message?.includes('size')) {
             errorMessage = 'File too large (max 10MB)'
           }
           
-          // Update attachment status to error
-          setAttachedFiles(prev => prev.map(file => 
-            file.id === attachment.id 
-              ? { ...file, uploadStatus: 'error', errorMessage }
-              : file
-          ))
+          // Use startTransition for non-urgent error updates
+          startTransition(() => {
+            setAttachedFiles(prev => prev.map(file => 
+              file.id === attachment.id 
+                ? { ...file, uploadStatus: 'error', errorMessage }
+                : file
+            ))
+          })
           continue
         }
 
-
-
-        // Get signed URL for private bucket (expires in 1 hour)
+        // Get signed URL
         const { data: { signedUrl } } = await supabase.storage
           .from('user-uploads')
           .createSignedUrl(filePath, 3600)
@@ -935,29 +949,36 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
           throw new Error('Failed to create signed URL')
         }
 
-        // Update attachment with successful upload
-        setAttachedFiles(prev => prev.map(file => 
-          file.id === attachment.id 
-            ? { ...file, uploadStatus: 'uploaded', fileUrl: signedUrl }
-            : file
-        ))
+        // Use startTransition to mark as non-urgent update
+        startTransition(() => {
+          setAttachedFiles(prev => prev.map(file => 
+            file.id === attachment.id 
+              ? { ...file, uploadStatus: 'uploaded', fileUrl: signedUrl }
+              : file
+          ))
+        })
+
+        // Small delay to prevent overwhelming the UI and allow typing
+        await new Promise(resolve => setTimeout(resolve, 50))
 
       } catch (error) {
         console.error('File upload error:', error)
-        setAttachedFiles(prev => prev.map(file => 
-          file.id === attachment.id 
-            ? { ...file, uploadStatus: 'error', errorMessage: 'Upload failed' }
-            : file
-        ))
+        startTransition(() => {
+          setAttachedFiles(prev => prev.map(file => 
+            file.id === attachment.id 
+              ? { ...file, uploadStatus: 'error', errorMessage: 'Upload failed' }
+              : file
+          ))
+        })
       }
     }
-  }
+  }, [userId])
 
-  const handleRemoveFile = (fileId: string) => {
+  const handleRemoveFile = useCallback((fileId: string) => {
     setAttachedFiles(prev => prev.filter(file => file.id !== fileId))
-  }
+  }, [])
 
-  const handleFileSelectType = (type: 'all' | 'images' | 'documents') => {
+  const handleFileSelectType = useCallback((type: 'all' | 'images' | 'documents') => {
     if (fileInputRef.current) {
       // Update accept attribute based on type
       switch (type) {
@@ -972,22 +993,22 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
       }
       fileInputRef.current.click()
     }
-  }
+  }, [])
 
   // Drag and drop handlers
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
     setIsDragging(true)
-  }
+  }, [])
 
-  const handleDragLeave = (e: React.DragEvent) => {
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
     setIsDragging(false)
-  }
+  }, [])
 
-  const handleDrop = async (e: React.DragEvent) => {
+  const handleDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
     setIsDragging(false)
@@ -996,7 +1017,7 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
     if (files.length > 0) {
       await handleMultipleFileUpload(files)
     }
-  }
+  }, [handleMultipleFileUpload])
 
   const handleVoiceRecord = () => {
     setIsRecording(!isRecording)
@@ -1155,6 +1176,7 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
                 className="w-full bg-card border border-line rounded-xl px-4 py-3 text-text placeholder:text-muted resize-none focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/30"
                 rows={1}
                 style={{ minHeight: '44px', maxHeight: '120px' }}
+                disabled={isLoading}
               />
             </div>
 

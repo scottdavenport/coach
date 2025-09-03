@@ -1,6 +1,7 @@
 import { X, Loader2 } from 'lucide-react';
 import { FileAttachment } from '@/types';
 import { FileProcessor } from '@/lib/file-processing';
+import { memo } from 'react';
 
 interface FilePreviewChipProps {
   file: FileAttachment;
@@ -8,7 +9,7 @@ interface FilePreviewChipProps {
   className?: string;
 }
 
-export function FilePreviewChip({ file, onRemove, className = '' }: FilePreviewChipProps) {
+export const FilePreviewChip = memo(function FilePreviewChip({ file, onRemove, className = '' }: FilePreviewChipProps) {
   const icon = FileProcessor.getFileIcon(file.fileType);
   const formattedSize = FileProcessor.formatFileSize(file.fileSize);
 
@@ -59,7 +60,7 @@ export function FilePreviewChip({ file, onRemove, className = '' }: FilePreviewC
       </button>
     </div>
   );
-}
+})
 
 interface FilePreviewListProps {
   files: FileAttachment[];
@@ -67,7 +68,7 @@ interface FilePreviewListProps {
   className?: string;
 }
 
-export function FilePreviewList({ files, onRemoveFile, className = '' }: FilePreviewListProps) {
+export const FilePreviewList = memo(function FilePreviewList({ files, onRemoveFile, className = '' }: FilePreviewListProps) {
   if (files.length === 0) return null;
 
   return (
@@ -81,4 +82,4 @@ export function FilePreviewList({ files, onRemoveFile, className = '' }: FilePre
       ))}
     </div>
   );
-}
+})
