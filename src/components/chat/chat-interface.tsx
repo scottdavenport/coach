@@ -1,11 +1,15 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { Mic, Send, Plus } from 'lucide-react'
+import { Mic, Send, Plus, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ChatMessage } from './chat-message'
 import { FileUploadMenu } from './file-upload-menu'
+import { FilePreviewList } from './file-preview-chip'
 import { createClient } from '@/lib/supabase/client'
+import { FileAttachment, SupportedFileType } from '@/types'
+import { FileProcessor } from '@/lib/file-processing'
+import { processFileContentClient } from '@/lib/file-processing/client'
 
 interface ChatInterfaceProps {
   userId: string
@@ -29,12 +33,8 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
     mood: null as string | null,
     physical_notes: null as string | null
   })
-  const [pendingFile, setPendingFile] = useState<{
-    file: File
-    fileUrl: string
-    fileName: string
-    uploaded: boolean
-  } | null>(null)
+  const [attachedFiles, setAttachedFiles] = useState<FileAttachment[]>([])
+  const [isDragging, setIsDragging] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -110,11 +110,11 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
   }, [pendingQuestions, isLoading, onQuestionAsked])
 
   const handleSendMessage = async () => {
-    if ((!inputValue.trim() && !pendingFile) || isLoading) return
+    if ((!inputValue.trim() && attachedFiles.length === 0) || isLoading) return
 
-    // If we have a pending file, process it with context
-    if (pendingFile) {
-      await handleFileWithContext()
+    // If we have attached files, process them with context
+    if (attachedFiles.length > 0) {
+      await handleFilesWithContext()
       return
     }
 
@@ -200,71 +200,143 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
     }
   }
 
-  const handleFileWithContext = async () => {
-    if (!pendingFile) return
+  const handleFilesWithContext = async () => {
+    if (attachedFiles.length === 0) return
 
     setIsLoading(true)
 
     try {
-      // Create combined message with file and context
       const contextText = inputValue.trim() || 'No additional context provided'
-      const combinedMessage = `📎 File: ${pendingFile.fileName}\n\nContext: ${contextText}\n\nFile URL: ${pendingFile.fileUrl}`
+      
+      // Create file summary for user message
+      const fileSummary = attachedFiles.map(file => 
+        `📎 ${file.fileName} (${FileProcessor.formatFileSize(file.fileSize)})`
+      ).join('\n')
+      
+      const combinedMessage = `${fileSummary}\n\nContext: ${contextText}`
 
       const userMessage = {
         id: Date.now(),
         content: combinedMessage,
         role: 'user',
         timestamp: new Date(),
-        hasFile: true,
-        fileName: pendingFile.fileName,
-        fileUrl: pendingFile.fileUrl
+        hasFiles: true,
+        fileAttachments: attachedFiles
       }
 
       setMessages(prev => [...prev, userMessage])
       setInputValue('')
-      setPendingFile(null)
 
-      // Call real OCR Edge Function
-      console.log('🚀 Calling OCR Edge Function with:', pendingFile.fileUrl)
-      
-      try {
-        const ocrResult = await callOcrFunction(pendingFile.fileUrl, userId)
-        console.log('OCR Result:', ocrResult)
-        
-        if (ocrResult.success) {
-          // The backend now handles storing conversation insights automatically
-          console.log('🔍 OCR data processed:', ocrResult.structuredData);
-          
-          // Send to OpenAI for natural conversational response
-          const aiResponse = await sendToAIWithOcrData(ocrResult.structuredData, contextText)
-          
-          const ocrMessage = {
-            id: Date.now() + 1,
-            content: aiResponse,
-            role: 'assistant',
-            timestamp: new Date(),
-            isOcrResult: true,
-            structuredData: ocrResult.structuredData
-          }
-          setMessages(prev => [...prev, ocrMessage])
-        } else {
-          throw new Error(ocrResult.error || 'OCR processing failed')
-        }
-      } catch (error) {
-        console.error('OCR processing error:', error)
-        const aiErrorResponse = await sendErrorToAI('OCR processing failure')
-        const errorMessage = {
-          id: Date.now() + 1,
-          content: aiErrorResponse,
-          role: 'assistant',
-          timestamp: new Date(),
-          isOcrResult: true
-        }
-        setMessages(prev => [...prev, errorMessage])
+      // Process files by type
+      const imageFiles = attachedFiles.filter(file => file.fileType.startsWith('image/'))
+      const documentFiles = attachedFiles.filter(file => !file.fileType.startsWith('image/'))
+
+      const allProcessedContent: any = {
+        images: [],
+        documents: [],
+        context: contextText
       }
 
+      // Process images with OCR
+      for (const imageFile of imageFiles) {
+        if (imageFile.fileUrl) {
+          try {
+            console.log('🚀 Calling OCR Edge Function with:', imageFile.fileUrl)
+            const ocrResult = await callOcrFunction(imageFile.fileUrl, userId)
+            
+            if (ocrResult.success) {
+              allProcessedContent.images.push({
+                fileName: imageFile.fileName,
+                ocrData: ocrResult.structuredData,
+                fileUrl: imageFile.fileUrl
+              })
+            }
+          } catch (error) {
+            console.error('OCR processing error for', imageFile.fileName, error)
+            allProcessedContent.images.push({
+              fileName: imageFile.fileName,
+              error: 'OCR processing failed'
+            })
+          }
+        }
+      }
+
+      // Process documents
+      for (const docFile of documentFiles) {
+        try {
+          // For complex documents, use server-side processing
+          const needsServerProcessing = [
+            'application/pdf',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+          ].includes(docFile.fileType)
+
+          let processingResult
+          
+          if (needsServerProcessing && docFile.fileUrl) {
+            // Use server-side extraction API
+            const response = await fetch('/api/files/extract', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                fileUrl: docFile.fileUrl,
+                fileName: docFile.fileName,
+                mimeType: docFile.fileType
+              })
+            })
+            
+            if (response.ok) {
+              processingResult = await response.json()
+            } else {
+              throw new Error('Server processing failed')
+            }
+          } else {
+            // Use client-side processing for simple files
+            processingResult = await processFileContentClient(docFile.file)
+          }
+          
+          if (processingResult.success) {
+            allProcessedContent.documents.push({
+              fileName: docFile.fileName,
+              content: processingResult.content,
+              metadata: processingResult.metadata
+            })
+          } else {
+            allProcessedContent.documents.push({
+              fileName: docFile.fileName,
+              error: processingResult.error
+            })
+          }
+        } catch (error) {
+          console.error('Document processing error for', docFile.fileName, error)
+          allProcessedContent.documents.push({
+            fileName: docFile.fileName,
+            error: 'Document processing failed'
+          })
+        }
+      }
+
+      // Send all processed content to AI
+      const aiResponse = await sendToAIWithMultiFileData(allProcessedContent, contextText)
+      
+      const aiMessage = {
+        id: Date.now() + 1,
+        content: aiResponse,
+        role: 'assistant',
+        timestamp: new Date(),
+        isMultiFileResult: true,
+        processedContent: allProcessedContent
+      }
+      setMessages(prev => [...prev, aiMessage])
+
+      // Clear attached files
+      setAttachedFiles([])
+
     } catch (error) {
-      console.error('Error processing file with context:', error)
+      console.error('Error processing files with context:', error)
       const aiErrorResponse = await sendErrorToAI('file processing issue')
       const errorMessage = {
         id: Date.now() + 1,
@@ -657,22 +729,22 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
     }
   }
 
-  // Send OCR data to OpenAI for natural conversational response
-  const sendToAIWithOcrData = async (structuredData: any, context: string) => {
+
+
+  // Send multi-file data to OpenAI for natural conversational response
+  const sendToAIWithMultiFileData = async (processedContent: any, context: string) => {
     try {
-      // Process OCR data directly without creating fake user messages
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          message: context || 'I uploaded a screenshot of my workout data',
+          message: context || 'I uploaded multiple files',
           conversationId: Date.now().toString(),
-          conversationState: 'ocr_analysis',
+          conversationState: 'multi_file_analysis',
           checkinProgress: {},
-          // Pass OCR data separately so it can be processed without fake messages
-          ocrData: structuredData
+          multiFileData: processedContent
         }),
       })
 
@@ -681,11 +753,10 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
       }
 
       const data = await response.json()
-      return data.message || await sendErrorToAI('OCR response generation')
+      return data.message || await sendErrorToAI('file processing issue')
     } catch (error) {
-      console.error('Error getting AI response for OCR data:', error)
-      // Fallback to AI error response if AI fails
-      return await sendErrorToAI('OCR response generation')
+      console.error('Error getting AI response for multi-file data:', error)
+      return await sendErrorToAI('file processing issue')
     }
   }
 
@@ -741,93 +812,152 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
   }
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
+    const files = Array.from(event.target.files || [])
+    if (files.length === 0) return
 
-    // Check file size (limit to 10MB for now)
-    const maxFileSize = 10 * 1024 * 1024 // 10MB
-    if (file.size > maxFileSize) {
+    await handleMultipleFileUpload(files)
+    event.target.value = ''
+  }
+
+  const handleMultipleFileUpload = async (files: File[]) => {
+    // Validate files
+    const existingCount = attachedFiles.length
+    const totalCount = existingCount + files.length
+    
+    if (totalCount > 10) {
       const errorMessage = {
         id: Date.now(),
-        content: `❌ File too large: ${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB). Maximum size is 10MB.`,
+        content: `❌ Too many files: ${totalCount} total. Maximum is 10 files.`,
         role: 'assistant',
         timestamp: new Date(),
       }
       setMessages(prev => [...prev, errorMessage])
-      event.target.value = ''
       return
     }
 
-    // Show uploading message - declare outside try block so it's accessible in catch
-    const uploadingMessage = {
-      id: Date.now(),
-      content: `📤 Uploading: ${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB)...`,
-      role: 'user',
-      timestamp: new Date(),
-      isUploading: true
+    // Validate each file
+    const validationResult = FileProcessor.validateFileList(files)
+    if (!validationResult.isValid) {
+      const errorMessage = {
+        id: Date.now(),
+        content: `❌ ${validationResult.error}`,
+        role: 'assistant',
+        timestamp: new Date(),
+      }
+      setMessages(prev => [...prev, errorMessage])
+      return
     }
-    setMessages(prev => [...prev, uploadingMessage])
 
-    try {
+    // Create file attachments with uploading status
+    const newAttachments: FileAttachment[] = files.map(file => ({
+      id: `${Date.now()}-${Math.random().toString(36).substring(2)}`,
+      file,
+      fileName: file.name,
+      fileSize: file.size,
+      fileType: file.type as SupportedFileType,
+      uploadStatus: 'uploading'
+    }))
 
-      // Upload to Supabase Storage
-      const supabase = createClient()
-      const fileExt = file.name.split('.').pop()
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`
-      const filePath = `${userId}/uploads/${fileName}`
+    // Add to attached files list
+    setAttachedFiles(prev => [...prev, ...newAttachments])
+    setIsUploadMenuOpen(false)
 
-      const { error } = await supabase.storage
-        .from('user-uploads')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: false
-        })
+    // Upload files to Supabase Storage
+    const supabase = createClient()
+    
+    for (const attachment of newAttachments) {
+      try {
+        const fileExt = attachment.file.name.split('.').pop()
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`
+        const filePath = `${userId}/uploads/${fileName}`
 
-      if (error) {
-        console.error('Upload error:', error)
-        // Update message to show error
-        setMessages(prev => prev.map(msg => 
-          msg.id === uploadingMessage.id 
-            ? { ...msg, content: `❌ Upload failed: ${file.name}`, isUploading: false }
-            : msg
+        const { error } = await supabase.storage
+          .from('user-uploads')
+          .upload(filePath, attachment.file, {
+            cacheControl: '3600',
+            upsert: false
+          })
+
+        if (error) {
+          console.error('Upload error:', error)
+          // Update attachment status to error
+          setAttachedFiles(prev => prev.map(file => 
+            file.id === attachment.id 
+              ? { ...file, uploadStatus: 'error', errorMessage: 'Upload failed' }
+              : file
+          ))
+          continue
+        }
+
+        // Get signed URL for private bucket (expires in 1 hour)
+        const { data: { signedUrl } } = await supabase.storage
+          .from('user-uploads')
+          .createSignedUrl(filePath, 3600)
+
+        if (!signedUrl) {
+          throw new Error('Failed to create signed URL')
+        }
+
+        // Update attachment with successful upload
+        setAttachedFiles(prev => prev.map(file => 
+          file.id === attachment.id 
+            ? { ...file, uploadStatus: 'uploaded', fileUrl: signedUrl }
+            : file
         ))
-        return
+
+      } catch (error) {
+        console.error('File upload error:', error)
+        setAttachedFiles(prev => prev.map(file => 
+          file.id === attachment.id 
+            ? { ...file, uploadStatus: 'error', errorMessage: 'Upload failed' }
+            : file
+        ))
       }
+    }
+  }
 
-      // Get signed URL for private bucket (expires in 1 hour)
-      const { data: { signedUrl } } = await supabase.storage
-        .from('user-uploads')
-        .createSignedUrl(filePath, 3600) // 1 hour expiry
+  const handleRemoveFile = (fileId: string) => {
+    setAttachedFiles(prev => prev.filter(file => file.id !== fileId))
+  }
 
-      if (!signedUrl) {
-        throw new Error('Failed to create signed URL')
+  const handleFileSelectType = (type: 'all' | 'images' | 'documents') => {
+    if (fileInputRef.current) {
+      // Update accept attribute based on type
+      switch (type) {
+        case 'images':
+          fileInputRef.current.accept = 'image/*'
+          break
+        case 'documents':
+          fileInputRef.current.accept = '.pdf,.doc,.docx,.txt,.md,.csv,.xlsx,.ods,.pptx'
+          break
+        default:
+          fileInputRef.current.accept = FileProcessor.getAcceptString()
       }
+      fileInputRef.current.click()
+    }
+  }
 
-      // Store file as pending for user to add context
-      setPendingFile({
-        file,
-        fileUrl: signedUrl,
-        fileName: file.name,
-        uploaded: true
-      })
+  // Drag and drop handlers
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(true)
+  }
 
-      // Remove the uploading message - no message in chat until user sends
-      setMessages(prev => prev.filter(msg => msg.id !== uploadingMessage.id))
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+  }
 
-      // Close the upload menu
-      setIsUploadMenuOpen(false)
-      
-      // Clear the file input
-      event.target.value = ''
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
 
-    } catch (error) {
-      console.error('File upload error:', error)
-      // Update message to show error
-      setMessages(prev => prev.map(msg => 
-        msg.id === uploadingMessage.id 
-          ? { ...msg, content: `❌ Upload failed: ${file.name}`, isUploading: false }
-          : msg
-      ))
+    const files = Array.from(e.dataTransfer.files)
+    if (files.length > 0) {
+      await handleMultipleFileUpload(files)
     }
   }
 
@@ -876,7 +1006,23 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
   // The backend automatically stores conversation insights in a simplified way
 
   return (
-    <div className="flex flex-col h-full">
+    <div 
+      className="flex flex-col h-full"
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {/* Drag overlay */}
+      {isDragging && (
+        <div className="absolute inset-0 bg-primary/10 border-2 border-dashed border-primary z-50 flex items-center justify-center">
+          <div className="text-center">
+            <Upload className="h-12 w-12 text-primary mx-auto mb-2" />
+            <p className="text-lg font-medium text-primary">Drop files here</p>
+            <p className="text-sm text-muted">Upload images and documents</p>
+          </div>
+        </div>
+      )}
+
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-4">
         <div className="max-w-4xl mx-auto space-y-4">
@@ -925,28 +1071,19 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
       {/* Input Area - Pinned to Bottom */}
       <div className="border-t border-line p-4 bg-background">
         <div className="max-w-4xl mx-auto">
-          {/* Pending File Indicator */}
-          {pendingFile && (
+          {/* File Attachments Preview */}
+          {attachedFiles.length > 0 && (
             <div className="mb-3 p-3 bg-primary/10 border border-primary/30 rounded-lg">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <div className="w-8 h-8 bg-primary/20 rounded-lg flex items-center justify-center">
-                    <span className="text-xs font-medium">📎</span>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">{pendingFile.fileName}</p>
-                    <p className="text-xs text-muted">Add context and click Send to process</p>
-                  </div>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setPendingFile(null)}
-                  className="text-muted hover:text-destructive"
-                >
-                  ✕
-                </Button>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm font-medium">
+                  {attachedFiles.length} file{attachedFiles.length > 1 ? 's' : ''} attached
+                </p>
+                <p className="text-xs text-muted">Add context and click Send to process</p>
               </div>
+              <FilePreviewList 
+                files={attachedFiles} 
+                onRemoveFile={handleRemoveFile}
+              />
             </div>
           )}
 
@@ -958,14 +1095,15 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
                 size="sm"
                 onClick={() => setIsUploadMenuOpen(!isUploadMenuOpen)}
                 className="p-2 text-muted hover:text-text"
-                disabled={!!pendingFile}
+                disabled={attachedFiles.length >= 10}
               >
                 <Plus className="h-4 w-4" />
               </Button>
               
               {isUploadMenuOpen && (
                 <FileUploadMenu 
-                  onFileSelect={() => fileInputRef.current?.click()}
+                  onFileSelect={handleFileSelectType}
+                  disabled={attachedFiles.length >= 10}
                 />
               )}
             </div>
@@ -976,7 +1114,7 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyPress={handleKeyPress}
-                placeholder={pendingFile ? "Add context about this image..." : "Ask anything..."}
+                placeholder={attachedFiles.length > 0 ? "Add context about these files..." : "Ask anything..."}
                 className="w-full bg-card border border-line rounded-xl px-4 py-3 text-text placeholder:text-muted resize-none focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/30"
                 rows={1}
                 style={{ minHeight: '44px', maxHeight: '120px' }}
@@ -990,7 +1128,7 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
                 size="sm"
                 onClick={handleVoiceRecord}
                 className={`p-2 ${isRecording ? 'text-destructive' : 'text-muted hover:text-text'}`}
-                disabled={!!pendingFile}
+                disabled={attachedFiles.length >= 10}
               >
                 {isRecording ? (
                   <div className="w-4 h-4 bg-destructive rounded-full flex items-center justify-center">
@@ -1003,7 +1141,7 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
               
               <Button
                 onClick={handleSendMessage}
-                disabled={(!inputValue.trim() && !pendingFile) || isLoading}
+                disabled={(!inputValue.trim() && attachedFiles.length === 0) || isLoading}
                 className="bg-primary text-black hover:bg-primary/90 disabled:opacity-50"
                 size="sm"
               >
@@ -1019,7 +1157,8 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
         ref={fileInputRef}
         type="file"
         onChange={handleFileUpload}
-        accept="image/*,.pdf,.doc,.docx"
+        accept={FileProcessor.getAcceptString()}
+        multiple
         className="hidden"
       />
     </div>

@@ -20,11 +20,12 @@ export interface TrendPreferences {
 export interface ConversationMessage {
   id?: string;
   message: string;
-  message_type: 'text' | 'image' | 'file';
+  message_type: 'text' | 'image' | 'file' | 'multi_file';
   metadata?: {
     role?: 'user' | 'assistant';
     conversation_id?: string;
     parsed_health_data?: ParsedConversation;
+    file_attachments?: FileAttachment[];
     [key: string]: unknown;
   };
   created_at?: string;
@@ -149,9 +150,50 @@ export interface ChatMessageProps {
 }
 
 export interface FileUploadMenuProps {
-  onFileUpload: (file: File) => void;
-  onImageUpload: (file: File) => void;
+  onFileUpload: (files: File[]) => void;
   disabled?: boolean;
+  maxFiles?: number;
+  supportedTypes?: string[];
+}
+
+export interface FileAttachment {
+  id: string;
+  file: File;
+  fileName: string;
+  fileSize: number;
+  fileType: SupportedFileType;
+  fileUrl?: string;
+  uploadStatus: 'pending' | 'uploading' | 'uploaded' | 'error';
+  processedContent?: string;
+  errorMessage?: string;
+}
+
+export type SupportedFileType = 
+  | 'image/jpeg' 
+  | 'image/png' 
+  | 'image/gif' 
+  | 'image/webp'
+  | 'application/pdf'
+  | 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' // docx
+  | 'application/msword' // doc
+  | 'text/plain'
+  | 'text/markdown'
+  | 'text/csv'
+  | 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' // xlsx
+  | 'application/vnd.oasis.opendocument.spreadsheet' // ods
+  | 'application/vnd.openxmlformats-officedocument.presentationml.presentation'; // pptx
+
+export interface FileProcessingResult {
+  success: boolean;
+  fileId: string;
+  content?: string;
+  metadata?: {
+    pageCount?: number;
+    wordCount?: number;
+    tableCount?: number;
+    [key: string]: unknown;
+  };
+  error?: string;
 }
 
 export interface OuraIntegrationProps {

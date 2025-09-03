@@ -37,11 +37,12 @@ export async function POST(request: NextRequest) {
     console.log('👤 User authenticated:', user.id)
 
     const body = await request.json()
-    const { message, conversationId, conversationState, checkinProgress, ocrData } = body
+    const { message, conversationId, conversationState, checkinProgress, ocrData, multiFileData } = body
 
     console.log('📝 Message received:', {
       messageLength: message?.length || 0,
       hasOcrData: !!ocrData,
+      hasMultiFileData: !!multiFileData,
       conversationState,
       checkinProgress: !!checkinProgress
     })
@@ -136,6 +137,11 @@ export async function POST(request: NextRequest) {
       console.log('🔍 OCR DATA RECEIVED:', JSON.stringify(ocrData, null, 2))
     }
 
+    // Log multi-file data if present
+    if (multiFileData) {
+      console.log('🔍 MULTI-FILE DATA RECEIVED:', JSON.stringify(multiFileData, null, 2))
+    }
+
     // Save user message to database
     const { data: conversationData, error: conversationError } = await supabase
       .from('conversations')
@@ -193,6 +199,20 @@ ${userContext}
 ${stateContext}
 
 ${ocrData ? `OCR DATA AVAILABLE: The user has uploaded a screenshot with workout/health data. Here is the extracted data: ${JSON.stringify(ocrData)}. IMPORTANT: This OCR data contains the user's actual workout information. You MUST acknowledge and analyze this data in your response. Do NOT say you don't see the data - it's right here in the OCR data. Process this data naturally and conversationally without mentioning the technical OCR process. Focus on the health insights and provide natural coaching responses based on the actual workout metrics.` : ''}
+
+${multiFileData ? `MULTI-FILE DATA AVAILABLE: The user has uploaded multiple files. Here is the processed content:
+
+IMAGES WITH OCR DATA:
+${multiFileData.images?.map((img: any) => `
+- ${img.fileName}: ${img.error ? `Error: ${img.error}` : `OCR Data: ${JSON.stringify(img.ocrData)}`}
+`).join('') || 'No images uploaded'}
+
+DOCUMENTS:
+${multiFileData.documents?.map((doc: any) => `
+- ${doc.fileName}: ${doc.error ? `Error: ${doc.error}` : `Content: ${doc.content?.substring(0, 500)}${doc.content?.length > 500 ? '...' : ''}`}
+`).join('') || 'No documents uploaded'}
+
+IMPORTANT: Process all this data naturally and provide comprehensive coaching insights based on ALL the uploaded content. Reference specific files when relevant and provide actionable advice based on the combined information.` : ''}
 
 SPECIALIZED EXPERTISE:
 - PERSONAL TRAINING: Design progressive, safe, and effective workout programs
