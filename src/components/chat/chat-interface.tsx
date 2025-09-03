@@ -10,6 +10,7 @@ import { createClient } from '@/lib/supabase/client'
 import { FileAttachment, SupportedFileType } from '@/types'
 import { FileProcessor } from '@/lib/file-processing'
 import { processFileContentClient } from '@/lib/file-processing/client'
+import { createFileWithCorrectType, getFallbackMimeType } from '@/lib/file-processing/mime-type-fixes'
 
 interface ChatInterfaceProps {
   userId: string
@@ -871,23 +872,59 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`
         const filePath = `${userId}/uploads/${fileName}`
 
+        // Try with correct MIME type first
+        const correctedFile = createFileWithCorrectType(attachment.file)
+        let uploadError = null
+
         const { error } = await supabase.storage
           .from('user-uploads')
-          .upload(filePath, attachment.file, {
+          .upload(filePath, correctedFile, {
             cacheControl: '3600',
             upsert: false
           })
 
-        if (error) {
-          console.error('Upload error:', error)
+        uploadError = error
+
+        // If MIME type still not supported, try with fallback
+        if (uploadError?.message?.includes('mime type') && uploadError?.message?.includes('not supported')) {
+          console.log(`⚠️ Trying fallback MIME type for ${attachment.fileName}`)
+          const fallbackType = getFallbackMimeType(correctedFile.type)
+          const fallbackFile = new File([correctedFile], correctedFile.name, {
+            type: fallbackType,
+            lastModified: correctedFile.lastModified
+          })
+
+          const { error: fallbackError } = await supabase.storage
+            .from('user-uploads')
+            .upload(filePath, fallbackFile, {
+              cacheControl: '3600',
+              upsert: false
+            })
+
+          uploadError = fallbackError
+        }
+
+        if (uploadError) {
+          console.error('Upload error:', uploadError)
+          let errorMessage = 'Upload failed'
+          
+          // Provide specific error messages for common issues
+          if (uploadError.message?.includes('mime type') && uploadError.message?.includes('not supported')) {
+            errorMessage = `File type not supported: ${attachment.file.type}`
+          } else if (uploadError.message?.includes('size')) {
+            errorMessage = 'File too large (max 10MB)'
+          }
+          
           // Update attachment status to error
           setAttachedFiles(prev => prev.map(file => 
             file.id === attachment.id 
-              ? { ...file, uploadStatus: 'error', errorMessage: 'Upload failed' }
+              ? { ...file, uploadStatus: 'error', errorMessage }
               : file
           ))
           continue
         }
+
+
 
         // Get signed URL for private bucket (expires in 1 hour)
         const { data: { signedUrl } } = await supabase.storage

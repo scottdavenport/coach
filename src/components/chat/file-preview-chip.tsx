@@ -41,7 +41,7 @@ export function FilePreviewChip({ file, onRemove, className = '' }: FilePreviewC
         <span className="text-xs opacity-70">
           {formattedSize}
           {file.uploadStatus === 'uploading' && ' • Uploading...'}
-          {file.uploadStatus === 'error' && ' • Error'}
+          {file.uploadStatus === 'error' && ` • ${file.errorMessage || 'Error'}`}
         </span>
       </div>
 
