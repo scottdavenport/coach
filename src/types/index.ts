@@ -250,3 +250,31 @@ export interface OuraReadinessData {
   score_previous_night: number;
   [key: string]: unknown;
 }
+
+export interface StructuredCardData {
+  categories: {
+    [categoryName: string]: {
+      displayName: string;
+      icon?: string;
+      color?: string;
+      metrics: Array<{
+        id: string;
+        metric_key: string;
+        display_name: string;
+        value: number | string | boolean;
+        unit: string;
+        source: string;
+        confidence: number;
+        is_editable: boolean;
+      }>;
+    };
+  };
+  journalEntries: Array<{
+    id?: string;
+    entry_type: string;
+    content: string;
+    category: string;
+    created_at?: string;
+  }>;
+  date: string;
+}

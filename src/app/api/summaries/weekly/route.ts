@@ -17,19 +17,34 @@ export async function POST(request: NextRequest) {
 
     const { weekStart } = await request.json()
 
-    // Get the week's daily cards
+    // Get the week's structured metrics
     const weekEnd = new Date(weekStart)
     weekEnd.setDate(weekEnd.getDate() + 6)
     
-    const { data: weeklyCards } = await supabase
-      .from('daily_log_cards')
-      .select('summary, log_date')
+    const { data: weeklyMetrics } = await supabase
+      .from('user_daily_metrics')
+      .select(`
+        metric_date,
+        metric_value,
+        text_value,
+        boolean_value,
+        source,
+        standard_metrics (
+          metric_key,
+          display_name,
+          unit,
+          metric_categories (
+            name,
+            display_name
+          )
+        )
+      `)
       .eq('user_id', user.id)
-      .gte('log_date', weekStart)
-      .lte('log_date', weekEnd.toISOString().split('T')[0])
-      .order('log_date', { ascending: true })
+      .gte('metric_date', weekStart)
+      .lte('metric_date', weekEnd.toISOString().split('T')[0])
+      .order('metric_date', { ascending: true })
 
-    if (!weeklyCards || weeklyCards.length === 0) {
+    if (!weeklyMetrics || weeklyMetrics.length === 0) {
       return NextResponse.json({ error: 'No data found for this week' }, { status: 404 })
     }
 
@@ -47,7 +62,7 @@ export async function POST(request: NextRequest) {
 
     // Prepare data for summary generation
     const summaryData = {
-      daily_cards: weeklyCards,
+      daily_metrics: weeklyMetrics,
       conversations: weeklyConversations || [],
       week_start: weekStart,
       week_end: weekEnd.toISOString().split('T')[0]

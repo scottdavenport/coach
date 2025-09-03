@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef } from 'react'
+import { useState } from 'react'
 import { ChatInterface } from '@/components/chat/chat-interface'
 
 import { DashboardHeader } from '@/components/dashboard/dashboard-header'
@@ -10,23 +10,33 @@ interface DashboardClientProps {
 }
 
 export default function DashboardClient({ userId }: DashboardClientProps) {
-  const cardModalRef = useRef<{ refreshData: () => void }>(null)
+  const [currentDate, setCurrentDate] = useState<string>('')
 
   const handleDataStored = () => {
-    // Refresh the daily card when new data is stored
-    if (cardModalRef.current) {
-      cardModalRef.current.refreshData()
-    }
+    // Data stored - could trigger journal refresh if needed
+    console.log('Data stored successfully')
+  }
+
+  const handleDateChange = (date: string) => {
+    console.log('🔍 DashboardClient: Date changed to:', date)
+    setCurrentDate(date)
   }
 
   return (
     <div className="flex flex-col h-screen">
       {/* Header */}
-      <DashboardHeader userId={userId} cardModalRef={cardModalRef} />
+      <DashboardHeader 
+        userId={userId} 
+        selectedDate={currentDate} 
+        onDateChange={handleDateChange}
+      />
       
       {/* Chat Interface */}
       <div className="flex-1 overflow-hidden">
-        <ChatInterface userId={userId} onDataStored={handleDataStored} />
+        <ChatInterface 
+          userId={userId} 
+          onDataStored={handleDataStored}
+        />
       </div>
     </div>
   )

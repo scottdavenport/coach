@@ -86,14 +86,37 @@ export async function POST(request: NextRequest) {
       .order('created_at', { ascending: false })
       .limit(30)
 
-    // Fetch last 7 days of daily cards for context
+    // Fetch last 7 days of structured metrics for context
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-    const { data: weeklyCards } = await supabase
-      .from('daily_log_cards')
-      .select('summary, log_date')
+    const { data: weeklyMetrics } = await supabase
+      .from('user_daily_metrics')
+      .select(`
+        metric_date,
+        metric_value,
+        text_value,
+        boolean_value,
+        source,
+        standard_metrics (
+          metric_key,
+          display_name,
+          unit,
+          metric_categories (
+            name,
+            display_name
+          )
+        )
+      `)
       .eq('user_id', user.id)
-      .gte('log_date', sevenDaysAgo)
-      .order('log_date', { ascending: false })
+      .gte('metric_date', sevenDaysAgo)
+      .order('metric_date', { ascending: false })
+
+    // Transform metrics to match expected format
+    const weeklyCards = weeklyMetrics ? weeklyMetrics.map(metric => ({
+      summary: {
+        [metric.standard_metrics?.[0]?.metric_key || 'unknown']: metric.metric_value || metric.text_value || metric.boolean_value
+      },
+      log_date: metric.metric_date
+    })) : []
 
     // Fetch recent user context data (last 7 days)
     const { data: recentContext } = await supabase
@@ -132,24 +155,24 @@ export async function POST(request: NextRequest) {
     const parsedData = await parseConversationForRichContext(message, user.id, conversationContext, userContext)
 
     // Show extracted data in console for development review
-    if (parsedData.health_events.length > 0 || parsedData.context_data.length > 0) {
+    if (parsedData && parsedData.health_events && parsedData.health_events.length > 0 || parsedData && parsedData.context_data && parsedData.context_data.length > 0) {
       console.log('🔍 **EXTRACTED RICH CONTEXT DATA (REVIEW REQUIRED):**')
       console.log('User ID:', user.id)
       console.log('Original message:', message)
-      if (parsedData.health_events.length > 0) {
+      if (parsedData && parsedData.health_events && parsedData.health_events.length > 0) {
         console.log('Health events:', JSON.stringify(parsedData.health_events, null, 2))
       }
-      if (parsedData.context_data.length > 0) {
+      if (parsedData && parsedData.context_data && parsedData.context_data.length > 0) {
         console.log('Context data:', JSON.stringify(parsedData.context_data, null, 2))
       }
-      if (parsedData.daily_summary) {
+      if (parsedData && parsedData.daily_summary) {
         console.log('Daily summary:', JSON.stringify(parsedData.daily_summary, null, 2))
       }
-      if (parsedData.follow_up_questions && parsedData.follow_up_questions.length > 0) {
+      if (parsedData && parsedData.follow_up_questions && parsedData.follow_up_questions.length > 0) {
         console.log('Follow-up questions:', parsedData.follow_up_questions)
       }
-      console.log('Should update card:', parsedData.should_update_card)
-      console.log('Clarification needed:', parsedData.clarification_needed)
+      console.log('Should update card:', parsedData?.should_update_card)
+      console.log('Clarification needed:', parsedData?.clarification_needed)
       console.log('---')
     }
 
@@ -208,17 +231,17 @@ Always be curious and supportive, building a rich understanding of the user's co
     const aiResponse = completion.choices[0]?.message?.content || "I'm sorry, I couldn't process that request."
 
     // Store parsed health data to daily card if we have data to store
-    if (parsedData && (parsedData.health_events.length > 0 || parsedData.context_data.length > 0 || parsedData.daily_summary)) {
+    if (parsedData && (parsedData.health_events && parsedData.health_events.length > 0 || parsedData.context_data && parsedData.context_data.length > 0 || parsedData.daily_summary)) {
       try {
         console.log('🔍 **EXTRACTED RICH CONTEXT DATA (REVIEW REQUIRED):**')
         console.log('User ID:', user.id)
         console.log('Original message:', message)
-        console.log('Health events:', parsedData.health_events)
-        console.log('Context data:', parsedData.context_data)
-        console.log('Daily summary:', parsedData.daily_summary)
-        console.log('Follow-up questions:', parsedData.follow_up_questions)
-        console.log('Should update card:', parsedData.should_update_card)
-        console.log('Clarification needed:', parsedData.clarification_needed)
+        console.log('Health events:', parsedData?.health_events)
+        console.log('Context data:', parsedData?.context_data)
+        console.log('Daily summary:', parsedData?.daily_summary)
+        console.log('Follow-up questions:', parsedData?.follow_up_questions)
+        console.log('Should update card:', parsedData?.should_update_card)
+        console.log('Clarification needed:', parsedData?.clarification_needed)
         console.log('---')
 
         // Call the health store API to update the daily card
@@ -228,9 +251,9 @@ Always be curious and supportive, building a rich understanding of the user's co
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            events: parsedData.health_events.filter((e: any) => e.should_store),
-            contextData: parsedData.context_data.filter((c: any) => c.should_store),
-            dailySummary: parsedData.daily_summary,
+            events: parsedData?.health_events?.filter((e: any) => e.should_store) || [],
+            contextData: parsedData?.context_data?.filter((c: any) => c.should_store) || [],
+            dailySummary: parsedData?.daily_summary || {},
             userId: user.id
           })
         })
@@ -238,9 +261,9 @@ Always be curious and supportive, building a rich understanding of the user's co
         if (healthStoreResponse.ok) {
           console.log('💾 **STORING RICH CONTEXT DATA:**')
           console.log('User ID:', user.id)
-          console.log('Events to store:', parsedData.health_events.filter((e: any) => e.should_store))
-          console.log('Context data to store:', parsedData.context_data.filter((c: any) => c.should_store))
-          console.log('Daily summary to store:', parsedData.daily_summary)
+          console.log('Events to store:', parsedData?.health_events?.filter((e: any) => e.should_store) || [])
+          console.log('Context data to store:', parsedData?.context_data?.filter((c: any) => c.should_store) || [])
+          console.log('Daily summary to store:', parsedData?.daily_summary || {})
           console.log('---')
         } else {
           console.error('Failed to store health data:', await healthStoreResponse.text())
@@ -260,7 +283,8 @@ Always be curious and supportive, building a rich understanding of the user's co
         metadata: { 
           conversation_id: conversationId,
           role: 'assistant',
-          parsed_health_data: parsedData // Store the parsed data for reference
+          parsed_health_data: parsedData, // Store the parsed data for reference
+          conversation_state: conversationState // Track the conversation type
         }
       })
 
@@ -502,12 +526,28 @@ CURRENT MESSAGE: ${message}
       }
     }
 
-    // Try to parse the JSON response
+    // Try to parse the JSON response - handle markdown formatting
     try {
-      const parsed = JSON.parse(response)
+      let jsonContent = response
+      
+      // Extract JSON from markdown code blocks if present
+      const jsonMatch = response.match(/```json\s*([\s\S]*?)\s*```/)
+      if (jsonMatch) {
+        jsonContent = jsonMatch[1].trim()
+      } else {
+        // Try to find JSON content without markdown
+        const jsonStart = response.indexOf('{')
+        const jsonEnd = response.lastIndexOf('}') + 1
+        if (jsonStart !== -1 && jsonEnd > jsonStart) {
+          jsonContent = response.substring(jsonStart, jsonEnd)
+        }
+      }
+      
+      const parsed = JSON.parse(jsonContent)
       return parsed as ParsedConversation
     } catch (parseError) {
       console.error('Error parsing AI response:', parseError)
+      console.log('Raw response:', response)
       return { 
         health_events: [], 
         context_data: [], 

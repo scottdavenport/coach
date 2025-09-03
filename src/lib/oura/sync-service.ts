@@ -112,94 +112,116 @@ export class OuraSyncService {
       const activityRecord = activityData.data.find(d => d.day === date)
       const readinessRecord = readinessData.data.find(d => d.day === date)
 
-      // Transform Oura data to daily card format
-      const dailyCardData = this.transformOuraData(sleepRecord, activityRecord, readinessRecord)
+      // Transform Oura data to structured metrics format
+      const structuredMetrics = await this.transformOuraToStructuredMetrics(sleepRecord, activityRecord, readinessRecord, date)
 
-      // Get existing daily card data
-      const { data: existingCard } = await this.supabase
-        .from('daily_log_cards')
-        .select('summary')
-        .eq('user_id', userId)
-        .eq('log_date', date)
-        .single()
+      // Store metrics using the new structured system
+      for (const metric of structuredMetrics) {
+        const { error } = await this.supabase
+          .from('user_daily_metrics')
+          .upsert({
+            user_id: userId,
+            metric_id: metric.metric_id,
+            metric_date: date,
+            metric_value: metric.metric_value,
+            text_value: metric.text_value,
+            boolean_value: metric.boolean_value,
+            source: 'oura_api',
+            confidence: 0.95
+          }, {
+            onConflict: 'user_id,metric_id,metric_date'
+          })
 
-      // Merge with existing data, prioritizing Oura data
-      const mergedSummary = {
-        ...existingCard?.summary,
-        ...dailyCardData,
-        source: 'oura_api',
-        last_updated: new Date().toISOString()
-      }
-
-      // Upsert daily card
-      const { error } = await this.supabase
-        .from('daily_log_cards')
-        .upsert({
-          user_id: userId,
-          log_date: date,
-          summary: mergedSummary,
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'user_id,log_date'
-        })
-
-      if (error) {
-        console.error(`Error updating daily card for ${date}:`, error)
+        if (error) {
+          console.error(`Error storing metric ${metric.metric_key} for ${date}:`, error)
+        }
       }
     }
   }
 
-  private transformOuraData(sleep?: any, activity?: any, readiness?: any) {
-    const transformed: any = {}
+  private async transformOuraToStructuredMetrics(sleep: any, activity: any, readiness: any, date: string) {
+    const metrics: any[] = []
+
+    // Get standard metrics to map Oura data
+    const { data: standardMetrics } = await this.supabase
+      .from('standard_metrics')
+      .select('id, metric_key')
+
+    if (!standardMetrics) return metrics
+
+    const metricIdMap = new Map(standardMetrics.map(m => [m.metric_key, m.id]))
 
     // Sleep data
     if (sleep) {
-      transformed.sleep_score = sleep.score
-      transformed.total_sleep = sleep.total_sleep_duration
-      transformed.time_in_bed = sleep.time_in_bed
-      transformed.sleep_efficiency = sleep.efficiency
-      transformed.rem_sleep = sleep.rem_sleep_duration
-      transformed.deep_sleep = sleep.deep_sleep_duration
-      transformed.light_sleep = sleep.light_sleep_duration
-      transformed.sleep_latency = sleep.latency
-      transformed.average_heart_rate = sleep.average_heart_rate
-      transformed.lowest_heart_rate = sleep.lowest_heart_rate
-      transformed.average_hrv = sleep.average_hrv
-      transformed.respiratory_rate = sleep.respiratory_rate
+      const sleepMappings = {
+        'sleep_score': sleep.score,
+        'sleep_duration': sleep.total_sleep_duration,
+        'time_in_bed': sleep.time_in_bed,
+        'sleep_efficiency': sleep.efficiency,
+        'rem_sleep': sleep.rem_sleep_duration,
+        'deep_sleep': sleep.deep_sleep_duration,
+        'resting_heart_rate': sleep.average_heart_rate,
+        'heart_rate_variability': sleep.average_hrv,
+        'respiratory_rate': sleep.respiratory_rate
+      }
+
+      for (const [metricKey, value] of Object.entries(sleepMappings)) {
+        const metricId = metricIdMap.get(metricKey)
+        if (metricId && value !== null && value !== undefined) {
+          metrics.push({
+            metric_id: metricId,
+            metric_key: metricKey,
+            metric_value: typeof value === 'number' ? value : null,
+            text_value: typeof value === 'string' ? value : null,
+            boolean_value: typeof value === 'boolean' ? value : null
+          })
+        }
+      }
     }
 
     // Activity data
     if (activity) {
-      transformed.activity_score = activity.score
-      transformed.steps = activity.steps
-      transformed.calories_total = activity.calories_total
-      transformed.calories_active = activity.calories_active
-      transformed.average_met_minutes = activity.average_met_minutes
-      transformed.active_met_minutes = activity.active_met_minutes
-      transformed.rest_met_minutes = activity.rest_met_minutes
-      transformed.average_heart_rate_activity = activity.average_heart_rate
-      transformed.max_heart_rate = activity.max_heart_rate
+      const activityMappings = {
+        'steps': activity.steps,
+        'calories_burned': activity.calories_total,
+        'active_minutes': activity.active_met_minutes
+      }
+
+      for (const [metricKey, value] of Object.entries(activityMappings)) {
+        const metricId = metricIdMap.get(metricKey)
+        if (metricId && value !== null && value !== undefined) {
+          metrics.push({
+            metric_id: metricId,
+            metric_key: metricKey,
+            metric_value: typeof value === 'number' ? value : null,
+            text_value: typeof value === 'string' ? value : null,
+            boolean_value: typeof value === 'boolean' ? value : null
+          })
+        }
+      }
     }
 
     // Readiness data
     if (readiness) {
-      transformed.readiness_score = readiness.score
-      transformed.score_activity_balance = readiness.score_activity_balance
-      transformed.score_hrv_balance = readiness.score_hrv_balance
-      transformed.score_previous_day = readiness.score_previous_day
-      transformed.score_previous_night = readiness.score_previous_night
-      transformed.score_recovery_index = readiness.score_recovery_index
-      transformed.score_resting_hr = readiness.score_resting_hr
-      transformed.score_sleep_balance = readiness.score_sleep_balance
-      transformed.score_temperature = readiness.score_temperature
+      const readinessMappings = {
+        'readiness': readiness.score
+      }
+
+      for (const [metricKey, value] of Object.entries(readinessMappings)) {
+        const metricId = metricIdMap.get(metricKey)
+        if (metricId && value !== null && value !== undefined) {
+          metrics.push({
+            metric_id: metricId,
+            metric_key: metricKey,
+            metric_value: typeof value === 'number' ? value : null,
+            text_value: typeof value === 'string' ? value : null,
+            boolean_value: typeof value === 'boolean' ? value : null
+          })
+        }
+      }
     }
 
-    // Add metadata
-    transformed.app_name = 'Oura Ring'
-    transformed.source = 'oura_api'
-    transformed.last_updated = new Date().toISOString()
-
-    return transformed
+    return metrics
   }
 
   private async updateLastSync(userId: string) {

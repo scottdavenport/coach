@@ -38,6 +38,8 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+
+
   const loadConversationHistory = useCallback(async () => {
     try {
       setIsLoadingHistory(true)
@@ -170,7 +172,10 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
 
       // Automatically store data if we have parsed data (no review needed)
       if (data.parsedData && (data.parsedData.health_events.length > 0 || data.parsedData.context_data.length > 0)) {
+        console.log('🔍 Attempting to store conversation data:', data.parsedData)
         await storeDataAutomatically(data.parsedData)
+      } else {
+        console.log('🔍 No parsed data to store or data is empty')
       }
 
     } catch (error) {
@@ -222,13 +227,15 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
         if (ocrResult.success) {
           // Store the structured data first
           if (ocrResult.structuredData) {
-            console.log('Storing structured OCR data:', ocrResult.structuredData);
+            console.log('🔍 Storing structured OCR data:', ocrResult.structuredData);
             try {
               await storeOcrData(ocrResult.structuredData, userId);
-              console.log('OCR data stored successfully');
+              console.log('✅ OCR data stored successfully');
             } catch (error) {
-              console.error('Failed to store OCR data:', error);
+              console.error('❌ Failed to store OCR data:', error);
             }
+          } else {
+            console.log('🔍 No structured data in OCR result')
           }
           
           // Send to OpenAI for natural conversational response
@@ -760,23 +767,33 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
 
   const storeDataAutomatically = async (parsedData: any) => {
     try {
+      console.log('🔍 storeDataAutomatically called with:', parsedData)
+      
+      const requestBody = {
+        events: parsedData.health_events.filter((e: any) => e.should_store),
+        contextData: parsedData.context_data.filter((c: any) => c.should_store),
+        dailySummary: parsedData.daily_summary,
+        conversationId: Date.now().toString(),
+      }
+      
+      console.log('🔍 Request body:', requestBody)
+      
       const response = await fetch('/api/health/store', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          events: parsedData.health_events.filter((e: any) => e.should_store),
-          contextData: parsedData.context_data.filter((c: any) => c.should_store),
-          dailySummary: parsedData.daily_summary,
-          conversationId: Date.now().toString(),
-        }),
+        body: JSON.stringify(requestBody),
       })
 
+      console.log('🔍 Response status:', response.status)
+      
       if (!response.ok) {
-        console.error('Failed to store data automatically')
+        const errorText = await response.text()
+        console.error('Failed to store data automatically:', response.status, errorText)
       } else {
-        console.log('Data stored successfully, triggering daily card refresh...')
+        const result = await response.json()
+        console.log('✅ Data stored successfully:', result)
         // Trigger daily card refresh via callback
         if (onDataStored) {
           setTimeout(() => {
@@ -785,7 +802,7 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
         }
       }
     } catch (error) {
-      console.error('Error storing data automatically:', error)
+      console.error('❌ Error storing data automatically:', error)
     }
   }
 
@@ -914,97 +931,40 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
     }
   }
 
-  // Store structured OCR data in the database
+  // Store structured OCR data in the new structured metrics system
   const storeOcrData = async (structuredData: any, userId: string) => {
     try {
-      const supabase = createClient()
+      console.log('🔍 storeOcrData called with:', structuredData)
       const today = new Date().toISOString().split('T')[0] // YYYY-MM-DD format
       
-      // Prepare the health data as JSONB summary
-      const healthSummary = {
-        // Sleep metrics
-        readiness_score: structuredData.readiness || structuredData.readiness_score || null,
-        sleep_score: structuredData.sleepScore || structuredData.sleep || null,
-        total_sleep: structuredData.totalSleep || null,
-        time_in_bed: structuredData.timeInBed || null,
-        sleep_efficiency: structuredData.sleepEfficiency || null,
-        rem_sleep: structuredData.remSleep || null,
-        deep_sleep: structuredData.deepSleep || null,
-        restfulness: structuredData.restfulness || null,
-        timing: structuredData.timing || null,
-        
-        // Heart metrics
-        resting_heart_rate: structuredData.restingHeartRate || structuredData.heartRate || null,
-        heart_rate_variability: structuredData.heartRateVariability || null,
-        
-        // Biometric metrics
-        body_temperature: structuredData.bodyTemperature || null,
-        respiratory_rate: structuredData.respiratoryRate || null,
-        
-        // Activity metrics
-        activity_score: structuredData.activity || structuredData.activity_score || null,
-        steps: structuredData.steps || null,
-        calories: structuredData.calories || null,
-        
-        // Other metrics
-        glucose_level: structuredData.glucose || null,
-        
-        // Metadata (excluded from categorization)
-        app_name: structuredData.appName || null,
-        context: structuredData.context || null,
-        source: 'ocr_upload',
-        last_updated: new Date().toISOString()
-      }
-
-      // First, try to get existing data for today
-      const { data: existingData, error: fetchError } = await supabase
-        .from('daily_log_cards')
-        .select('summary')
-        .eq('user_id', userId)
-        .eq('log_date', today)
-        .single()
-
-      if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 = no rows returned
-        console.error('Error fetching existing data:', fetchError)
-        throw fetchError
-      }
-
-      // Smart merge with existing summary data - only update fields that have actual values
-      const existingSummary = existingData?.summary || {}
-      const mergedSummary = { ...existingSummary }
+      // Map OCR data to our structured metrics using the mapping function
+      const mappedMetrics = await mapOcrToStructuredMetrics(structuredData)
+      console.log('🔍 Mapped metrics:', mappedMetrics)
       
-      // Update fields - allow null values for corrections
-      Object.keys(healthSummary).forEach(key => {
-        const newValue = healthSummary[key]
-        const existingValue = existingSummary[key]
-        
-        // Always update if the value is different (including null for corrections)
-        if (existingValue !== newValue) {
-          mergedSummary[key] = newValue
-          console.log(`Updating ${key}: ${existingValue} → ${newValue}`)
-        } else {
-          console.log(`Keeping existing ${key}: ${existingValue} (new value: ${newValue})`)
-        }
+      // Store using the new structured metrics API
+      console.log('🔍 Sending request to /api/metrics/daily with:', { date: today, metrics: mappedMetrics })
+      
+      const response = await fetch('/api/metrics/daily', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          date: today,
+          metrics: mappedMetrics
+        }),
       })
 
-      // Insert or update the daily log card
-      const { data, error } = await supabase
-        .from('daily_log_cards')
-        .upsert({
-          user_id: userId,
-          log_date: today,
-          summary: mergedSummary,
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'user_id,log_date'
-        })
-
-      if (error) {
-        console.error('Error storing OCR data:', error)
-        throw error
+      console.log('🔍 Response status:', response.status)
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        console.error('❌ Failed to store OCR data in structured system:', errorData)
+        throw new Error(`Failed to store data: ${errorData.error || 'Unknown error'}`)
       }
 
-      console.log('OCR data stored successfully:', data)
+      const result = await response.json()
+      console.log('✅ OCR data stored successfully in structured system:', result)
       
       // Trigger daily card refresh
       if (onDataStored) {
@@ -1014,11 +974,98 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
         }, 1000) // Increased delay to ensure database write completes
       }
       
-      return data
+      return result
     } catch (error) {
       console.error('Failed to store OCR data:', error)
       throw error
     }
+  }
+
+  // Helper function to map OCR data to structured metrics
+  const mapOcrToStructuredMetrics = async (ocrData: any) => {
+    const supabase = createClient()
+    const today = new Date().toISOString().split('T')[0]
+    
+    console.log('🔍 mapOcrToStructuredMetrics called with:', ocrData)
+    
+    // Handle different OCR data formats
+    let mappings = {}
+    
+    // If ocrData has context_data (from conversation parsing)
+    if (ocrData.context_data && Array.isArray(ocrData.context_data)) {
+      console.log('🔍 Processing context_data format')
+      ocrData.context_data.forEach((item: any) => {
+        if (item.should_store) {
+          mappings[item.key] = item.value
+        }
+      })
+    }
+    // If ocrData has daily_summary (from conversation parsing)
+    else if (ocrData.daily_summary) {
+      console.log('🔍 Processing daily_summary format')
+      mappings = { ...ocrData.daily_summary }
+    }
+    // If ocrData is a flat object (direct OCR result)
+    else {
+      console.log('🔍 Processing flat object format')
+      mappings = {
+        // Sleep metrics
+        'readiness_score': ocrData.readiness || ocrData.readiness_score,
+        'sleep_score': ocrData.sleepScore || ocrData.sleep,
+        'sleep_duration': ocrData.totalSleep,
+        'time_in_bed': ocrData.timeInBed,
+        'sleep_efficiency': ocrData.sleepEfficiency,
+        'rem_sleep': ocrData.remSleep,
+        'deep_sleep': ocrData.deepSleep,
+        
+        // Health metrics
+        'resting_heart_rate': ocrData.restingHeartRate || ocrData.heartRate,
+        'heart_rate_variability': ocrData.heartRateVariability,
+        'body_temperature': ocrData.bodyTemperature,
+        'glucose': ocrData.glucose,
+        
+        // Activity metrics
+        'steps': ocrData.steps,
+        'calories_burned': ocrData.calories,
+        
+        // Wellness metrics
+        'energy': ocrData.energy,
+        'mood': ocrData.mood,
+        'stress': ocrData.stress
+      }
+    }
+    
+    console.log('🔍 Final mappings:', mappings)
+    
+    const metrics = []
+    
+    // Get metric IDs for each metric key
+    for (const [metricKey, value] of Object.entries(mappings)) {
+      if (value !== null && value !== undefined) {
+        // Get the metric ID from the database
+        const { data: metricData, error } = await supabase
+          .from('standard_metrics')
+          .select('id')
+          .eq('metric_key', metricKey)
+          .single()
+        
+        if (metricData) {
+          metrics.push({
+            metric_id: metricData.id,
+            metric_date: today,
+            metric_value: typeof value === 'number' ? value : null,
+            text_value: typeof value === 'string' ? value : null,
+            boolean_value: typeof value === 'boolean' ? value : null,
+            source: 'ocr',
+            confidence: 0.9 // High confidence for OCR data
+          })
+        } else {
+          console.warn(`Metric key not found: ${metricKey}`)
+        }
+      }
+    }
+    
+    return metrics
   }
 
   return (

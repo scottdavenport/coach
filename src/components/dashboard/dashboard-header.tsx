@@ -4,19 +4,21 @@ import { useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { SettingsModal } from '@/components/settings/settings-modal'
-import { CardModalTest } from '@/components/card/card-modal-test'
 import { WeeklySummaryModal } from '@/components/card/weekly-summary-modal'
 import { DailyWorkoutModal, DailyWorkoutModalRef } from '@/components/dashboard/daily-workout-modal'
-import { Settings, Calendar, Dumbbell } from 'lucide-react'
+import { DailyJournal } from '@/components/card/daily-narrative'
+import { Settings, Calendar, Dumbbell, Sun } from 'lucide-react'
 
 interface DashboardHeaderProps {
   userId: string
-  cardModalRef?: React.RefObject<{ refreshData: () => void }>
+  selectedDate?: string
+  onDateChange?: (date: string) => void
 }
 
-export function DashboardHeader({ userId, cardModalRef }: DashboardHeaderProps) {
+export function DashboardHeader({ userId, selectedDate, onDateChange }: DashboardHeaderProps) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [isWeeklySummaryOpen, setIsWeeklySummaryOpen] = useState(false)
+  const [isDailyJournalOpen, setIsDailyJournalOpen] = useState(false)
   const workoutModalRef = useRef<DailyWorkoutModalRef>(null)
 
   const handleSignOut = async () => {
@@ -32,7 +34,15 @@ export function DashboardHeader({ userId, cardModalRef }: DashboardHeaderProps) 
           <p className="text-sm text-muted">Your AI Health & Fitness Companion</p>
         </div>
         <div className="flex items-center gap-2">
-          <CardModalTest userId={userId} ref={cardModalRef} />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsDailyJournalOpen(true)}
+            className="h-8 w-8"
+            title="Daily Journal"
+          >
+            <Sun className="h-4 w-4" />
+          </Button>
           <Button
             variant="ghost"
             size="icon"
@@ -82,6 +92,13 @@ export function DashboardHeader({ userId, cardModalRef }: DashboardHeaderProps) 
       <DailyWorkoutModal
         userId={userId}
         ref={workoutModalRef}
+      />
+
+      <DailyJournal
+        userId={userId}
+        isOpen={isDailyJournalOpen}
+        onClose={() => setIsDailyJournalOpen(false)}
+        selectedDate={selectedDate}
       />
     </>
   )

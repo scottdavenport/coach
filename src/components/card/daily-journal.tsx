@@ -18,7 +18,13 @@ import { Textarea } from '@/components/ui/textarea'
 interface DailyJournalProps {
   userId: string
   date: string
-  journalEntries: ClassifiedData[]
+  journalEntries: Array<{
+    id?: string
+    entry_type: string
+    content: string
+    category: string
+    created_at?: string
+  }>
   onDataUpdate: () => void
 }
 
@@ -72,32 +78,14 @@ export function DailyJournal({ userId, date, journalEntries, onDataUpdate }: Dai
     fetchJournalEntries()
   }, [userId, date])
 
-  // Convert ClassifiedData to JournalEntry format for display
+  // Use only database entries (since we're not passing journal entries from StructuredCardData anymore)
   const allJournalEntries = useMemo(() => {
-    const entries: JournalEntry[] = []
-    
-    // Add database entries
-    entries.push(...dbJournalEntries)
-    
-    // Add classified data entries (from context_data)
-    journalEntries.forEach((entry, index) => {
-      if (entry.value && (typeof entry.value === 'string' || Array.isArray(entry.value))) {
-        entries.push({
-          id: `classified_${index}`,
-          entry_type: entry.classification.type,
-          content: Array.isArray(entry.value) ? entry.value.join('\n') : entry.value,
-          category: entry.classification.category,
-          created_at: entry.metadata?.timestamp
-        })
-      }
-    })
-    
-    return entries.sort((a, b) => {
+    return dbJournalEntries.sort((a, b) => {
       const dateA = a.created_at ? new Date(a.created_at).getTime() : 0
       const dateB = b.created_at ? new Date(b.created_at).getTime() : 0
       return dateB - dateA
     })
-  }, [dbJournalEntries, journalEntries])
+  }, [dbJournalEntries])
 
   const handleAddEntry = async () => {
     if (!newEntryContent.trim()) return

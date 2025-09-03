@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { mapToStructuredMetrics } from '@/lib/metric-mapping'
 
 export async function POST(request: NextRequest) {
   try {
@@ -54,41 +55,49 @@ export async function POST(request: NextRequest) {
     const storedMetrics = []
     const storedJournalEntries = []
 
-    // Store metrics in the new daily_metrics table
+    // Store metrics using new structured system
     if (dailySummary) {
-      const metricMappings = [
-        { key: 'mood', type: 'mood', unit: '/10' },
-        { key: 'energy', type: 'energy', unit: '/10' },
-        { key: 'stress', type: 'stress', unit: '/10' },
-        { key: 'readiness', type: 'readiness', unit: '' },
-        { key: 'sleep_hours', type: 'sleep_hours', unit: 'hours' },
-        { key: 'sleep_quality', type: 'sleep_quality', unit: '/10' },
-        { key: 'resting_heart_rate', type: 'heart_rate', unit: 'bpm' },
-        { key: 'weight', type: 'weight', unit: 'lbs' }
-      ]
+      // Map daily summary to structured metrics
+      const parsedMetrics = mapToStructuredMetrics(dailySummary, 'conversation')
+      
+      // Get standard metrics to find metric IDs
+      const { data: standardMetrics, error: metricsError } = await supabase
+        .from('standard_metrics')
+        .select('id, metric_key')
+      
+      if (metricsError) {
+        console.error('Error fetching standard metrics:', metricsError)
+      } else {
+        // Create metric ID mapping
+        const metricIdMap = new Map(standardMetrics?.map(m => [m.metric_key, m.id]) || [])
+        
+        // Store each parsed metric
+        for (const parsedMetric of parsedMetrics) {
+          const metricId = metricIdMap.get(parsedMetric.metric)
+          
+          if (metricId) {
+            const { data: metricData, error: metricError } = await supabase
+              .from('user_daily_metrics')
+              .upsert({
+                user_id: user.id,
+                metric_id: metricId,
+                metric_date: today,
+                metric_value: typeof parsedMetric.value === 'number' ? parsedMetric.value : null,
+                text_value: typeof parsedMetric.value === 'string' ? parsedMetric.value : null,
+                boolean_value: typeof parsedMetric.value === 'boolean' ? parsedMetric.value : null,
+                source: parsedMetric.source,
+                confidence: parsedMetric.confidence
+              }, {
+                onConflict: 'user_id,metric_id,metric_date'
+              })
+              .select()
+              .single()
 
-      for (const mapping of metricMappings) {
-        if (dailySummary[mapping.key] !== null && dailySummary[mapping.key] !== undefined) {
-          const { data: metricData, error: metricError } = await supabase
-            .from('daily_metrics')
-            .upsert({
-              user_id: user.id,
-              metric_date: today,
-              metric_type: mapping.type,
-              metric_value: dailySummary[mapping.key],
-              metric_unit: mapping.unit,
-              source: 'conversation',
-              confidence: 1.0
-            }, {
-              onConflict: 'user_id,metric_date,metric_type'
-            })
-            .select()
-            .single()
-
-          if (metricError) {
-            console.error(`Error storing metric ${mapping.key}:`, metricError)
-          } else {
-            storedMetrics.push(metricData)
+            if (metricError) {
+              console.error(`Error storing metric ${parsedMetric.metric}:`, metricError)
+            } else {
+              storedMetrics.push(metricData)
+            }
           }
         }
       }
@@ -142,7 +151,6 @@ export async function POST(request: NextRequest) {
     if (events && events.length > 0) {
       for (const event of events) {
         if (event.event_type === 'workout') {
-          // Create a completed activity from workout event
           const { data: activityData, error: activityError } = await supabase
             .from('daily_activities')
             .insert({
@@ -150,10 +158,11 @@ export async function POST(request: NextRequest) {
               activity_date: today,
               activity_type: 'workout',
               status: 'completed',
-              title: `Workout - ${event.data.duration || 'Unknown duration'}`,
-              description: `Completed workout from conversation`,
+              title: event.data.workout_type || 'Workout',
+              description: event.data.description || '',
               completed_data: event.data,
-              source: 'conversation'
+              source: 'conversation',
+              confidence: event.confidence || 0.8
             })
             .select()
             .single()
@@ -167,48 +176,26 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Store individual health events (keep for historical tracking)
-    const storedEvents = []
-    if (events && events.length > 0) {
-      for (const event of events) {
-        const { data: eventData, error: eventError } = await supabase
-          .from('events')
-          .insert({
-            user_id: user.id,
-            conversation_id: null,
-            event_type: event.event_type,
-            data: event.data
-          })
-          .select()
-          .single()
-
-        if (eventError) {
-          console.error('Error storing event:', eventError)
-        } else {
-          storedEvents.push(eventData)
-        }
-      }
-    }
-
     console.log('✅ **STORAGE COMPLETE:**')
-    console.log(`Stored ${storedMetrics.length} metrics`)
-    console.log(`Stored ${storedJournalEntries.length} journal entries`)
-    console.log(`Stored ${storedActivities.length} activities`)
-    console.log(`Stored ${storedEvents.length} events`)
+    console.log(`- Stored ${storedMetrics.length} metrics`)
+    console.log(`- Stored ${storedJournalEntries.length} journal entries`)
+    console.log(`- Stored ${storedActivities.length} activities`)
+    console.log('---')
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
-      storedMetrics,
-      storedJournalEntries,
-      storedActivities,
-      storedEvents,
-      message: `Successfully stored ${storedMetrics.length} metrics, ${storedJournalEntries.length} journal entries, ${storedActivities.length} activities, and ${storedEvents.length} events`
+      message: 'Health data stored successfully',
+      data: {
+        metrics: storedMetrics,
+        journalEntries: storedJournalEntries,
+        activities: storedActivities
+      }
     })
 
   } catch (error) {
-    console.error('Health store API error:', error)
+    console.error('Health store error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' }, 
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }
