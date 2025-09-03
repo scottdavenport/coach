@@ -181,7 +181,7 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
 
     } catch (error) {
       console.error('Error sending message:', error)
-      const aiErrorResponse = await sendErrorToAI('connection issue', 'The user tried to send a message but I had trouble connecting.')
+      const aiErrorResponse = await sendErrorToAI('connection issue')
       const errorMessage = {
         id: Date.now() + 1,
         content: aiErrorResponse,
@@ -230,7 +230,7 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
           console.log('🔍 OCR data processed:', ocrResult.structuredData);
           
           // Send to OpenAI for natural conversational response
-          const aiResponse = await sendToAIWithOcrData(ocrResult.structuredData, contextText, pendingFile.fileName)
+          const aiResponse = await sendToAIWithOcrData(ocrResult.structuredData, contextText)
           
           const ocrMessage = {
             id: Date.now() + 1,
@@ -246,7 +246,7 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
         }
       } catch (error) {
         console.error('OCR processing error:', error)
-        const aiErrorResponse = await sendErrorToAI('OCR processing failure', `The OCR processing failed for file ${pendingFile.fileName}. Error: ${error.message}. Context provided: "${contextText}"`)
+        const aiErrorResponse = await sendErrorToAI('OCR processing failure')
         const errorMessage = {
           id: Date.now() + 1,
           content: aiErrorResponse,
@@ -259,7 +259,7 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
 
     } catch (error) {
       console.error('Error processing file with context:', error)
-      const aiErrorResponse = await sendErrorToAI('file processing issue', `The user tried to upload a file (${pendingFile?.fileName}) but I had trouble processing it.`)
+      const aiErrorResponse = await sendErrorToAI('file processing issue')
       const errorMessage = {
         id: Date.now() + 1,
         content: aiErrorResponse,
@@ -374,7 +374,7 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
       
     } catch (error) {
       console.error('Error handling OCR correction:', error)
-      const aiErrorResponse = await sendErrorToAI('data update issue', 'The user tried to correct some health data but I had trouble updating it in the database.')
+      const aiErrorResponse = await sendErrorToAI('data update issue')
       const errorMessage = {
         id: Date.now() + 1,
         content: aiErrorResponse,
@@ -550,7 +550,7 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
 
 
   // Handle errors gracefully without calling the AI API
-  const sendErrorToAI = async (errorType: string, context: string = '') => {
+  const sendErrorToAI = async (errorType: string) => {
     // Provide natural, friendly error messages directly
     const errorMessages = {
       'connection issue': "I'm having trouble connecting right now. Could you try sending your message again? Sometimes a quick refresh helps clear up connection issues.",
@@ -643,16 +643,16 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
       }
 
       const data = await response.json()
-      return data.message || await sendErrorToAI('correction response generation', 'I successfully updated the data but had trouble generating a response.')
+      return data.message || await sendErrorToAI('correction response generation')
     } catch (error) {
       console.error('Error getting AI response for correction:', error)
       // Fallback to AI error response if AI fails
-      return await sendErrorToAI('correction response generation', 'I successfully updated the data but had trouble generating a response.')
+      return await sendErrorToAI('correction response generation')
     }
   }
 
   // Send OCR data to OpenAI for natural conversational response
-  const sendToAIWithOcrData = async (structuredData: any, context: string, fileName: string) => {
+  const sendToAIWithOcrData = async (structuredData: any, context: string) => {
     try {
       // Process OCR data directly without creating fake user messages
       const response = await fetch('/api/chat', {
@@ -675,11 +675,11 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
       }
 
       const data = await response.json()
-      return data.message || await sendErrorToAI('OCR response generation', 'I successfully processed the health data but had trouble generating a response.')
+      return data.message || await sendErrorToAI('OCR response generation')
     } catch (error) {
       console.error('Error getting AI response for OCR data:', error)
       // Fallback to AI error response if AI fails
-      return await sendErrorToAI('OCR response generation', 'I successfully processed the health data but had trouble generating a response.')
+      return await sendErrorToAI('OCR response generation')
     }
   }
 

@@ -137,7 +137,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Parse the conversation for rich context data
-    const parsedData = await parseConversationForRichContext(message, user.id, conversationContext, userContext)
+    const parsedData = await parseConversationForRichContext(message)
 
     // Show extracted data in console for development review
     if (parsedData && (parsedData.has_health_data || parsedData.has_activity_data || parsedData.has_mood_data || parsedData.has_nutrition_data || parsedData.has_sleep_data || parsedData.has_workout_data)) {
@@ -409,7 +409,7 @@ function buildStateContext(conversationState: string, checkinProgress: Record<st
   return context
 }
 
-async function parseConversationForRichContext(message: string, userId: string, conversationContext: Array<{role: string, content: string}>, userContext: string): Promise<ParsedConversation> {
+async function parseConversationForRichContext(message: string): Promise<ParsedConversation> {
   try {
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",

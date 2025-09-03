@@ -38,7 +38,6 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
     isLoading: patternsLoading,
     error: patternsError,
     refreshPatterns,
-    getTopPatterns,
     getTopTopics,
     getTopActivities,
     getTopMoods,
@@ -144,7 +143,7 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
 
       if (conversationInsights && conversationInsights.length > 0) {
         // Build narrative from natural conversation flow
-        const narrativeData = buildNarrativeFromConversations(conversationInsights, date)
+        const narrativeData = buildNarrativeFromConversations(conversationInsights)
         setNarrativeData(narrativeData)
       } else {
         // No conversation insights found
@@ -158,10 +157,10 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
     } finally {
       setIsLoading(false)
     }
-  }, [userId])
+  }, [userId, buildNarrativeFromConversations])
 
   // Build narrative from natural conversation flow
-  const buildNarrativeFromConversations = (insights: any[], date: Date) => {
+  const buildNarrativeFromConversations = useCallback((insights: any[]) => {
     const narrative: any = {
       morning_checkin: {},
       daily_schedule: { activities: [] },
@@ -179,7 +178,6 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
     const notes: string[] = []
     const sleepInsights: string[] = []
     const moodInsights: string[] = []
-    const activityInsights: string[] = []
     const healthInsights: string[] = []
     
     insights.forEach(insight => {
@@ -298,10 +296,10 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
     narrative.notes_flags.flags = notes
 
     return narrative
-  }
+  }, [getActivityDescription])
 
   // Helper function to get natural activity descriptions
-  const getActivityDescription = (activity: string): string => {
+  const getActivityDescription = useCallback((activity: string): string => {
     const descriptions: { [key: string]: string } = {
       'Outdoor activity': 'Time spent in nature and fresh air',
       'Exercise session': 'Physical activity and movement',
@@ -311,7 +309,7 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
       'Resort time': 'Enjoying the beautiful resort surroundings'
     }
     return descriptions[activity] || 'Activity from natural conversation'
-  }
+  }, [])
 
   // Generate narrative using conversation insights (simplified approach)
   const generateNarrative = async (date: Date) => {
