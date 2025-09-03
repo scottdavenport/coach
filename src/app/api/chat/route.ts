@@ -24,14 +24,27 @@ interface ParsedConversation {
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('🚀 Chat API called')
+    
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
+      console.error('❌ No user found')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { message, conversationId, conversationState, checkinProgress, ocrData } = await request.json()
+    console.log('👤 User authenticated:', user.id)
+
+    const body = await request.json()
+    const { message, conversationId, conversationState, checkinProgress, ocrData } = body
+
+    console.log('📝 Message received:', {
+      messageLength: message?.length || 0,
+      hasOcrData: !!ocrData,
+      conversationState,
+      checkinProgress: !!checkinProgress
+    })
 
     // Ensure user exists in the users table
     const { error: userError } = await supabase
@@ -42,6 +55,7 @@ export async function POST(request: NextRequest) {
 
     if (userError && userError.code === 'PGRST116') {
       // User doesn't exist, create them
+      console.log('👤 Creating new user in database')
       const { error: createUserError } = await supabase
         .from('users')
         .insert({
@@ -50,13 +64,15 @@ export async function POST(request: NextRequest) {
         })
 
       if (createUserError) {
-        console.error('Error creating user:', createUserError)
+        console.error('❌ Error creating user:', createUserError)
         return NextResponse.json({ error: 'Failed to create user' }, { status: 500 })
       }
-    } else     if (userError) {
-      console.error('Error checking user:', userError)
+    } else if (userError) {
+      console.error('❌ Error checking user:', userError)
       return NextResponse.json({ error: 'Failed to verify user' }, { status: 500 })
     }
+
+    console.log('✅ User verified in database')
 
     // Fetch conversation history (last 30 messages for context)
     const { data: conversationHistory } = await supabase
@@ -137,7 +153,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Parse the conversation for rich context data
+    console.log('🔍 Starting conversation parsing...')
     const parsedData = await parseConversationForRichContext(message)
+    console.log('✅ Conversation parsing complete:', {
+      hasHealthData: parsedData.has_health_data,
+      hasActivityData: parsedData.has_activity_data,
+      insightsCount: parsedData.insights.length
+    })
 
     // Show extracted data in console for development review
     if (parsedData && (parsedData.has_health_data || parsedData.has_activity_data || parsedData.has_mood_data || parsedData.has_nutrition_data || parsedData.has_sleep_data || parsedData.has_workout_data)) {
@@ -158,6 +180,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create OpenAI chat completion with enhanced system prompt
+    console.log('🤖 Starting OpenAI completion...')
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
@@ -314,11 +337,18 @@ Always be curious and supportive, building a rich understanding of the user's co
     })
 
   } catch (error) {
-    console.error('Chat API error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' }, 
-      { status: 500 }
-    )
+    console.error('❌ CHAT API ERROR:', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : 'No stack trace',
+      timestamp: new Date().toISOString()
+    })
+    
+    // Return a more detailed error response
+    return NextResponse.json({ 
+      error: 'Internal server error',
+      details: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString()
+    }, { status: 500 })
   }
 }
 

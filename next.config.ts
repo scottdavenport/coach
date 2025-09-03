@@ -11,6 +11,15 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  experimental: {
+    serverExternalPackages: ['@supabase/supabase-js'],
+  },
+  api: {
+    bodyParser: {
+      sizeLimit: '10mb',
+    },
+    responseLimit: '10mb',
+  },
 };
 
 export default nextConfig;

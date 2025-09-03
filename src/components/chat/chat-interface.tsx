@@ -156,7 +156,13 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
       })
 
       if (!response.ok) {
-        throw new Error('Failed to send message')
+        const errorText = await response.text()
+        console.error('API Error Response:', {
+          status: response.status,
+          statusText: response.statusText,
+          body: errorText
+        })
+        throw new Error(`Failed to send message: ${response.status} ${response.statusText}`)
       }
 
       const data = await response.json()
@@ -738,10 +744,24 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
     const file = event.target.files?.[0]
     if (!file) return
 
+    // Check file size (limit to 10MB for now)
+    const maxFileSize = 10 * 1024 * 1024 // 10MB
+    if (file.size > maxFileSize) {
+      const errorMessage = {
+        id: Date.now(),
+        content: `❌ File too large: ${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB). Maximum size is 10MB.`,
+        role: 'assistant',
+        timestamp: new Date(),
+      }
+      setMessages(prev => [...prev, errorMessage])
+      event.target.value = ''
+      return
+    }
+
     // Show uploading message - declare outside try block so it's accessible in catch
     const uploadingMessage = {
       id: Date.now(),
-      content: `📤 Uploading: ${file.name}...`,
+      content: `📤 Uploading: ${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB)...`,
       role: 'user',
       timestamp: new Date(),
       isUploading: true
