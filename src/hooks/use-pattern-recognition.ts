@@ -109,12 +109,13 @@ export function usePatternRecognition(userId: string): UsePatternRecognitionRetu
 
   /**
    * Initial pattern analysis when hook is initialized
+   * TEMPORARILY DISABLED for performance debugging
    */
-  useEffect(() => {
-    if (userId) {
-      analyzePatterns()
-    }
-  }, [userId, analyzePatterns])
+  // useEffect(() => {
+  //   if (userId) {
+  //     analyzePatterns()
+  //   }
+  // }, [userId, analyzePatterns])
 
   return {
     patterns,
