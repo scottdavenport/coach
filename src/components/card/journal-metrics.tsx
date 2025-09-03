@@ -63,7 +63,7 @@ export function JournalMetrics({ userId, date }: JournalMetricsProps) {
       if (prefs) {
         // Map metric IDs to our preference keys
         const newPrefs = { ...preferences }
-        prefs.forEach(pref => {
+        prefs.forEach(_pref => {
           // This would need to be mapped based on actual metric IDs
           // For now, we'll use the default preferences
         })
@@ -124,7 +124,7 @@ export function JournalMetrics({ userId, date }: JournalMetricsProps) {
       setPreferences(newPrefs)
       
       // Save to database
-      const supabase = createClient()
+      // const supabase = createClient()
       // This would need to be implemented based on your metric preference system
       console.log('Preference updated:', key, value)
     } catch (error) {

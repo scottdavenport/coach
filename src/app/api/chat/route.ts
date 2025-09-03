@@ -409,7 +409,7 @@ function buildStateContext(conversationState: string, checkinProgress: Record<st
   return context
 }
 
-async function parseConversationForRichContext(message: string, userId: string, conversationContext: Array<{role: string, content: string}>, userContext: string): Promise<ParsedConversation> {
+async function parseConversationForRichContext(message: string, _userId: string, _conversationContext: Array<{role: string, content: string}>, _userContext: string): Promise<ParsedConversation> {
   try {
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",

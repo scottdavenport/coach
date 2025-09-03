@@ -15,7 +15,7 @@ interface DashboardHeaderProps {
   onDateChange?: (date: string) => void
 }
 
-export function DashboardHeader({ userId, selectedDate, onDateChange }: DashboardHeaderProps) {
+export function DashboardHeader({ userId, selectedDate }: DashboardHeaderProps) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [isWeeklySummaryOpen, setIsWeeklySummaryOpen] = useState(false)
   const [isDailyJournalOpen, setIsDailyJournalOpen] = useState(false)

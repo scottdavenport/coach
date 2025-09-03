@@ -550,7 +550,7 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
 
 
   // Handle errors gracefully without calling the AI API
-  const sendErrorToAI = async (errorType: string, context: string = '') => {
+  const sendErrorToAI = async (errorType: string, _context: string = '') => {
     // Provide natural, friendly error messages directly
     const errorMessages = {
       'connection issue': "I'm having trouble connecting right now. Could you try sending your message again? Sometimes a quick refresh helps clear up connection issues.",
@@ -652,7 +652,7 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
   }
 
   // Send OCR data to OpenAI for natural conversational response
-  const sendToAIWithOcrData = async (structuredData: any, context: string, fileName: string) => {
+  const sendToAIWithOcrData = async (structuredData: any, context: string, _fileName: string) => {
     try {
       // Process OCR data directly without creating fake user messages
       const response = await fetch('/api/chat', {

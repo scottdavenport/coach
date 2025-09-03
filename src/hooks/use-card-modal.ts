@@ -6,16 +6,6 @@ interface UseCardModalProps {
   userId: string
 }
 
-interface DailyMetric {
-  id: string
-  metric_type: string
-  metric_value: number
-  metric_unit: string
-  source: string
-  confidence: number
-  created_at: string
-}
-
 interface DailyJournalEntry {
   id: string
   entry_type: string
@@ -105,7 +95,7 @@ export function useCardModal({ userId }: UseCardModalProps) {
       }
 
       // Fetch journal entries
-      const { data: journalEntries, error: journalError } = await supabase
+      const { error: journalError } = await supabase
         .from('daily_journal')
         .select('*')
         .eq('user_id', userId)
@@ -117,7 +107,7 @@ export function useCardModal({ userId }: UseCardModalProps) {
       }
 
       // Fetch goals (placeholder for now)
-      const goals: any[] = []
+      // const goals: any[] = []
 
       // Transform metrics into structured format by category
       const categories: Record<string, any> = {}

@@ -38,7 +38,6 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
     isLoading: patternsLoading,
     error: patternsError,
     refreshPatterns,
-    getTopPatterns,
     getTopTopics,
     getTopActivities,
     getTopMoods,
@@ -158,10 +157,10 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
     } finally {
       setIsLoading(false)
     }
-  }, [userId])
+  }, [userId, buildNarrativeFromConversations])
 
   // Build narrative from natural conversation flow
-  const buildNarrativeFromConversations = (insights: any[], date: Date) => {
+  const buildNarrativeFromConversations = useCallback((insights: any[], _date: Date) => {
     const narrative: any = {
       morning_checkin: {},
       daily_schedule: { activities: [] },
@@ -179,7 +178,7 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
     const notes: string[] = []
     const sleepInsights: string[] = []
     const moodInsights: string[] = []
-    const activityInsights: string[] = []
+
     const healthInsights: string[] = []
     
     insights.forEach(insight => {
@@ -298,7 +297,7 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
     narrative.notes_flags.flags = notes
 
     return narrative
-  }
+  }, [])
 
   // Helper function to get natural activity descriptions
   const getActivityDescription = (activity: string): string => {

@@ -238,6 +238,18 @@ create table user_metric_preferences (
   unique(user_id, metric_id)
 );
 
+-- Conversation Insights (extracted from chat interactions)
+create table conversation_insights (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade,
+  conversation_date date not null,
+  message text not null,
+  insights text[] default '{}',
+  data_types jsonb default '{}',
+  follow_up_questions text[] default '{}',
+  created_at timestamp with time zone default now()
+);
+
 -- Indexes for performance
 create index idx_conversations_user_id on conversations(user_id);
 create index idx_events_user_id on events(user_id);
@@ -254,6 +266,8 @@ create index idx_standard_metrics_category on standard_metrics(category_id);
 create index idx_user_daily_metrics_user_date on user_daily_metrics(user_id, metric_date);
 create index idx_user_daily_metrics_metric on user_daily_metrics(metric_id);
 create index idx_user_metric_preferences_user on user_metric_preferences(user_id);
+create index idx_conversation_insights_user_id on conversation_insights(user_id);
+create index idx_conversation_insights_date on conversation_insights(conversation_date);
 
 -- Row Level Security (RLS) setup
 alter table users enable row level security;
@@ -273,6 +287,7 @@ alter table metric_categories enable row level security;
 alter table standard_metrics enable row level security;
 alter table user_daily_metrics enable row level security;
 alter table user_metric_preferences enable row level security;
+alter table conversation_insights enable row level security;
 
 -- RLS Policies
 create policy "Users can view own data" on users for select using (id = auth.uid());
@@ -295,3 +310,4 @@ create policy "Allow read access to standard metrics" on standard_metrics for se
 -- User-specific policies for structured metrics
 create policy "Users can manage own daily metrics" on user_daily_metrics for all using (user_id = auth.uid());
 create policy "Users can manage own metric preferences" on user_metric_preferences for all using (user_id = auth.uid());
+create policy "Users can manage own conversation insights" on conversation_insights for all using (user_id = auth.uid());
