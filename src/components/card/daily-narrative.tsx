@@ -32,17 +32,27 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
   const [isGenerating, setIsGenerating] = useState(false)
   const [showPatterns, setShowPatterns] = useState(false)
 
-  // Pattern recognition hook
-  const {
-    patterns,
-    isLoading: patternsLoading,
-    error: patternsError,
-    refreshPatterns,
-    getTopTopics,
-    getTopActivities,
-    getTopMoods,
-    getSleepInsights
-  } = usePatternRecognition(userId)
+  // Pattern recognition hook - TEMPORARILY DISABLED for performance debugging
+  // const {
+  //   patterns,
+  //   isLoading: patternsLoading,
+  //   error: patternsError,
+  //   refreshPatterns,
+  //   getTopTopics,
+  //   getTopActivities,
+  //   getTopMoods,
+  //   getSleepInsights
+  // } = usePatternRecognition(userId)
+  
+  // Temporary mock data while pattern recognition is disabled
+  const patterns = null
+  const patternsLoading = false
+  const patternsError = null
+  const refreshPatterns = async () => {}
+  const getTopTopics = () => []
+  const getTopActivities = () => []
+  const getTopMoods = () => []
+  const getSleepInsights = () => []
 
   // Update currentDate when selectedDate prop changes
   useEffect(() => {
