@@ -118,7 +118,7 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
   }
 
   // Helper function to get natural activity descriptions
-  const getActivityDescription = useCallback((activity: string): string => {
+  const getActivityDescription = (activity: string): string => {
     const descriptions: { [key: string]: string } = {
       'Outdoor activity': 'Time spent in nature and fresh air',
       'Exercise session': 'Physical activity and movement',
@@ -128,7 +128,7 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
       'Resort time': 'Enjoying the beautiful resort surroundings'
     }
     return descriptions[activity] || 'Activity from natural conversation'
-  }, [])
+  } // PERFORMANCE FIX: Converted from useCallback to regular function to eliminate unnecessary dependencies
 
   // Build narrative from natural conversation flow
   const buildNarrativeFromConversations = useCallback((insights: any[]) => {
@@ -267,7 +267,7 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
     narrative.notes_flags.flags = notes
 
     return narrative
-  }, [getActivityDescription])
+  }, []) // PERFORMANCE FIX: Removed getActivityDescription dependency to prevent re-renders
 
   // Load narrative data for a specific date
   const loadNarrativeData = useCallback(async (date: Date) => {
@@ -309,7 +309,7 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
     } finally {
       setIsLoading(false)
     }
-  }, [userId, buildNarrativeFromConversations])
+  }, [userId]) // PERFORMANCE FIX: Removed buildNarrativeFromConversations from dependencies to prevent re-renders
 
   // Generate narrative using conversation insights (simplified approach)
   const generateNarrative = async (date: Date) => {
@@ -359,14 +359,14 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
     if (currentDate) {
       loadNarrativeData(currentDate)
     }
-  }, [currentDate, loadNarrativeData])
+  }, [currentDate]) // FIXED: Removed loadNarrativeData from dependencies to prevent infinite loop
 
   // Load data when modal opens
   useEffect(() => {
     if (isOpen) {
       loadNarrativeData(currentDate)
     }
-  }, [isOpen, currentDate, loadNarrativeData])
+  }, [isOpen, currentDate]) // FIXED: Removed loadNarrativeData from dependencies to prevent infinite loop
 
   // Real-time updates: Listen for new conversation insights and update narrative
   useEffect(() => {
@@ -428,7 +428,7 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
         supabase.removeChannel(channel)
       }
     }
-  }, [isOpen, userId, currentDate, loadNarrativeData])
+  }, [isOpen, userId, currentDate]) // FIXED: Removed loadNarrativeData from dependencies to prevent infinite loop
 
   // Refresh current narrative
   const handleRefresh = () => {
@@ -438,8 +438,9 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
   // Toggle pattern insights
   const togglePatterns = () => {
     setShowPatterns(!showPatterns)
-    if (!showPatterns && patterns) {
-      refreshPatterns()
+    // PERFORMANCE FIX: Only analyze patterns when user explicitly requests them
+    if (!showPatterns && !patterns) {
+      refreshPatterns() // This will trigger pattern analysis only when needed
     }
   }
 

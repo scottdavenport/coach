@@ -108,13 +108,15 @@ export function usePatternRecognition(userId: string): UsePatternRecognitionRetu
   }, [patterns])
 
   /**
-   * Initial pattern analysis when hook is initialized
+   * Initial pattern analysis when hook is initialized - DISABLED TO FIX PERFORMANCE
+   * Pattern analysis will only run when explicitly requested via analyzePatterns() or refreshPatterns()
    */
-  useEffect(() => {
-    if (userId) {
-      analyzePatterns()
-    }
-  }, [userId, analyzePatterns])
+  // PERFORMANCE FIX: Removed automatic pattern analysis on mount
+  // useEffect(() => {
+  //   if (userId) {
+  //     analyzePatterns()
+  //   }
+  // }, [userId, analyzePatterns])
 
   return {
     patterns,
