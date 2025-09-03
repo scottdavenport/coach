@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -43,16 +43,16 @@ export function JournalMetrics({ userId, date }: JournalMetricsProps) {
   // Load user preferences
   useEffect(() => {
     loadUserPreferences()
-  }, [userId])
+  }, [loadUserPreferences])
 
   // Load metrics data
   useEffect(() => {
     if (isExpanded) {
       loadMetricsData()
     }
-  }, [userId, date, isExpanded])
+  }, [isExpanded, loadMetricsData])
 
-  const loadUserPreferences = async () => {
+  const loadUserPreferences = useCallback(async () => {
     try {
       const supabase = createClient()
       const { data: prefs } = await supabase
@@ -63,7 +63,7 @@ export function JournalMetrics({ userId, date }: JournalMetricsProps) {
       if (prefs) {
         // Map metric IDs to our preference keys
         const newPrefs = { ...preferences }
-        prefs.forEach(pref => {
+        prefs.forEach(() => {
           // This would need to be mapped based on actual metric IDs
           // For now, we'll use the default preferences
         })
@@ -72,9 +72,9 @@ export function JournalMetrics({ userId, date }: JournalMetricsProps) {
     } catch (error) {
       console.error('Error loading user preferences:', error)
     }
-  }
+  }, [userId, preferences])
 
-  const loadMetricsData = async () => {
+  const loadMetricsData = useCallback(async () => {
     try {
       setLoading(true)
       const supabase = createClient()
@@ -116,7 +116,7 @@ export function JournalMetrics({ userId, date }: JournalMetricsProps) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [userId, date])
 
   const updatePreference = async (key: keyof UserMetricPreferences, value: boolean) => {
     try {
@@ -124,7 +124,6 @@ export function JournalMetrics({ userId, date }: JournalMetricsProps) {
       setPreferences(newPrefs)
       
       // Save to database
-      const supabase = createClient()
       // This would need to be implemented based on your metric preference system
       console.log('Preference updated:', key, value)
     } catch (error) {

@@ -113,7 +113,7 @@ export class OuraSyncService {
       const readinessRecord = readinessData.data.find(d => d.day === date)
 
       // Transform Oura data to structured metrics format
-      const structuredMetrics = await this.transformOuraToStructuredMetrics(sleepRecord, activityRecord, readinessRecord, date)
+      const structuredMetrics = await this.transformOuraToStructuredMetrics(sleepRecord, activityRecord, readinessRecord)
 
       // Store metrics using the new structured system
       for (const metric of structuredMetrics) {
@@ -139,7 +139,7 @@ export class OuraSyncService {
     }
   }
 
-  private async transformOuraToStructuredMetrics(sleep: any, activity: any, readiness: any, date: string) {
+  private async transformOuraToStructuredMetrics(sleep: any, activity: any, readiness: any) {
     const metrics: any[] = []
 
     // Get standard metrics to map Oura data

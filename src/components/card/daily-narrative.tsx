@@ -143,7 +143,7 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
 
       if (conversationInsights && conversationInsights.length > 0) {
         // Build narrative from natural conversation flow
-        const narrativeData = buildNarrativeFromConversations(conversationInsights, date)
+        const narrativeData = buildNarrativeFromConversations(conversationInsights)
         setNarrativeData(narrativeData)
       } else {
         // No conversation insights found
@@ -160,7 +160,7 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
   }, [userId, buildNarrativeFromConversations])
 
   // Build narrative from natural conversation flow
-  const buildNarrativeFromConversations = useCallback((insights: any[], date: Date) => {
+  const buildNarrativeFromConversations = useCallback((insights: any[]) => {
     const narrative: any = {
       morning_checkin: {},
       daily_schedule: { activities: [] },
@@ -178,7 +178,6 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
     const notes: string[] = []
     const sleepInsights: string[] = []
     const moodInsights: string[] = []
-    const activityInsights: string[] = []
     const healthInsights: string[] = []
     
     insights.forEach(insight => {

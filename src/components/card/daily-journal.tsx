@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { ClassifiedData } from '@/lib/data-classification'
+
 import { 
   BookOpen, 
   Target, 
@@ -18,13 +18,6 @@ import { Textarea } from '@/components/ui/textarea'
 interface DailyJournalProps {
   userId: string
   date: string
-  journalEntries: Array<{
-    id?: string
-    entry_type: string
-    content: string
-    category: string
-    created_at?: string
-  }>
   onDataUpdate: () => void
 }
 
@@ -44,7 +37,7 @@ const ENTRY_TYPE_CONFIG = {
   advice: { title: 'Advice', icon: Lightbulb, color: 'text-orange-400' }
 }
 
-export function DailyJournal({ userId, date, journalEntries, onDataUpdate }: DailyJournalProps) {
+export function DailyJournal({ userId, date, onDataUpdate }: DailyJournalProps) {
   const [isAddingEntry, setIsAddingEntry] = useState(false)
   const [newEntryType, setNewEntryType] = useState('note')
   const [newEntryContent, setNewEntryContent] = useState('')

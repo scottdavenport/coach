@@ -174,7 +174,7 @@ function getUnitForMetric(metric: string): string {
 }
 
 // Helper function to validate metric values
-export function validateMetricValue(metric: string, value: any): boolean {
+export function validateMetricValue(metric: string, _value: any): boolean {
   const metricInfo = Object.values(METRIC_MAPPING).find(m => m.metric === metric);
   if (!metricInfo) return false;
   
