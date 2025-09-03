@@ -18,6 +18,7 @@ export function DashboardHeader({ userId, selectedDate }: DashboardHeaderProps) 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [isWeeklySummaryOpen, setIsWeeklySummaryOpen] = useState(false)
   const [isDailyJournalOpen, setIsDailyJournalOpen] = useState(false)
+  const [isDailyWorkoutOpen, setIsDailyWorkoutOpen] = useState(false) // PERFORMANCE FIX: Add state for workout modal
   const [isResetting, setIsResetting] = useState(false)
   const workoutModalRef = useRef<DailyWorkoutModalRef>(null)
 
@@ -102,7 +103,11 @@ export function DashboardHeader({ userId, selectedDate }: DashboardHeaderProps) 
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => workoutModalRef.current?.openModal()}
+            onClick={() => {
+              setIsDailyWorkoutOpen(true)
+              // Open the modal after it's rendered
+              setTimeout(() => workoutModalRef.current?.openModal(), 0)
+            }}
             className="h-8 w-8"
             title="Daily Workout"
           >
@@ -134,28 +139,40 @@ export function DashboardHeader({ userId, selectedDate }: DashboardHeaderProps) 
         </div>
       </div>
 
-      <SettingsModal
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-        userId={userId}
-      />
+      {/* PERFORMANCE FIX: Only render modals when open to prevent background processing */}
+      {isSettingsOpen && (
+        <SettingsModal
+          isOpen={isSettingsOpen}
+          onClose={() => setIsSettingsOpen(false)}
+          userId={userId}
+        />
+      )}
 
-      <WeeklySummaryModal
-        isOpen={isWeeklySummaryOpen}
-        onClose={() => setIsWeeklySummaryOpen(false)}
-      />
+      {isWeeklySummaryOpen && (
+        <WeeklySummaryModal
+          isOpen={isWeeklySummaryOpen}
+          onClose={() => setIsWeeklySummaryOpen(false)}
+        />
+      )}
 
-      <DailyWorkoutModal
-        userId={userId}
-        ref={workoutModalRef}
-      />
+      {/* PERFORMANCE FIX: Only render DailyWorkoutModal when needed */}
+      {isDailyWorkoutOpen && (
+        <DailyWorkoutModal
+          userId={userId}
+          ref={workoutModalRef}
+          onClose={() => setIsDailyWorkoutOpen(false)}
+        />
+      )}
 
-      <DailyJournal
-        userId={userId}
-        isOpen={isDailyJournalOpen}
-        onClose={() => setIsDailyJournalOpen(false)}
-        selectedDate={selectedDate}
-      />
+      {/* PERFORMANCE FIX: Only render DailyJournal when modal is open to prevent background processing */}
+      {isDailyJournalOpen && (
+        <DailyJournal
+          userId={userId}
+          isOpen={isDailyJournalOpen}
+          onClose={() => setIsDailyJournalOpen(false)}
+          selectedDate={selectedDate}
+        />
+      )}
     </>
   )
 }

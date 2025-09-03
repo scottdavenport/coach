@@ -22,6 +22,7 @@ import {
 
 interface DailyWorkoutModalProps {
   userId: string
+  onClose?: () => void // PERFORMANCE FIX: Add callback for when modal closes
 }
 
 export interface DailyWorkoutModalRef {
@@ -30,7 +31,7 @@ export interface DailyWorkoutModalRef {
 }
 
 export const DailyWorkoutModal = forwardRef<DailyWorkoutModalRef, DailyWorkoutModalProps>(
-  ({ userId }, ref) => {
+  ({ userId, onClose }, ref) => {
     const [isOpen, setIsOpen] = useState(false)
     const [selectedDate, setSelectedDate] = useState('')
     const [showDatePicker, setShowDatePicker] = useState(false)
@@ -127,7 +128,13 @@ export const DailyWorkoutModal = forwardRef<DailyWorkoutModalRef, DailyWorkoutMo
     const completedActivities = getCompletedActivities()
 
     return (
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <Dialog open={isOpen} onOpenChange={(open) => {
+        setIsOpen(open)
+        // PERFORMANCE FIX: Notify parent when modal closes
+        if (!open && onClose) {
+          onClose()
+        }
+      }}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center justify-between">

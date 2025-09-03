@@ -207,7 +207,7 @@ export function useDailyActivities({ userId }: UseDailyActivitiesProps) {
     if (selectedDate) {
       fetchActivities(selectedDate)
     }
-  }, [selectedDate, fetchActivities])
+  }, [selectedDate]) // PERFORMANCE FIX: Removed fetchActivities from dependencies to prevent infinite loop
 
   return {
     activities,

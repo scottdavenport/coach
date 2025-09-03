@@ -168,7 +168,7 @@ export function useOuraIntegration({ userId }: UseOuraIntegrationProps) {
     if (userId) {
       fetchIntegration()
     }
-  }, [userId, fetchIntegration])
+  }, [userId]) // PERFORMANCE FIX: Removed fetchIntegration from dependencies to prevent infinite loop
 
   return {
     integration,
