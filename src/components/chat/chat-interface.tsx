@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect, useCallback, startTransition } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { Mic, Send, Plus, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ChatMessage } from './chat-message'
@@ -8,8 +8,7 @@ import { FileUploadMenu } from './file-upload-menu'
 import { FilePreviewList } from './file-preview-chip'
 import { OptimizedInput } from './optimized-input'
 import { IsolatedFileManager } from './isolated-file-manager'
-import { PerformanceTestInput } from './performance-test-input'
-import { EmergencyChatInput } from './emergency-chat-input'
+
 import { createClient } from '@/lib/supabase/client'
 import { FileAttachment, SupportedFileType } from '@/types'
 import { FileProcessor } from '@/lib/file-processing'
@@ -27,7 +26,7 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
   
   const [messages, setMessages] = useState<any[]>([])
   const [inputValue, setInputValue] = useState('')
-  const [debouncedInputValue, setDebouncedInputValue] = useState('')
+
   const [isUploadMenuOpen, setIsUploadMenuOpen] = useState(false)
   const [isRecording, setIsRecording] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -40,41 +39,11 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
     physical_notes: null as string | null
   })
   const [isDragging, setIsDragging] = useState(false)
-  const [useEmergencyMode, setUseEmergencyMode] = useState(false)
   const fileManager = useFileManager(userId)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const renderCountRef = useRef(0)
 
-  // Debounce input value to reduce re-renders
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedInputValue(inputValue)
-    }, 100) // 100ms debounce
 
-    return () => clearTimeout(timer)
-  }, [inputValue])
-
-  // Performance debugging
-  useEffect(() => {
-    renderCountRef.current += 1
-    const startTime = performance.now()
-    
-    console.log('🐌 PERFORMANCE DEBUG - Render #', renderCountRef.current, {
-      attachedFilesCount: fileManager.files.length,
-      inputValueLength: inputValue.length,
-      debouncedInputLength: debouncedInputValue.length,
-      isLoading,
-      timestamp: Date.now()
-    })
-
-    return () => {
-      const endTime = performance.now()
-      if (endTime - startTime > 16) { // > 1 frame at 60fps
-        console.warn('⚠️ SLOW RENDER detected:', endTime - startTime + 'ms')
-      }
-    }
-  })
 
 
 
@@ -1113,37 +1082,10 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
         </div>
       </div>
 
-      {/* Performance Toggle */}
-      <div className="border-b border-line p-2 bg-yellow-50">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <span className="text-xs text-yellow-800">
-            🐌 Performance Debug Mode - Files: {fileManager.files.length}
-          </span>
-          <button
-            onClick={() => setUseEmergencyMode(!useEmergencyMode)}
-            className="text-xs bg-yellow-200 px-2 py-1 rounded"
-          >
-            {useEmergencyMode ? 'Use Normal Input' : 'Use Emergency Input'}
-          </button>
-        </div>
-      </div>
-
-      {/* Emergency Input Mode */}
-      {useEmergencyMode ? (
-        <EmergencyChatInput
-          onSendMessage={handleEmergencyMessage}
-          onFileUpload={handleEmergencyFileUpload}
-          disabled={isLoading}
-          isLoading={isLoading}
-          fileCount={fileManager.files.length}
-        />
-      ) : (
-        <>
-          {/* Input Area - Pinned to Bottom */}
-          <div className="border-t border-line p-4 bg-background">
-            <div className="max-w-4xl mx-auto">
-              {/* Performance Test - Remove after debugging */}
-              <PerformanceTestInput />
+      {/* Input Area - Pinned to Bottom */}
+      <div className="border-t border-line p-4 bg-background">
+        <div className="max-w-4xl mx-auto">
+              
               
               {/* File Attachments Preview - Isolated */}
               <IsolatedFileManager 
@@ -1214,8 +1156,6 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
           </div>
         </div>
       </div>
-        </>
-      )}
 
       {/* Hidden file input */}
       <input
