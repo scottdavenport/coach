@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ User verified in database')
 
-    // Fetch conversation history (last 6 messages for context)
+    // Fetch conversation history (last 6 messages for context, with size limits)
     const { data: conversationHistory } = await supabase
       .from('conversations')
       .select('message, message_type, metadata, created_at')
@@ -136,12 +136,13 @@ export async function POST(request: NextRequest) {
       console.log('🔍 MULTI-FILE DATA RECEIVED:', JSON.stringify(multiFileData, null, 2))
     }
 
-    // Save user message to database
+    // Save user message to database (truncate if too large to prevent performance issues)
+    const truncatedMessage = message.length > 1000 ? message.substring(0, 1000) + '... [truncated for performance]' : message
     const { data: conversationData, error: conversationError } = await supabase
       .from('conversations')
       .insert({
         user_id: user.id,
-        message: message,
+        message: truncatedMessage,
         message_type: 'text',
         metadata: { conversation_id: conversationId }
       })
@@ -391,7 +392,7 @@ function buildConversationContext(conversationHistory: Array<{message: string, m
   
   return recentMessages.map(msg => ({
     role: msg.metadata?.role === 'assistant' ? 'assistant' : 'user',
-    content: msg.message.length > 500 ? msg.message.substring(0, 500) + '...' : msg.message
+    content: msg.message.length > 300 ? msg.message.substring(0, 300) + '... [truncated]' : msg.message
   }))
 }
 

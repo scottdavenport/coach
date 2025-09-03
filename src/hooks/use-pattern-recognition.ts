@@ -109,7 +109,8 @@ export function usePatternRecognition(userId: string): UsePatternRecognitionRetu
 
   /**
    * Initial pattern analysis when hook is initialized
-   * TEMPORARILY DISABLED for performance debugging
+   * DISABLED to prevent background processing that causes typing lag
+   * Pattern analysis will only run when explicitly requested
    */
   // useEffect(() => {
   //   if (userId) {
