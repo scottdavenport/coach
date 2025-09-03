@@ -379,11 +379,59 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
   }, [isOpen, currentDate, loadNarrativeData])
 
   // Real-time updates: Listen for new conversation insights and update narrative
-  // TEMPORARILY DISABLED - Real-time subscriptions causing performance issues
-  // useEffect(() => {
-  //   if (!isOpen || !userId) return
-  //   // Real-time subscription logic disabled for performance debugging
-  // }, [isOpen, userId, currentDate, loadNarrativeData])
+  useEffect(() => {
+    if (!isOpen || !userId) return
+
+    const supabase = createClient()
+    
+    // Subscribe to new conversation insights for the currently selected date
+    const startOfDay = new Date(currentDate)
+    startOfDay.setHours(0, 0, 0, 0)
+    const endOfDay = new Date(currentDate)
+    endOfDay.setHours(23, 59, 59, 999)
+
+    console.log('Setting up real-time subscription for date:', currentDate.toISOString().split('T')[0])
+
+    const channelName = `narrative-updates-${currentDate.toISOString().split('T')[0]}-${userId}`
+    
+    const channel = supabase
+      .channel(channelName)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT', // Only listen to new insights (not updates/deletes)
+          schema: 'public',
+          table: 'conversation_insights',
+          filter: `user_id=eq.${userId}`
+        },
+        async (payload) => {
+          console.log('Real-time insight detected:', (payload.new as any)?.message?.substring(0, 50))
+          
+          // Check if this insight is for the currently selected date
+          const insightDate = new Date((payload.new as any)?.conversation_date)
+          
+          if (insightDate >= startOfDay && insightDate <= endOfDay) {
+            console.log('Insight matches selected date - triggering narrative update')
+            // Debounce the update to prevent excessive calls
+            setTimeout(async () => {
+              await loadNarrativeData(currentDate)
+            }, 2000) // 2 second delay to batch multiple insights
+          }
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('Real-time subscription active for narrative updates on date:', currentDate.toISOString().split('T')[0])
+        }
+      })
+
+    return () => {
+      if (channel) {
+        console.log('Cleaning up real-time subscription for date:', currentDate.toISOString().split('T')[0])
+        supabase.removeChannel(channel)
+      }
+    }
+  }, [isOpen, userId, currentDate]) // Removed loadNarrativeData dependency to prevent infinite loops
 
   // Refresh current narrative
   const handleRefresh = () => {
