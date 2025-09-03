@@ -6,25 +6,7 @@ interface UseCardModalProps {
   userId: string
 }
 
-interface DailyMetric {
-  id: string
-  metric_type: string
-  metric_value: number
-  metric_unit: string
-  source: string
-  confidence: number
-  created_at: string
-}
 
-interface DailyJournalEntry {
-  id: string
-  entry_type: string
-  category: string
-  content: string
-  source: string
-  confidence: number
-  created_at: string
-}
 
 export function useCardModal({ userId }: UseCardModalProps) {
   const [isOpen, setIsOpen] = useState(false)
@@ -104,20 +86,7 @@ export function useCardModal({ userId }: UseCardModalProps) {
         console.error('Error fetching metrics:', metricsError)
       }
 
-      // Fetch journal entries
-      const { data: journalEntries, error: journalError } = await supabase
-        .from('daily_journal')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('journal_date', date)
-        .order('created_at', { ascending: false })
-
-      if (journalError) {
-        console.error('Error fetching journal entries:', journalError)
-      }
-
-      // Fetch goals (placeholder for now)
-      const goals: any[] = []
+      // Note: Journal entries are handled by DailyJournal component directly
 
       // Transform metrics into structured format by category
       const categories: Record<string, any> = {}
