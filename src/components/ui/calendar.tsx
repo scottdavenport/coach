@@ -17,6 +17,7 @@ interface CalendarProps {
   selectedDate: string
   onDateSelect: (date: string) => void
   journalEntryDates?: string[]
+  previousDayDate?: string
   className?: string
 }
 
@@ -24,20 +25,26 @@ export function Calendar({
   selectedDate, 
   onDateSelect, 
   journalEntryDates = [], 
+  previousDayDate,
   className = '' 
 }: CalendarProps) {
   const { userTimezone } = useUserTimezone()
   const [currentYear, setCurrentYear] = useState(() => {
-    const today = getTodayInTimezone()
-    return parseInt(today.split('-')[0])
+    return parseInt(selectedDate.split('-')[0])
   })
   const [currentMonth, setCurrentMonth] = useState(() => {
-    const today = getTodayInTimezone()
-    return parseInt(today.split('-')[1])
+    return parseInt(selectedDate.split('-')[1])
   })
   const [isOpen, setIsOpen] = useState(false)
 
   const preferredTimezone = getUserPreferredTimezone(userTimezone)
+
+  // Update calendar month/year when selected date changes
+  useEffect(() => {
+    const [year, month] = selectedDate.split('-').map(Number)
+    setCurrentYear(year)
+    setCurrentMonth(month)
+  }, [selectedDate])
 
   // Get calendar grid for current month
   const calendarGrid = getCalendarGridInTimezone(currentYear, currentMonth, preferredTimezone)
@@ -94,20 +101,20 @@ export function Calendar({
   ).replace(/\d+/, '').trim()
 
   return (
-    <div className={`relative ${className}`}>
-      {/* Calendar Toggle Button */}
+    <div className={`relative inline-block ${className}`}>
+      {/* Calendar Toggle Button - shows previous day */}
       <Button
         variant="outline"
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-2"
       >
         <CalendarIcon className="h-4 w-4" />
-        {formatDateInTimezone(selectedDate, 'short', preferredTimezone)}
+        {previousDayDate ? formatDateInTimezone(previousDayDate, 'short', preferredTimezone) : formatDateInTimezone(selectedDate, 'short', preferredTimezone)}
       </Button>
 
       {/* Calendar Dropdown */}
       {isOpen && (
-        <div className="absolute top-full left-0 mt-2 bg-background border border-line rounded-lg shadow-lg z-50 p-4 min-w-[320px]">
+        <div className="absolute top-full left-0 mt-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-[100] p-4 min-w-[320px] max-w-[320px]">
           {/* Calendar Header */}
           <div className="flex items-center justify-between mb-4">
             <Button
@@ -187,7 +194,7 @@ export function Calendar({
       {/* Backdrop */}
       {isOpen && (
         <div 
-          className="fixed inset-0 z-40" 
+          className="fixed inset-0 z-[90]" 
           onClick={() => setIsOpen(false)}
         />
       )}

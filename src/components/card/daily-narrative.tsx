@@ -78,16 +78,11 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
   const getTopMoods = (limit?: number) => []
   const getSleepInsights = () => []
 
-  // Update currentDate when selectedDate prop changes
+  // Update currentDate when selectedDate prop changes or initialize with today
   useEffect(() => {
     if (selectedDate) {
       setCurrentDate(selectedDate)
-    }
-  }, [selectedDate])
-
-  // Ensure we start with current date if no date is selected
-  useEffect(() => {
-    if (!selectedDate) {
+    } else {
       const preferredTimezone = getUserPreferredTimezone(userTimezone)
       const todayString = getTodayInTimezone(preferredTimezone)
       console.log('🔍 Setting current date to today:', todayString, 'in timezone:', preferredTimezone)
@@ -346,23 +341,16 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
     }
   }
 
-  // Load data when currentDate changes
+  // Load data when currentDate changes or modal opens
   useEffect(() => {
-    if (currentDate) {
+    if (currentDate && isOpen) {
       loadNarrativeData(currentDate)
     }
-  }, [currentDate, loadNarrativeData])
-
-  // Load data when modal opens
-  useEffect(() => {
-    if (isOpen) {
-      loadNarrativeData(currentDate)
-    }
-  }, [isOpen, currentDate, loadNarrativeData])
+  }, [currentDate, isOpen, userId, userTimezone]) // Removed loadNarrativeData dependency to prevent infinite loops
 
   // Real-time updates: Listen for new conversation insights and update narrative
   useEffect(() => {
-    if (!isOpen || !userId) return
+    if (!isOpen || !userId || !currentDate) return
 
     const supabase = createClient()
     
@@ -451,12 +439,18 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
           </Button>
 
           <div className="flex items-center gap-4">
+            {/* Main date display - full format */}
             <h2 className="text-lg font-semibold">{formatDate(currentDate)}</h2>
+            
+            {/* Calendar button showing previous day in short format */}
             <Calendar 
               selectedDate={currentDate}
               onDateSelect={handleDateSelect}
               journalEntryDates={journalEntryDates}
+              previousDayDate={navigateDateInTimezone(currentDate, 'prev', getUserPreferredTimezone(userTimezone))}
             />
+            
+            {/* Today button - only show when not on today */}
             {!isToday() && (
               <Button
                 variant="outline"
