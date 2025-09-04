@@ -45,6 +45,8 @@ export function useUserTimezone(): UseUserTimezoneReturn {
       setError(null)
       
       const supabase = createClient()
+      
+      // Try to fetch timezone, but gracefully handle if column doesn't exist
       const { data, error: fetchError } = await supabase
         .from('users')
         .select('timezone')
@@ -52,13 +54,22 @@ export function useUserTimezone(): UseUserTimezoneReturn {
         .single()
 
       if (fetchError) {
+        // If the error is about the column not existing, that's expected for new migrations
+        if (fetchError.code === 'PGRST116' || 
+            fetchError.message?.includes('column') || 
+            fetchError.message?.includes('does not exist') ||
+            fetchError.message?.includes('timezone')) {
+          console.log('Timezone column not found, using detected timezone as default')
+          setUserTimezone(detectedTimezone)
+          return
+        }
         console.error('Error fetching user timezone:', fetchError)
         setError('Failed to load timezone preference')
         setUserTimezone('UTC')
         return
       }
 
-      const storedTimezone = data?.timezone || 'UTC'
+      const storedTimezone = data?.timezone || detectedTimezone
       setUserTimezone(storedTimezone)
 
       // If user doesn't have a timezone set, auto-detect and save it
@@ -69,7 +80,7 @@ export function useUserTimezone(): UseUserTimezoneReturn {
     } catch (err) {
       console.error('Error in loadUserTimezone:', err)
       setError('Failed to load timezone preference')
-      setUserTimezone('UTC')
+      setUserTimezone(detectedTimezone) // Fall back to detected timezone
     } finally {
       setIsLoading(false)
     }
@@ -93,6 +104,15 @@ export function useUserTimezone(): UseUserTimezoneReturn {
 
       if (updateError) {
         console.error('Error updating user timezone:', updateError)
+        // If the error is about the column not existing, that's expected for new migrations
+        if (updateError.code === 'PGRST116' || 
+            updateError.message?.includes('column') || 
+            updateError.message?.includes('does not exist') ||
+            updateError.message?.includes('timezone')) {
+          console.log('Timezone column not found, cannot update timezone preference')
+          setError('Timezone feature not available yet - migration may not be applied')
+          return
+        }
         setError('Failed to update timezone preference')
         return
       }
