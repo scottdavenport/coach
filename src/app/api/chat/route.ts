@@ -310,40 +310,113 @@ export async function POST(request: NextRequest) {
         })
         console.log('---')
 
-        // Store the conversation insights in a simple way
+        // Store the conversation insights with enhanced context
+        const enhancedInsights = {
+          user_id: user.id,
+          conversation_date: new Date().toISOString().split('T')[0],
+          message: message,
+          insights: parsedData.insights,
+          data_types: {
+            health: parsedData.has_health_data,
+            activity: parsedData.has_activity_data,
+            mood: parsedData.has_mood_data,
+            nutrition: parsedData.has_nutrition_data,
+            sleep: parsedData.has_sleep_data,
+            workout: parsedData.has_workout_data,
+            // Add flags for file data
+            has_ocr_data: !!ocrData,
+            has_multifile_data: !!multiFileData
+          },
+          follow_up_questions: parsedData.follow_up_questions,
+          created_at: new Date().toISOString()
+        }
+
+        // Add OCR and multi-file context to insights if present
+        if (ocrData) {
+          enhancedInsights.insights.push(`OCR data extracted from uploaded image: ${JSON.stringify(ocrData).substring(0, 200)}...`)
+        }
+        
+        if (multiFileData) {
+          if (multiFileData.images?.length > 0) {
+            enhancedInsights.insights.push(`Uploaded ${multiFileData.images.length} image(s) with analysis`)
+          }
+          if (multiFileData.documents?.length > 0) {
+            multiFileData.documents.forEach((doc: any) => {
+              if (doc.content) {
+                enhancedInsights.insights.push(`Document analysis: ${doc.fileName} - ${doc.content.substring(0, 150)}...`)
+              }
+            })
+          }
+        }
+
         const { error: insightError } = await supabase
           .from('conversation_insights')
-          .insert({
-            user_id: user.id,
-            conversation_date: new Date().toISOString().split('T')[0],
-            message: message,
-            insights: parsedData.insights,
-            data_types: {
-              health: parsedData.has_health_data,
-              activity: parsedData.has_activity_data,
-              mood: parsedData.has_mood_data,
-              nutrition: parsedData.has_nutrition_data,
-              sleep: parsedData.has_sleep_data,
-              workout: parsedData.has_workout_data
-            },
-            follow_up_questions: parsedData.follow_up_questions,
-            created_at: new Date().toISOString()
-          })
+          .insert(enhancedInsights)
 
         if (insightError) {
           console.error('Error storing conversation insights:', insightError)
         } else {
           console.log('✅ Conversation insights stored successfully')
           
+          // Link any uploaded files to this conversation
+          if (conversationData?.id && multiFileData) {
+            try {
+              const fileLinks = []
+              
+              // Process images with OCR data
+              if (multiFileData.images) {
+                for (const image of multiFileData.images) {
+                  if (image.uploadId) {
+                    fileLinks.push({
+                      conversation_id: conversationData.id,
+                      file_id: image.uploadId,
+                      attachment_order: fileLinks.length
+                    })
+                  }
+                }
+              }
+              
+              // Process documents
+              if (multiFileData.documents) {
+                for (const doc of multiFileData.documents) {
+                  if (doc.uploadId) {
+                    fileLinks.push({
+                      conversation_id: conversationData.id,
+                      file_id: doc.uploadId,
+                      attachment_order: fileLinks.length
+                    })
+                  }
+                }
+              }
+              
+              if (fileLinks.length > 0) {
+                const { error: linkError } = await supabase
+                  .from('conversation_file_attachments')
+                  .insert(fileLinks)
+                
+                if (linkError) {
+                  console.error('Error linking files to conversation:', linkError)
+                } else {
+                  console.log('✅ Linked', fileLinks.length, 'files to conversation')
+                }
+              }
+            } catch (linkError) {
+              console.error('Error processing file links:', linkError)
+            }
+          }
+          
           // Trigger daily narrative generation (non-blocking)
           const today = new Date().toISOString().split('T')[0]
           
-          // Call narrative generation directly instead of HTTP fetch
+          // Call narrative generation directly - this should work now
           try {
-            // Import and call the narrative generation logic directly
             const { generateDailyNarrative } = await import('@/lib/narrative-generator')
-            await generateDailyNarrative(user.id, today)
-            console.log('✅ Daily narrative generation triggered')
+            const result = await generateDailyNarrative(user.id, today)
+            if (result.success) {
+              console.log('✅ Daily narrative generation completed:', result)
+            } else {
+              console.error('❌ Daily narrative generation failed:', result.error)
+            }
           } catch (error) {
             console.error('Error triggering narrative generation:', error)
           }

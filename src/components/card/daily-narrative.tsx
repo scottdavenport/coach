@@ -16,13 +16,17 @@ interface DailyJournalProps {
 }
 
 interface NarrativeData {
-  morning_checkin: any
-  daily_schedule: any
-  session_data: any
-  notes_flags: any
-  feedback_log: any
-  weekly_averages: any
-  narrative_text?: string
+  activities: string[]
+  narrative_text: string
+  notes: string[]
+  health_context?: string
+  follow_up?: string
+  journal_entries?: Array<{
+    entry_type: string
+    category: string
+    content: string
+    confidence: number
+  }>
 }
 
 export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJournalProps) {
@@ -53,9 +57,9 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
   const patternsLoading = false
   const patternsError = null
   const refreshPatterns = async () => {}
-  const getTopTopics = () => []
-  const getTopActivities = () => []
-  const getTopMoods = () => []
+  const getTopTopics = (limit?: number) => []
+  const getTopActivities = (limit?: number) => []
+  const getTopMoods = (limit?: number) => []
   const getSleepInsights = () => []
 
   // Update currentDate when selectedDate prop changes
@@ -147,158 +151,102 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
     return descriptions[activity] || 'Activity from natural conversation'
   }, [])
 
-  // Build narrative from natural conversation flow
-  const buildNarrativeFromConversations = useCallback((insights: any[]) => {
-    const narrative: any = {
-      morning_checkin: {},
-      daily_schedule: { activities: [] },
-      session_data: {},
-      notes_flags: { flags: [] },
-      feedback_log: {},
-      weekly_averages: {},
-      data_sources: ['conversation'],
-      is_complete: false,
-      narrative_text: ''
-    }
-
-    // Extract activities and insights from conversations
+  // Build narrative from conversation insights and journal entries
+  const buildNarrativeFromConversationsAndJournal = useCallback((insights: any[], journalEntries: any[]) => {
+    // Extract activities from insights with more specific detection
     const activities: string[] = []
     const notes: string[] = []
-    const sleepInsights: string[] = []
-    const moodInsights: string[] = []
-    const healthInsights: string[] = []
     
     insights.forEach(insight => {
       const message = insight.message.toLowerCase()
       
-      // Extract activities based on data types and message content
-      if (insight.data_types?.activity) {
-        if (message.includes('golf') || message.includes('hike') || message.includes('walk') || message.includes('run')) {
-          activities.push('Outdoor activity')
-        }
-        if (message.includes('workout') || message.includes('exercise') || message.includes('training')) {
-          activities.push('Exercise session')
-        }
-        if (message.includes('pool') || message.includes('swim')) {
-          activities.push('Pool time')
-        }
-        if (message.includes('relax') || message.includes('chill') || message.includes('enjoying')) {
-          activities.push('Relaxation time')
-        }
-        if (message.includes('starbucks') || message.includes('coffee')) {
-          activities.push('Coffee run')
-        }
-        if (message.includes('resort') || message.includes('sedona') || message.includes('views')) {
-          activities.push('Resort time')
-        }
-        if (message.includes('dinner') || message.includes('restaurant') || message.includes('grill')) {
-          activities.push('Dining out')
-        }
-        if (message.includes('uptown') || message.includes('shops') || message.includes('shopping')) {
-          activities.push('Exploring town')
-        }
+      // Extract specific activities from actual message content
+      if (message.includes('open range grill')) {
+        activities.push('Dinner at Open Range Grill')
+      } else if (message.includes('dinner') && message.includes('restaurant')) {
+        activities.push('Restaurant dinner')
+      } else if (message.includes('dinner')) {
+        activities.push('Dinner plans')
       }
       
-      // Extract sleep insights
-      if (insight.data_types?.sleep) {
-        if (message.includes('good night') || message.includes('good sleep') || message.includes('well rested')) {
-          sleepInsights.push('Great sleep quality')
-        }
-        if (message.includes('woke up') || message.includes('around 6') || message.includes('early')) {
-          sleepInsights.push('Early morning start')
-        }
+      if (message.includes('uptown sedona')) {
+        activities.push('Exploring uptown Sedona')
+      } else if (message.includes('sedona')) {
+        activities.push('Sedona exploration')
       }
       
-      // Extract mood insights
-      if (insight.data_types?.mood) {
-        if (message.includes('enjoying') || message.includes('beautiful') || message.includes('good')) {
-          moodInsights.push('Positive mood')
-        }
-      }
+      // More specific activity detection
+      if (message.includes('golf')) activities.push('Golf')
+      if (message.includes('hike')) activities.push('Hiking')
+      if (message.includes('workout')) activities.push('Workout')
+      if (message.includes('coffee')) activities.push('Coffee time')
+      if (message.includes('pool')) activities.push('Pool time')
       
-      // Extract health insights
-      if (insight.data_types?.health) {
-        healthInsights.push('Health update shared')
-      }
-      
-      // Add any specific insights from AI analysis
+      // Add insights as notes with cleaning
       if (insight.insights && Array.isArray(insight.insights)) {
         insight.insights.forEach((insightText: string) => {
-          // Clean up the insight text to remove "User" references
           const cleanInsight = insightText
             .replace(/^User\s+/i, '')
-            .replace(/^I\s+had/i, 'Had')
-            .replace(/^I\s+am/i, 'Am')
-            .replace(/^I\s+was/i, 'Was')
-          
+            .replace(/^I\s+/i, '')
           notes.push(cleanInsight)
         })
       }
     })
 
-    // Build natural, human-sounding narrative text
-    let narrativeText = ''
+    // Get narrative from journal entries
+    const reflectionEntry = journalEntries.find(entry => entry.entry_type === 'reflection')
+    const activityEntry = journalEntries.find(entry => entry.entry_type === 'note' && entry.category === 'fitness')
+    const healthEntry = journalEntries.find(entry => entry.category === 'health')
+    const followUpEntry = journalEntries.find(entry => entry.entry_type === 'goal')
+
+    // Use AI-generated narrative if available, otherwise build from insights
+    let narrativeText = reflectionEntry?.content || ''
     
-    if (activities.length > 0 && sleepInsights.length > 0) {
-      // Combine sleep and activities naturally
-      const sleepPhrase = sleepInsights.includes('Great sleep quality') ? 'felt well-rested' : 'got up early'
-      const activityPhrase = activities.join(' and ')
-      
-      if (activities.includes('Coffee run') && activities.includes('Resort time')) {
-        narrativeText = `Started the day feeling refreshed and made an early morning coffee run. Spent time enjoying the beautiful resort views and taking in the peaceful surroundings.`
-      } else if (activities.includes('Coffee run')) {
-        narrativeText = `Had a great start to the day with an early morning coffee run. ${activityPhrase} made for a productive morning.`
+    if (!narrativeText && activities.length > 0) {
+      // Build rich narrative from activities
+      if (activities.some(a => a.includes('Open Range Grill'))) {
+        narrativeText = `Planning an evening at Open Range Grill in Sedona tonight. Looking forward to exploring the local dining scene and enjoying a relaxing dinner in this beautiful area.`
+      } else if (activities.some(a => a.includes('Sedona'))) {
+        narrativeText = `Spending time exploring the beautiful Sedona area. ${activities.join(' and ')} made for a wonderful day of discovery and enjoyment.`
       } else {
-        narrativeText = `Woke up ${sleepPhrase} and had a wonderful day that included ${activityPhrase}.`
+        narrativeText = `Today included ${activities.join(' and ')}. It's been a great day filled with meaningful activities and experiences.`
       }
-    } else if (activities.length > 0) {
-      // Just activities
-      const activityPhrase = activities.join(' and ')
-      narrativeText = `Today was filled with ${activityPhrase}. It's been a great day of activity and enjoyment.`
-    } else if (sleepInsights.length > 0) {
-      // Just sleep insights
-      if (sleepInsights.includes('Great sleep quality')) {
-        narrativeText = `Had a really good night's sleep and woke up feeling refreshed and ready for the day.`
-      } else {
-        narrativeText = `Got an early start to the day and felt energized.`
-      }
-    } else if (notes.length > 0) {
-      // Create rich narrative from actual insights
-      const cleanNotes = notes.map(note => note.toLowerCase())
-      
-      // Check for specific patterns and create contextual narratives
-      if (cleanNotes.some(note => note.includes('dinner') && note.includes('restaurant'))) {
-        const restaurantNote = notes.find(note => note.toLowerCase().includes('restaurant'))
-        narrativeText = `Planning a nice dinner out tonight. ${restaurantNote} Looking forward to a relaxing evening with good food and company.`
-      } else if (cleanNotes.some(note => note.includes('walk') || note.includes('hike'))) {
-        narrativeText = `Enjoyed some outdoor time today. ${notes.join('. ')}. Fresh air and movement are always energizing.`
-      } else if (cleanNotes.some(note => note.includes('sedona') || note.includes('uptown'))) {
-        narrativeText = `Exploring the beautiful Sedona area. ${notes.join('. ')}. The scenery and atmosphere here are truly special.`
-      } else {
-        // Use insights directly for rich, personalized narrative
-        narrativeText = `${notes.join('. ')}. It's been a meaningful day with good experiences and connections.`
-      }
-    } else {
-      // Fallback
+    } else if (!narrativeText && notes.length > 0) {
+      narrativeText = `${notes.join('. ')}. It's been a meaningful day with good conversations and connections.`
+    } else if (!narrativeText) {
       narrativeText = "Today was a day of natural conversation and connection. Sometimes the best moments come from simply sharing what's on your mind."
     }
 
-    narrative.narrative_text = narrativeText
+    return {
+      activities: Array.from(new Set(activities)),
+      narrative_text: narrativeText,
+      notes: Array.from(new Set(notes)),
+      health_context: healthEntry?.content || '',
+      follow_up: followUpEntry?.content?.replace('Tomorrow\'s reflection: ', '') || '',
+      journal_entries: journalEntries
+    }
+  }, [])
 
-    // Set activities with natural descriptions
-    narrative.daily_schedule.activities = activities.map(activity => ({
-      type: 'activity',
-      title: activity,
-      description: getActivityDescription(activity),
-      status: 'completed',
-      source: 'conversation'
-    }))
+  // Build narrative from existing journal entries only
+  const buildNarrativeFromJournalEntries = useCallback((journalEntries: any[]) => {
+    const reflectionEntry = journalEntries.find(entry => entry.entry_type === 'reflection')
+    const activityEntry = journalEntries.find(entry => entry.entry_type === 'note' && entry.category === 'fitness')
+    const healthEntry = journalEntries.find(entry => entry.category === 'health')
+    const followUpEntry = journalEntries.find(entry => entry.entry_type === 'goal')
+    const noteEntries = journalEntries.filter(entry => entry.entry_type === 'note' && entry.category === 'lifestyle')
 
-    // Set notes with cleaned content
-    narrative.notes_flags.flags = notes
-
-    return narrative
-  }, [getActivityDescription])
+    // Extract activities from activity entry
+    const activities = activityEntry?.content?.replace('Activities: ', '').split(', ') || []
+    
+    return {
+      activities,
+      narrative_text: reflectionEntry?.content || 'Journal entries available for this day.',
+      notes: noteEntries.map(entry => entry.content),
+      health_context: healthEntry?.content || '',
+      follow_up: followUpEntry?.content?.replace('Tomorrow\'s reflection: ', '') || '',
+      journal_entries: journalEntries
+    }
+  }, [])
 
   // Load narrative data for a specific date
   const loadNarrativeData = useCallback(async (date: Date) => {
@@ -309,7 +257,7 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
       
       console.log('🔍 Loading narrative data for date:', dateString)
       
-      // Load conversation insights from the new simplified table
+      // Load conversation insights
       const { data: conversationInsights, error: insightsError } = await supabase
         .from('conversation_insights')
         .select('*')
@@ -322,25 +270,41 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
         throw insightsError
       }
 
+      // Load existing journal entries for the date
+      const { data: journalEntries, error: journalError } = await supabase
+        .from('daily_journal')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('journal_date', dateString)
+        .order('created_at', { ascending: true })
+
+      if (journalError) {
+        console.error('Error fetching journal entries:', journalError)
+      }
+
       console.log('🔍 Found conversation insights:', conversationInsights?.length || 0)
+      console.log('🔍 Found journal entries:', journalEntries?.length || 0)
 
       if (conversationInsights && conversationInsights.length > 0) {
-        // Build narrative from natural conversation flow
-        const narrativeData = buildNarrativeFromConversations(conversationInsights)
+        // Build narrative from natural conversation flow and existing journal entries
+        const narrativeData = buildNarrativeFromConversationsAndJournal(conversationInsights, journalEntries || [])
+        setNarrativeData(narrativeData)
+      } else if (journalEntries && journalEntries.length > 0) {
+        // Use existing journal entries if no conversation insights
+        const narrativeData = buildNarrativeFromJournalEntries(journalEntries)
         setNarrativeData(narrativeData)
       } else {
-        // No conversation insights found
-        console.log('🔍 No conversation insights found for this date')
+        // No data found
+        console.log('🔍 No conversation insights or journal entries found for this date')
         setNarrativeData(null)
       }
     } catch (error) {
       console.error('Error loading narrative data:', error)
-      // Set empty state on error
       setNarrativeData(null)
     } finally {
       setIsLoading(false)
     }
-  }, [userId, buildNarrativeFromConversations])
+  }, [userId])
 
   // Generate narrative using conversation insights (simplified approach)
   const generateNarrative = async (date: Date) => {
@@ -360,28 +324,11 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
   // Fallback basic narrative
   const generateBasicNarrative = (): NarrativeData => {
     return {
-      morning_checkin: {
-        sleep_data: { hours: 7.5, quality: 8 },
-        readiness_data: { readiness: 85, hrv: 42, rhr: 58 },
-        notes: "Felt well-rested, slight grogginess"
-      },
-      daily_schedule: {
-        activities: [
-          { type: "workout", title: "Push & Core", description: "30 min strength training", status: "completed" }
-        ]
-      },
-      session_data: {
-        heart_rate: { avg: 120, max: 145 },
-        calories: 180,
-        glucose: 110
-      },
-      notes_flags: {
-        energy_level: 8,
-        mood: 7,
-        flags: ["Shoulder tightness", "Good form maintained"]
-      },
-      feedback_log: {},
-      weekly_averages: {}
+      activities: ['General activity'],
+      narrative_text: 'Had a good day with various activities and experiences.',
+      notes: ['Day included meaningful moments'],
+      health_context: '',
+      follow_up: 'How are you feeling about tomorrow?'
     }
   }
 
@@ -692,65 +639,66 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
                 )}
 
                 {/* Key Activities - Clean Bullets */}
-                {narrativeData.daily_schedule?.activities?.length > 0 && (
+                {narrativeData.activities?.length > 0 && (
                   <div className="border-l-4 border-blue-400 pl-4">
                     <h4 className="font-medium text-blue-400 mb-3">🎯 Key Activities Today</h4>
                     <div className="space-y-2">
-                      {narrativeData.daily_schedule.activities.map((activity: any, index: number) => (
+                      {narrativeData.activities.map((activity: string, index: number) => (
                         <div key={index} className="flex items-center gap-2 text-sm">
                           <span className="text-green-500">•</span>
-                          <span>{activity.title}</span>
+                          <span>{activity}</span>
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
 
-                {/* Health Metrics - Only if meaningful data exists */}
-                {(narrativeData.session_data?.heart_rate?.avg || 
-                  narrativeData.notes_flags?.energy_level || 
-                  narrativeData.notes_flags?.mood) && (
+                {/* Health Context - From AI analysis */}
+                {narrativeData.health_context && (
                   <div className="border-l-4 border-green-400 pl-4">
-                    <h4 className="font-medium text-green-400 mb-3">💚 Quick Health Check</h4>
-                    <div className="space-y-2 text-sm">
-                      {narrativeData.session_data?.heart_rate?.avg && (
-                        <div className="flex items-center gap-2">
-                          <span>❤️</span>
-                          <span>Heart Rate: ~{narrativeData.session_data.heart_rate.avg} bpm</span>
-                        </div>
-                      )}
-                      {narrativeData.notes_flags?.energy_level && (
-                        <div className="flex items-center gap-2">
-                          <span>🔋</span>
-                          <span>Energy: {narrativeData.notes_flags.energy_level}/10</span>
-                        </div>
-                      )}
-                      {narrativeData.notes_flags?.mood && (
-                        <div className="flex items-center gap-2">
-                          <span>😊</span>
-                          <span>Mood: {narrativeData.notes_flags.mood}/10</span>
-                        </div>
-                      )}
+                    <h4 className="font-medium text-green-400 mb-3">💚 Health Context</h4>
+                    <div className="text-sm">
+                      <p>{narrativeData.health_context}</p>
                     </div>
                   </div>
                 )}
 
-                {/* Additional Notes - Only if meaningful */}
-                {narrativeData.notes_flags?.flags?.length > 0 && (
+                {/* Additional Notes */}
+                {narrativeData.notes?.length > 0 && (
                   <div className="border-l-4 border-purple-400 pl-4">
-                    <h4 className="font-medium text-purple-400 mb-3">💭 Additional Notes</h4>
+                    <h4 className="font-medium text-purple-400 mb-3">💭 Key Insights</h4>
                     <div className="space-y-2 text-sm">
-                      {narrativeData.notes_flags.flags.map((flag: string, index: number) => (
+                      {narrativeData.notes.map((note: string, index: number) => (
                         <div key={index} className="flex items-center gap-2">
                           <span>💡</span>
-                          <span>{flag}</span>
+                          <span>{note}</span>
                         </div>
                       ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Tomorrow's Reflection */}
+                {narrativeData.follow_up && (
+                  <div className="border-l-4 border-yellow-400 pl-4">
+                    <h4 className="font-medium text-yellow-400 mb-3">🌅 Tomorrow's Reflection</h4>
+                    <div className="text-sm italic">
+                      <p>{narrativeData.follow_up}</p>
                     </div>
                   </div>
                 )}
               </div>
             </div>
+          </div>
+        )}
+
+        {/* No Data State */}
+        {!isLoading && !isGenerating && !narrativeData && (
+          <div className="text-center py-8 text-muted-foreground">
+            <div className="text-4xl mb-2">📝</div>
+            <p>No journal entry for this day yet.</p>
+            <p className="text-xs mt-2">Start a conversation to create your daily journal!</p>
+            <p className="text-xs mt-1">Share your activities, thoughts, or upload files to generate rich entries.</p>
           </div>
         )}
 
