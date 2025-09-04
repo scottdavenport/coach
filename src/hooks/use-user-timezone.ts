@@ -65,7 +65,7 @@ export function useUserTimezone(): UseUserTimezoneReturn {
         }
         console.error('Error fetching user timezone:', fetchError)
         setError('Failed to load timezone preference')
-        setUserTimezone('UTC')
+        setUserTimezone('America/New_York')
         return
       }
 
@@ -73,7 +73,7 @@ export function useUserTimezone(): UseUserTimezoneReturn {
       setUserTimezone(storedTimezone)
 
       // If user doesn't have a timezone set, auto-detect and save it
-      if (!data?.timezone && detectedTimezone !== 'UTC') {
+      if (!data?.timezone && detectedTimezone !== 'America/New_York') {
         await updateTimezone(detectedTimezone)
       }
 

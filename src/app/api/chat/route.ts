@@ -427,14 +427,33 @@ Remember: You're not just responding to messages - you're building a comprehensi
           }
         }
 
-        const { error: insightError } = await supabase
+        // Debug: Log the data being inserted
+        logger.debug('Attempting to store conversation insights', {
+          userId: user.id,
+          userDate,
+          userTimezone,
+          insightsCount: enhancedInsights.insights.length,
+          dataTypes: enhancedInsights.data_types,
+          enhancedInsights: JSON.stringify(enhancedInsights, null, 2)
+        })
+
+        const { data: insertedData, error: insightError } = await supabase
           .from('conversation_insights')
           .insert(enhancedInsights)
+          .select()
 
         if (insightError) {
-          logger.error('Failed to store conversation insights', insightError, { userId: user.id })
+          logger.error('Failed to store conversation insights', insightError, { 
+            userId: user.id,
+            errorDetails: insightError,
+            attemptedData: enhancedInsights
+          })
         } else {
-          logger.info('Conversation insights stored successfully', { userId: user.id })
+          logger.info('Conversation insights stored successfully', { 
+            userId: user.id,
+            insertedRecordId: insertedData?.[0]?.id,
+            conversationDate: userDate
+          })
           
           // Link any uploaded files to this conversation
           if (conversationData?.id && multiFileData) {
@@ -484,16 +503,22 @@ Remember: You're not just responding to messages - you're building a comprehensi
           }
           
           // Trigger daily narrative generation (non-blocking)
-          const today = new Date().toISOString().split('T')[0] // Note: Using UTC date for database consistency
+          // Use the same userDate that we used for storing insights to ensure consistency
           
           // Call narrative generation directly - this should work now
           try {
             const { generateDailyNarrative } = await import('@/lib/narrative-generator')
-            const result = await generateDailyNarrative(user.id, today)
+            logger.debug('Calling narrative generation', {
+              userId: user.id,
+              userDate,
+              userTimezone,
+              utcDate: new Date().toISOString().split('T')[0]
+            })
+            const result = await generateDailyNarrative(user.id, userDate)
             if (result.success) {
-              logger.info('Daily narrative generation completed', { userId: user.id, date: today })
+              logger.info('Daily narrative generation completed', { userId: user.id, date: userDate })
             } else {
-              logger.error('Daily narrative generation failed', new Error(result.error), { userId: user.id, date: today })
+              logger.error('Daily narrative generation failed', new Error(result.error), { userId: user.id, date: userDate })
             }
           } catch (error) {
             logger.error('Failed to trigger narrative generation', error instanceof Error ? error : new Error('Unknown error'), { userId: user.id })
