@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import OpenAI from 'openai'
+import { logger } from '@/lib/logger'
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -24,27 +25,26 @@ interface ParsedConversation {
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('🚀 Chat API called')
+    logger.apiRequest('POST', '/api/chat')
     
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
-      console.error('❌ No user found')
+      logger.error('Authentication failed - no user found')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    console.log('👤 User authenticated:', user.id)
+    logger.info('User authenticated', { userId: user.id })
 
     const body = await request.json()
-    const { message, conversationId, conversationState, checkinProgress, ocrData, multiFileData } = body
+    const { message, conversationId, conversationState, ocrData, multiFileData } = body
 
-    console.log('📝 Message received:', {
+    logger.info('Message received', {
       messageLength: message?.length || 0,
       hasOcrData: !!ocrData,
       hasMultiFileData: !!multiFileData,
-      conversationState,
-      checkinProgress: !!checkinProgress
+      conversationState
     })
 
     // Ensure user exists in the users table
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
 
     if (userError && userError.code === 'PGRST116') {
       // User doesn't exist, create them
-      console.log('👤 Creating new user in database')
+      logger.info('Creating new user in database', { userId: user.id })
       const { error: createUserError } = await supabase
         .from('users')
         .insert({
@@ -65,15 +65,15 @@ export async function POST(request: NextRequest) {
         })
 
       if (createUserError) {
-        console.error('❌ Error creating user:', createUserError)
+        logger.error('Failed to create user', createUserError, { userId: user.id })
         return NextResponse.json({ error: 'Failed to create user' }, { status: 500 })
       }
     } else if (userError) {
-      console.error('❌ Error checking user:', userError)
+      logger.error('Failed to verify user', userError, { userId: user.id })
       return NextResponse.json({ error: 'Failed to verify user' }, { status: 500 })
     }
 
-    console.log('✅ User verified in database')
+    logger.debug('User verified in database', { userId: user.id })
 
     // Fetch conversation history (last 6 messages for context, with size limits)
     const { data: conversationHistory } = await supabase
@@ -124,16 +124,19 @@ export async function POST(request: NextRequest) {
     const userContext = buildEnhancedUserContext(weeklyCards || [], recentContext || [])
     
     // Build conversation state context
-    const stateContext = buildStateContext(conversationState, checkinProgress)
+    const stateContext = buildStateContext(conversationState)
     
     // Log OCR data if present
     if (ocrData) {
-      console.log('🔍 OCR DATA RECEIVED:', JSON.stringify(ocrData, null, 2))
+      logger.debug('OCR data received', { ocrDataSize: JSON.stringify(ocrData).length })
     }
 
     // Log multi-file data if present
     if (multiFileData) {
-      console.log('🔍 MULTI-FILE DATA RECEIVED:', JSON.stringify(multiFileData, null, 2))
+      logger.debug('Multi-file data received', { 
+        imageCount: multiFileData.images?.length || 0,
+        documentCount: multiFileData.documents?.length || 0
+      })
     }
 
     // Save user message to database (truncate if too large to prevent performance issues)
@@ -150,34 +153,35 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (conversationError) {
-      console.error('Error saving conversation:', conversationError)
+      logger.error('Failed to save conversation', conversationError, { userId: user.id })
     }
 
     // Parse the conversation for rich context data
-    console.log('🔍 Starting conversation parsing...')
+    logger.debug('Starting conversation parsing')
     const parsedData = await parseConversationForRichContext(message)
-    console.log('✅ Conversation parsing complete:', {
+    logger.debug('Conversation parsing complete', {
       hasHealthData: parsedData.has_health_data,
       hasActivityData: parsedData.has_activity_data,
-      insightsCount: parsedData.insights.length
+      insightsCount: parsedData.insights.length,
+      userId: user.id
     })
 
-    // Show extracted data in console for development review
+    // Log extracted data for development review
     if (parsedData && (parsedData.has_health_data || parsedData.has_activity_data || parsedData.has_mood_data || parsedData.has_nutrition_data || parsedData.has_sleep_data || parsedData.has_workout_data)) {
-      console.log('🔍 **CONVERSATION INSIGHTS DETECTED:**')
-      console.log('User ID:', user.id)
-      console.log('Original message:', message)
-      console.log('Insights:', parsedData.insights)
-      console.log('Follow-up questions:', parsedData.follow_up_questions)
-      console.log('Data types:', {
-        health: parsedData.has_health_data,
-        activity: parsedData.has_activity_data,
-        mood: parsedData.has_mood_data,
-        nutrition: parsedData.has_nutrition_data,
-        sleep: parsedData.has_sleep_data,
-        workout: parsedData.has_workout_data
+      logger.debug('Conversation insights detected', {
+        userId: user.id,
+        messagePreview: message.substring(0, 100),
+        insights: parsedData.insights,
+        followUpQuestions: parsedData.follow_up_questions,
+        dataTypes: {
+          health: parsedData.has_health_data,
+          activity: parsedData.has_activity_data,
+          mood: parsedData.has_mood_data,
+          nutrition: parsedData.has_nutrition_data,
+          sleep: parsedData.has_sleep_data,
+          workout: parsedData.has_workout_data
+        }
       })
-      console.log('---')
     }
 
     // Build system prompt with token counting
@@ -216,7 +220,7 @@ export async function POST(request: NextRequest) {
                            Math.ceil(message.length / 4) + 
                            (conversationContext.length * 50) // rough estimate per message
     
-    console.log('🔍 TOKEN USAGE ESTIMATE:', {
+    logger.debug('Token usage estimate', {
       systemPromptChars: systemPrompt.length,
       systemPromptTokens: Math.ceil(systemPrompt.length / 4),
       messageTokens: Math.ceil(message.length / 4),
@@ -227,7 +231,7 @@ export async function POST(request: NextRequest) {
 
     // Emergency fallback if still too large
     if (estimatedTokens > 150000) {
-      console.log('⚠️ EMERGENCY: Using minimal prompt due to token limit')
+      logger.warn('Using minimal prompt due to token limit', { estimatedTokens })
       const minimalPrompt = `You are Coach, a helpful AI fitness companion. Respond naturally to: "${message}"`
       
       const completion = await openai.chat.completions.create({
@@ -257,7 +261,7 @@ export async function POST(request: NextRequest) {
         })
 
       if (aiConversationError) {
-        console.error('Error saving AI response:', aiConversationError)
+        logger.error('Failed to save AI response in emergency mode', aiConversationError)
       }
 
       return NextResponse.json({ 
@@ -268,7 +272,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create OpenAI chat completion with reduced context
-    console.log('🤖 Starting OpenAI completion...')
+    logger.debug('Starting OpenAI completion')
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
@@ -295,20 +299,20 @@ export async function POST(request: NextRequest) {
     // Store conversation insights if we have any data types detected
     if (parsedData && (parsedData.has_health_data || parsedData.has_activity_data || parsedData.has_mood_data || parsedData.has_nutrition_data || parsedData.has_sleep_data || parsedData.has_workout_data)) {
       try {
-        console.log('🔍 **CONVERSATION INSIGHTS DETECTED:**')
-        console.log('User ID:', user.id)
-        console.log('Original message:', message)
-        console.log('Insights:', parsedData?.insights)
-        console.log('Follow-up questions:', parsedData?.follow_up_questions)
-        console.log('Data types detected:', {
-          health: parsedData?.has_health_data,
-          activity: parsedData?.has_activity_data,
-          mood: parsedData?.has_mood_data,
-          nutrition: parsedData?.has_nutrition_data,
-          sleep: parsedData?.has_sleep_data,
-          workout: parsedData?.has_workout_data
+        logger.info('Conversation insights detected for storage', {
+          userId: user.id,
+          messagePreview: message.substring(0, 100),
+          insights: parsedData?.insights,
+          followUpQuestions: parsedData?.follow_up_questions,
+          dataTypes: {
+            health: parsedData?.has_health_data,
+            activity: parsedData?.has_activity_data,
+            mood: parsedData?.has_mood_data,
+            nutrition: parsedData?.has_nutrition_data,
+            sleep: parsedData?.has_sleep_data,
+            workout: parsedData?.has_workout_data
+          }
         })
-        console.log('---')
 
         // Store the conversation insights with enhanced context
         const enhancedInsights = {
@@ -354,9 +358,9 @@ export async function POST(request: NextRequest) {
           .insert(enhancedInsights)
 
         if (insightError) {
-          console.error('Error storing conversation insights:', insightError)
+          logger.error('Failed to store conversation insights', insightError, { userId: user.id })
         } else {
-          console.log('✅ Conversation insights stored successfully')
+          logger.info('Conversation insights stored successfully', { userId: user.id })
           
           // Link any uploaded files to this conversation
           if (conversationData?.id && multiFileData) {
@@ -395,13 +399,13 @@ export async function POST(request: NextRequest) {
                   .insert(fileLinks)
                 
                 if (linkError) {
-                  console.error('Error linking files to conversation:', linkError)
+                  logger.error('Failed to link files to conversation', linkError, { userId: user.id, conversationId: conversationData.id })
                 } else {
-                  console.log('✅ Linked', fileLinks.length, 'files to conversation')
+                  logger.info('Files linked to conversation successfully', { userId: user.id, conversationId: conversationData.id, fileCount: fileLinks.length })
                 }
               }
             } catch (linkError) {
-              console.error('Error processing file links:', linkError)
+              logger.error('Failed to process file links', linkError instanceof Error ? linkError : new Error('Unknown error'), { userId: user.id })
             }
           }
           
@@ -413,16 +417,16 @@ export async function POST(request: NextRequest) {
             const { generateDailyNarrative } = await import('@/lib/narrative-generator')
             const result = await generateDailyNarrative(user.id, today)
             if (result.success) {
-              console.log('✅ Daily narrative generation completed:', result)
+              logger.info('Daily narrative generation completed', { userId: user.id, date: today })
             } else {
-              console.error('❌ Daily narrative generation failed:', result.error)
+              logger.error('Daily narrative generation failed', new Error(result.error), { userId: user.id, date: today })
             }
           } catch (error) {
-            console.error('Error triggering narrative generation:', error)
+            logger.error('Failed to trigger narrative generation', error instanceof Error ? error : new Error('Unknown error'), { userId: user.id })
           }
         }
       } catch (error) {
-        console.error('Error storing conversation insights:', error)
+        logger.error('Failed to store conversation insights', error instanceof Error ? error : new Error('Unknown error'), { userId: user.id })
       }
     }
 
@@ -442,7 +446,7 @@ export async function POST(request: NextRequest) {
       })
 
     if (aiConversationError) {
-      console.error('Error saving AI response:', aiConversationError)
+      logger.error('Failed to save AI response', aiConversationError, { userId: user.id })
     }
 
     return NextResponse.json({ 
@@ -452,9 +456,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('❌ CHAT API ERROR:', {
-      error: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : 'No stack trace',
+    logger.error('Chat API error', error instanceof Error ? error : new Error('Unknown error'), {
       timestamp: new Date().toISOString()
     })
     
@@ -506,7 +508,7 @@ function buildEnhancedUserContext(weeklyCards: Array<{summary?: Record<string, u
 // for better performance and automatic updates
 
 // Helper function to build conversation state context (MINIMAL VERSION)
-function buildStateContext(conversationState: string, checkinProgress: Record<string, unknown>): string {
+function buildStateContext(conversationState: string): string {
   // Minimal state context to save tokens
   if (conversationState && conversationState !== 'idle') {
     return `STATE: ${conversationState}`
@@ -575,7 +577,7 @@ EXAMPLES:
         follow_up_questions: parsed.follow_up_questions || []
       }
     } catch (parseError) {
-      console.error('Error parsing AI response:', parseError)
+      logger.error('Failed to parse AI response', parseError instanceof Error ? parseError : new Error('Parse error'))
       // Return simple fallback
       return {
         has_health_data: false,
@@ -589,7 +591,7 @@ EXAMPLES:
       }
     }
   } catch (error) {
-    console.error('Error in conversation parsing:', error)
+    logger.error('Error in conversation parsing', error instanceof Error ? error : new Error('Unknown error'))
     return {
       has_health_data: false,
       has_activity_data: false,

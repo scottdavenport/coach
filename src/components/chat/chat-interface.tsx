@@ -10,7 +10,7 @@ import { OptimizedInput } from './optimized-input'
 import { IsolatedFileManager } from './isolated-file-manager'
 
 import { createClient } from '@/lib/supabase/client'
-import { FileAttachment, SupportedFileType } from '@/types'
+import { FileAttachment, SupportedFileType, ConversationMessage } from '@/types'
 import { FileProcessor } from '@/lib/file-processing'
 import { processFileContentClient } from '@/lib/file-processing/client'
 import { useFileManager } from '@/hooks/use-file-manager'
