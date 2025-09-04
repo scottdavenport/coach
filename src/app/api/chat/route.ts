@@ -38,14 +38,13 @@ export async function POST(request: NextRequest) {
     logger.info('User authenticated', { userId: user.id })
 
     const body = await request.json()
-    const { message, conversationId, conversationState, checkinProgress, ocrData, multiFileData } = body
+    const { message, conversationId, conversationState, ocrData, multiFileData } = body
 
     logger.info('Message received', {
       messageLength: message?.length || 0,
       hasOcrData: !!ocrData,
       hasMultiFileData: !!multiFileData,
-      conversationState,
-      checkinProgress: !!checkinProgress
+      conversationState
     })
 
     // Ensure user exists in the users table
@@ -125,7 +124,7 @@ export async function POST(request: NextRequest) {
     const userContext = buildEnhancedUserContext(weeklyCards || [], recentContext || [])
     
     // Build conversation state context
-    const stateContext = buildStateContext(conversationState, checkinProgress)
+    const stateContext = buildStateContext(conversationState)
     
     // Log OCR data if present
     if (ocrData) {
@@ -508,7 +507,7 @@ function buildEnhancedUserContext(weeklyCards: Array<{summary?: Record<string, u
 // for better performance and automatic updates
 
 // Helper function to build conversation state context (MINIMAL VERSION)
-function buildStateContext(conversationState: string, checkinProgress: Record<string, unknown>): string {
+function buildStateContext(conversationState: string): string {
   // Minimal state context to save tokens
   if (conversationState && conversationState !== 'idle') {
     return `STATE: ${conversationState}`

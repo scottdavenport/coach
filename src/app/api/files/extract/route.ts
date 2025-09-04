@@ -110,7 +110,7 @@ async function extractXlsxContent(arrayBuffer: ArrayBuffer): Promise<string> {
     const jsonData: any[] = []
     
     // Convert worksheet to JSON format similar to XLSX
-    firstSheet.eachRow((row, rowNumber) => {
+    firstSheet.eachRow((row) => {
       const rowData: any[] = []
       row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
         rowData[colNumber - 1] = cell.value
