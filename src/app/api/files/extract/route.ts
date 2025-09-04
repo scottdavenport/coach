@@ -98,23 +98,33 @@ async function extractDocxContent(arrayBuffer: ArrayBuffer): Promise<string> {
 }
 
 async function extractXlsxContent(arrayBuffer: ArrayBuffer): Promise<string> {
-  const XLSX = await import('xlsx')
-  const workbook = XLSX.read(arrayBuffer, { type: 'array' })
+  const ExcelJS = await import('exceljs')
+  const workbook = new ExcelJS.Workbook()
+  await workbook.xlsx.load(arrayBuffer)
   
-  let content = `Excel (${workbook.SheetNames.length} sheets)\n`
+  let content = `Excel (${workbook.worksheets.length} sheets)\n`
 
   // Only process first sheet to save tokens
-  const firstSheet = workbook.SheetNames[0]
+  const firstSheet = workbook.worksheets[0]
   if (firstSheet) {
-    const worksheet = workbook.Sheets[firstSheet]
-    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 })
+    const jsonData: any[] = []
     
-    content += `${firstSheet}: ${jsonData.length} rows\n`
+    // Convert worksheet to JSON format similar to XLSX
+    firstSheet.eachRow((row, rowNumber) => {
+      const rowData: any[] = []
+      row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+        rowData[colNumber - 1] = cell.value
+      })
+      jsonData.push(rowData)
+    })
+    
+    content += `${firstSheet.name}: ${jsonData.length} rows\n`
     
     // Show only first 2 rows
-    const preview = jsonData.slice(0, 2) as string[][]
+    const preview = jsonData.slice(0, 2)
     preview.forEach((row, rowIndex) => {
-      const rowStr = row.slice(0, 3).join(' | ') + (row.length > 3 ? '...' : '')
+      const filteredRow = row.filter(cell => cell !== null && cell !== undefined)
+      const rowStr = filteredRow.slice(0, 3).join(' | ') + (filteredRow.length > 3 ? '...' : '')
       content += `${rowIndex + 1}: ${rowStr}\n`
     })
     

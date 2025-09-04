@@ -22,12 +22,14 @@ const eslintConfig = [
   },
   {
     rules: {
-      // Temporarily disable these rules to allow build to pass
-      "@typescript-eslint/no-explicit-any": "off",
-      "react/no-unescaped-entities": "off",
-      "@typescript-eslint/no-unused-vars": "warn",
-      "react-hooks/exhaustive-deps": "warn",
-      "@next/next/no-img-element": "warn",
+      // Re-enable critical rules for better code quality
+      "@typescript-eslint/no-explicit-any": "warn", // Changed from "off"
+      "react/no-unescaped-entities": "off", // Keep off for markdown content
+      "@typescript-eslint/no-unused-vars": "error", // Changed from "warn"
+      "react-hooks/exhaustive-deps": "error", // Changed from "warn"
+      "@next/next/no-img-element": "error", // Changed from "warn"
+      // Add new rules for better code quality
+      "no-console": "warn", // Reduce console.log usage
     },
   },
 ];

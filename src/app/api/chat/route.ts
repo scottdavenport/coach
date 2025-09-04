@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import OpenAI from 'openai'
+import { logger } from '@/lib/logger'
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -24,22 +25,22 @@ interface ParsedConversation {
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('🚀 Chat API called')
+    logger.apiRequest('POST', '/api/chat')
     
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
-      console.error('❌ No user found')
+      logger.error('Authentication failed - no user found')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    console.log('👤 User authenticated:', user.id)
+    logger.info('User authenticated', { userId: user.id })
 
     const body = await request.json()
     const { message, conversationId, conversationState, checkinProgress, ocrData, multiFileData } = body
 
-    console.log('📝 Message received:', {
+    logger.info('Message received', {
       messageLength: message?.length || 0,
       hasOcrData: !!ocrData,
       hasMultiFileData: !!multiFileData,
@@ -56,7 +57,7 @@ export async function POST(request: NextRequest) {
 
     if (userError && userError.code === 'PGRST116') {
       // User doesn't exist, create them
-      console.log('👤 Creating new user in database')
+      logger.info('Creating new user in database', { userId: user.id })
       const { error: createUserError } = await supabase
         .from('users')
         .insert({
@@ -65,15 +66,15 @@ export async function POST(request: NextRequest) {
         })
 
       if (createUserError) {
-        console.error('❌ Error creating user:', createUserError)
+        logger.error('Failed to create user', createUserError, { userId: user.id })
         return NextResponse.json({ error: 'Failed to create user' }, { status: 500 })
       }
     } else if (userError) {
-      console.error('❌ Error checking user:', userError)
+      logger.error('Failed to verify user', userError, { userId: user.id })
       return NextResponse.json({ error: 'Failed to verify user' }, { status: 500 })
     }
 
-    console.log('✅ User verified in database')
+    logger.debug('User verified in database', { userId: user.id })
 
     // Fetch conversation history (last 6 messages for context, with size limits)
     const { data: conversationHistory } = await supabase
@@ -150,34 +151,35 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (conversationError) {
-      console.error('Error saving conversation:', conversationError)
+      logger.error('Failed to save conversation', conversationError, { userId: user.id })
     }
 
     // Parse the conversation for rich context data
-    console.log('🔍 Starting conversation parsing...')
+    logger.debug('Starting conversation parsing')
     const parsedData = await parseConversationForRichContext(message)
-    console.log('✅ Conversation parsing complete:', {
+    logger.debug('Conversation parsing complete', {
       hasHealthData: parsedData.has_health_data,
       hasActivityData: parsedData.has_activity_data,
-      insightsCount: parsedData.insights.length
+      insightsCount: parsedData.insights.length,
+      userId: user.id
     })
 
-    // Show extracted data in console for development review
+    // Log extracted data for development review
     if (parsedData && (parsedData.has_health_data || parsedData.has_activity_data || parsedData.has_mood_data || parsedData.has_nutrition_data || parsedData.has_sleep_data || parsedData.has_workout_data)) {
-      console.log('🔍 **CONVERSATION INSIGHTS DETECTED:**')
-      console.log('User ID:', user.id)
-      console.log('Original message:', message)
-      console.log('Insights:', parsedData.insights)
-      console.log('Follow-up questions:', parsedData.follow_up_questions)
-      console.log('Data types:', {
-        health: parsedData.has_health_data,
-        activity: parsedData.has_activity_data,
-        mood: parsedData.has_mood_data,
-        nutrition: parsedData.has_nutrition_data,
-        sleep: parsedData.has_sleep_data,
-        workout: parsedData.has_workout_data
+      logger.debug('Conversation insights detected', {
+        userId: user.id,
+        messagePreview: message.substring(0, 100),
+        insights: parsedData.insights,
+        followUpQuestions: parsedData.follow_up_questions,
+        dataTypes: {
+          health: parsedData.has_health_data,
+          activity: parsedData.has_activity_data,
+          mood: parsedData.has_mood_data,
+          nutrition: parsedData.has_nutrition_data,
+          sleep: parsedData.has_sleep_data,
+          workout: parsedData.has_workout_data
+        }
       })
-      console.log('---')
     }
 
     // Build system prompt with token counting

@@ -24,7 +24,7 @@ interface ChatInterfaceProps {
 
 export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, onDataStored }: ChatInterfaceProps) {
   
-  const [messages, setMessages] = useState<any[]>([])
+  const [messages, setMessages] = useState<ConversationMessage[]>([])
   const [inputValue, setInputValue] = useState('')
 
   const [isUploadMenuOpen, setIsUploadMenuOpen] = useState(false)
@@ -358,7 +358,7 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
   }, [fileManager.files, inputValue, userId])
 
   // Detect if user is correcting OCR data
-  const detectOcrCorrection = (message: string, messageHistory: any[]) => {
+  const detectOcrCorrection = (message: string, messageHistory: ConversationMessage[]) => {
     const lowerMessage = message.toLowerCase()
     
     // Look for more specific correction patterns
