@@ -1,5 +1,5 @@
-import React, { ReactElement } from 'react'
-import { render, RenderOptions } from '@testing-library/react'
+import React, { ReactElement } from 'react';
+import { render, RenderOptions } from '@testing-library/react';
 
 // Mock Supabase client for testing
 const mockSupabaseClient = {
@@ -11,47 +11,64 @@ const mockSupabaseClient = {
   },
   from: () => ({
     select: () => ({
-      insert: () => ({ eq: () => ({ single: () => Promise.resolve({ data: null, error: null }) }) }),
-      update: () => ({ eq: () => ({ single: () => Promise.resolve({ data: null, error: null }) }) }),
-      delete: () => ({ eq: () => ({ single: () => Promise.resolve({ data: null, error: null }) }) }),
-      eq: () => ({ single: () => Promise.resolve({ data: null, error: null }) }),
-      order: () => ({ limit: () => Promise.resolve({ data: [], error: null }) }),
+      insert: () => ({
+        eq: () => ({
+          single: () => Promise.resolve({ data: null, error: null }),
+        }),
+      }),
+      update: () => ({
+        eq: () => ({
+          single: () => Promise.resolve({ data: null, error: null }),
+        }),
+      }),
+      delete: () => ({
+        eq: () => ({
+          single: () => Promise.resolve({ data: null, error: null }),
+        }),
+      }),
+      eq: () => ({
+        single: () => Promise.resolve({ data: null, error: null }),
+      }),
+      order: () => ({
+        limit: () => Promise.resolve({ data: [], error: null }),
+      }),
       limit: () => Promise.resolve({ data: [], error: null }),
     }),
   }),
   storage: {
     from: () => ({
       upload: () => Promise.resolve({ data: null, error: null }),
-      createSignedUrl: () => Promise.resolve({ data: { signedUrl: 'test-url' }, error: null }),
+      createSignedUrl: () =>
+        Promise.resolve({ data: { signedUrl: 'test-url' }, error: null }),
     }),
   },
   rpc: () => Promise.resolve({ data: null, error: null }),
-}
+};
 
 // Test wrapper component for providers
 interface TestWrapperProps {
-  children: React.ReactNode
+  children: React.ReactNode;
 }
 
 const TestWrapper = ({ children }: TestWrapperProps) => {
-  return <>{children}</>
-}
+  return <>{children}</>;
+};
 
 // Custom render function that includes providers
 const customRender = (
   ui: ReactElement,
   options?: Omit<RenderOptions, 'wrapper'>
-) => render(ui, { wrapper: TestWrapper, ...options })
+) => render(ui, { wrapper: TestWrapper, ...options });
 
 // Export mock Supabase client for testing
-export { mockSupabaseClient }
+export { mockSupabaseClient };
 
 // Mock data for testing
 export const mockUser = {
   id: 'test-user-id',
   email: 'test@example.com',
   created_at: '2024-01-01T00:00:00Z',
-}
+};
 
 export const mockConversation = {
   id: 'test-conversation-id',
@@ -63,7 +80,7 @@ export const mockConversation = {
     conversation_id: 'test-conversation-id',
   },
   created_at: '2024-01-01T00:00:00Z',
-}
+};
 
 export const mockHealthData = {
   id: 'test-health-id',
@@ -76,10 +93,11 @@ export const mockHealthData = {
   },
   confidence: 0.9,
   created_at: '2024-01-01T00:00:00Z',
-}
+};
 
 // Test helpers
-export const waitFor = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+export const waitFor = (ms: number) =>
+  new Promise(resolve => setTimeout(resolve, ms));
 
 export const mockApiResponse = (data: any, status = 200) => {
   return Promise.resolve({
@@ -87,9 +105,9 @@ export const mockApiResponse = (data: any, status = 200) => {
     status,
     json: () => Promise.resolve(data),
     text: () => Promise.resolve(JSON.stringify(data)),
-  })
-}
+  });
+};
 
 // Re-export everything
-export * from '@testing-library/react'
-export { customRender as render }
+export * from '@testing-library/react';
+export { customRender as render };

@@ -1,22 +1,28 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Mail, Loader2 } from 'lucide-react'
+import { useState } from 'react';
+import { createClient } from '@/lib/supabase/client';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Mail, Loader2 } from 'lucide-react';
 
 export function AuthForm() {
-  const [email, setEmail] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-  const [message, setMessage] = useState('')
-  const supabase = createClient()
+  const [email, setEmail] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [message, setMessage] = useState('');
+  const supabase = createClient();
 
   const handleSignIn = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
-    setMessage('')
+    e.preventDefault();
+    setIsLoading(true);
+    setMessage('');
 
     try {
       const { error: signInError } = await supabase.auth.signInWithOtp({
@@ -24,24 +30,26 @@ export function AuthForm() {
         options: {
           emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
-      })
+      });
 
       if (signInError) {
-        setMessage(signInError.message)
+        setMessage(signInError.message);
       } else {
-        setMessage('Check your email for the magic link!')
+        setMessage('Check your email for the magic link!');
       }
     } catch {
-      setMessage('An unexpected error occurred')
+      setMessage('An unexpected error occurred');
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl font-semibold text-center">Welcome to Coach</CardTitle>
+        <CardTitle className="text-2xl font-semibold text-center">
+          Welcome to Coach
+        </CardTitle>
         <CardDescription className="text-center">
           Enter your email to sign in with a magic link
         </CardDescription>
@@ -53,13 +61,13 @@ export function AuthForm() {
               type="email"
               placeholder="your@email.com"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={e => setEmail(e.target.value)}
               required
               className="h-11"
             />
           </div>
-          <Button 
-            type="submit" 
+          <Button
+            type="submit"
             className="w-full h-11 bg-primary text-black hover:brightness-110"
             disabled={isLoading}
           >
@@ -71,14 +79,18 @@ export function AuthForm() {
             Send Magic Link
           </Button>
           {message && (
-            <p className={`text-sm text-center ${
-              message.includes('Check your email') ? 'text-success' : 'text-destructive'
-            }`}>
+            <p
+              className={`text-sm text-center ${
+                message.includes('Check your email')
+                  ? 'text-success'
+                  : 'text-destructive'
+              }`}
+            >
               {message}
             </p>
           )}
         </form>
       </CardContent>
     </Card>
-  )
+  );
 }

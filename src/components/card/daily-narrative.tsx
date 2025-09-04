@@ -1,60 +1,73 @@
-'use client'
+'use client';
 
-import { useState, useEffect, useCallback } from 'react'
-import { createClient } from '@/lib/supabase/client'
-import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Calendar } from '@/components/ui/calendar'
-import { ChevronLeft, ChevronRight, Sun, Calendar as CalendarIcon, RefreshCw, Loader2, Brain, TrendingUp, Lightbulb } from 'lucide-react'
-import { 
-  getTodayInTimezone, 
-  formatDateLong, 
-  navigateDateInTimezone,
-  isTodayInTimezone,
-  isFutureDateInTimezone,
-  getUserPreferredTimezone
-} from '@/lib/timezone-utils'
-import { useUserTimezone } from '@/hooks/use-user-timezone'
-import { useJournalEntries } from '@/hooks/use-journal-entries'
-import { JournalMetrics } from './journal-metrics'
-import { usePatternRecognition } from '@/hooks/use-pattern-recognition'
+import { useState, useEffect, useCallback } from 'react';
+import { createClient } from '@/lib/supabase/client';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Calendar } from '@/components/ui/calendar';
+import {
+  Sun,
+  RefreshCw,
+  Loader2,
+  Brain,
+  TrendingUp,
+  Lightbulb,
+} from 'lucide-react';
+import {
+  getTodayInTimezone,
+  formatDateLong,
+  getUserPreferredTimezone,
+} from '@/lib/timezone-utils';
+import { useUserTimezone } from '@/hooks/use-user-timezone';
+import { useJournalEntries } from '@/hooks/use-journal-entries';
+import { JournalMetrics } from './journal-metrics';
+import { usePatternRecognition } from '@/hooks/use-pattern-recognition';
 
 interface DailyJournalProps {
-  userId: string
-  isOpen: boolean
-  onClose: () => void
-  selectedDate?: string
+  userId: string;
+  isOpen: boolean;
+  onClose: () => void;
+  selectedDate?: string;
 }
 
 interface NarrativeData {
-  activities: string[]
-  narrative_text: string
-  notes: string[]
-  health_context?: string
-  follow_up?: string
+  activities: string[];
+  narrative_text: string;
+  notes: string[];
+  health_context?: string;
+  follow_up?: string;
   journal_entries?: Array<{
-    entry_type: string
-    category: string
-    content: string
-    confidence: number
-  }>
+    entry_type: string;
+    category: string;
+    content: string;
+    confidence: number;
+  }>;
 }
 
-export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJournalProps) {
-  const { userTimezone } = useUserTimezone()
-  
-  // Initialize with today's date using user's preferred timezone
-  const [currentDate, setCurrentDate] = useState(() => {
-    const preferredTimezone = getUserPreferredTimezone(userTimezone)
-    return getTodayInTimezone(preferredTimezone)
-  })
-  const [narrativeData, setNarrativeData] = useState<NarrativeData | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [isGenerating, setIsGenerating] = useState(false)
-  const [showPatterns, setShowPatterns] = useState(false)
+export function DailyJournal({
+  userId,
+  isOpen,
+  onClose,
+  selectedDate,
+}: DailyJournalProps) {
+  const { userTimezone } = useUserTimezone();
+
+  // Initialize with empty string, will be set by useEffect when timezone is loaded
+  const [currentDate, setCurrentDate] = useState('');
+  const [narrativeData, setNarrativeData] = useState<NarrativeData | null>(
+    null
+  );
+  const [isLoading, setIsLoading] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [showPatterns, setShowPatterns] = useState(false);
 
   // Get journal entry dates for calendar indicators
-  const { journalEntryDates } = useJournalEntries({ userId })
+  const { journalEntryDates } = useJournalEntries({ userId });
 
   // Pattern recognition hook - TEMPORARILY DISABLED for performance debugging
   // const {
@@ -67,79 +80,48 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
   //   getTopMoods,
   //   getSleepInsights
   // } = usePatternRecognition(userId)
-  
+
   // Temporary mock data while pattern recognition is disabled
-  const patterns = null
-  const patternsLoading = false
-  const patternsError = null
-  const refreshPatterns = async () => {}
-  const getTopTopics = (limit?: number) => []
-  const getTopActivities = (limit?: number) => []
-  const getTopMoods = (limit?: number) => []
-  const getSleepInsights = () => []
+  const patterns = null;
+  const patternsLoading = false;
+  const patternsError = null;
+  const refreshPatterns = async () => {};
+  const getTopTopics = (limit?: number) => [];
+  const getTopActivities = (limit?: number) => [];
+  const getTopMoods = (limit?: number) => [];
+  const getSleepInsights = () => [];
 
   // Update currentDate when selectedDate prop changes or initialize with today
   useEffect(() => {
     if (selectedDate) {
-      setCurrentDate(selectedDate)
-    } else {
-      const preferredTimezone = getUserPreferredTimezone(userTimezone)
-      const todayString = getTodayInTimezone(preferredTimezone)
-      console.log('🔍 Setting current date to today:', todayString, 'in timezone:', preferredTimezone)
-      setCurrentDate(todayString)
+      setCurrentDate(selectedDate);
+    } else if (!currentDate) {
+      // Only set to today if currentDate is empty (initial load)
+      const preferredTimezone = getUserPreferredTimezone(userTimezone);
+      const todayString = getTodayInTimezone(preferredTimezone);
+      console.log(
+        '🔍 Setting current date to today:',
+        todayString,
+        'in timezone:',
+        preferredTimezone
+      );
+      setCurrentDate(todayString);
     }
-  }, [selectedDate, userTimezone])
+  }, [selectedDate, userTimezone, currentDate]);
 
   // Format date for display
   const formatDate = (dateString: string) => {
-    const preferredTimezone = getUserPreferredTimezone(userTimezone)
-    return formatDateLong(new Date(dateString + 'T00:00:00'), preferredTimezone)
-  }
-
-  // Navigate to previous/next day using timezone utilities
-  const goToPreviousDay = () => {
-    const preferredTimezone = getUserPreferredTimezone(userTimezone)
-    const prevDateString = navigateDateInTimezone(currentDate, 'prev', preferredTimezone)
-    setCurrentDate(prevDateString)
-  }
-
-  const goToNextDay = () => {
-    const preferredTimezone = getUserPreferredTimezone(userTimezone)
-    
-    // Don't allow navigation to future dates
-    if (!isFutureDateInTimezone(currentDate, preferredTimezone)) {
-      const nextDateString = navigateDateInTimezone(currentDate, 'next', preferredTimezone)
-      setCurrentDate(nextDateString)
-    }
-  }
-
-  const goToToday = () => {
-    const preferredTimezone = getUserPreferredTimezone(userTimezone)
-    const todayString = getTodayInTimezone(preferredTimezone)
-    setCurrentDate(todayString)
-  }
+    const preferredTimezone = getUserPreferredTimezone(userTimezone);
+    return formatDateLong(
+      new Date(dateString + 'T00:00:00'),
+      preferredTimezone
+    );
+  };
 
   // Handle date selection from calendar
   const handleDateSelect = (dateString: string) => {
-    setCurrentDate(dateString)
-  }
-
-  // Check if current date is today using timezone utilities
-  const isToday = () => {
-    const preferredTimezone = getUserPreferredTimezone(userTimezone)
-    return isTodayInTimezone(currentDate, preferredTimezone)
-  }
-
-  // Check if current date is in the future using timezone utilities
-  const isFutureDate = () => {
-    const preferredTimezone = getUserPreferredTimezone(userTimezone)
-    return isFutureDateInTimezone(currentDate, preferredTimezone)
-  }
-
-  // Check if we can navigate to next day
-  const canGoToNextDay = () => {
-    return !isToday() && !isFutureDate()
-  }
+    setCurrentDate(dateString);
+  };
 
   // Helper function to get natural activity descriptions
   const getActivityDescription = useCallback((activity: string): string => {
@@ -149,186 +131,236 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
       'Pool time': 'Relaxing by the water',
       'Relaxation time': 'Taking time to unwind and enjoy',
       'Coffee run': 'Morning coffee and energy boost',
-      'Resort time': 'Enjoying the beautiful resort surroundings'
-    }
-    return descriptions[activity] || 'Activity from natural conversation'
-  }, [])
+      'Resort time': 'Enjoying the beautiful resort surroundings',
+    };
+    return descriptions[activity] || 'Activity from natural conversation';
+  }, []);
 
   // Build narrative from conversation insights and journal entries
-  const buildNarrativeFromConversationsAndJournal = useCallback((insights: any[], journalEntries: any[]) => {
-    // Extract activities from insights with more specific detection
-    const activities: string[] = []
-    const notes: string[] = []
-    
-    insights.forEach(insight => {
-      const message = insight.message.toLowerCase()
-      
-      // Extract specific activities from actual message content
-      if (message.includes('open range grill')) {
-        activities.push('Dinner at Open Range Grill')
-      } else if (message.includes('dinner') && message.includes('restaurant')) {
-        activities.push('Restaurant dinner')
-      } else if (message.includes('dinner')) {
-        activities.push('Dinner plans')
-      }
-      
-      if (message.includes('uptown sedona')) {
-        activities.push('Exploring uptown Sedona')
-      } else if (message.includes('sedona')) {
-        activities.push('Sedona exploration')
-      }
-      
-      // More specific activity detection
-      if (message.includes('golf')) activities.push('Golf')
-      if (message.includes('hike')) activities.push('Hiking')
-      if (message.includes('workout')) activities.push('Workout')
-      if (message.includes('coffee')) activities.push('Coffee time')
-      if (message.includes('pool')) activities.push('Pool time')
-      
-      // Add insights as notes with cleaning
-      if (insight.insights && Array.isArray(insight.insights)) {
-        insight.insights.forEach((insightText: string) => {
-          const cleanInsight = insightText
-            .replace(/^User\s+/i, '')
-            .replace(/^I\s+/i, '')
-          notes.push(cleanInsight)
-        })
-      }
-    })
+  const buildNarrativeFromConversationsAndJournal = useCallback(
+    (insights: any[], journalEntries: any[]) => {
+      // Extract activities from insights with more specific detection
+      const activities: string[] = [];
+      const notes: string[] = [];
 
-    // Get narrative from journal entries
-    const reflectionEntry = journalEntries.find(entry => entry.entry_type === 'reflection')
-    const activityEntry = journalEntries.find(entry => entry.entry_type === 'note' && entry.category === 'fitness')
-    const healthEntry = journalEntries.find(entry => entry.category === 'health')
-    const followUpEntry = journalEntries.find(entry => entry.entry_type === 'goal')
+      insights.forEach(insight => {
+        const message = insight.message.toLowerCase();
 
-    // Use AI-generated narrative if available, otherwise build from insights
-    let narrativeText = reflectionEntry?.content || ''
-    
-    if (!narrativeText && activities.length > 0) {
-      // Build rich narrative from activities
-      if (activities.some(a => a.includes('Open Range Grill'))) {
-        narrativeText = `Planning an evening at Open Range Grill in Sedona tonight. Looking forward to exploring the local dining scene and enjoying a relaxing dinner in this beautiful area.`
-      } else if (activities.some(a => a.includes('Sedona'))) {
-        narrativeText = `Spending time exploring the beautiful Sedona area. ${activities.join(' and ')} made for a wonderful day of discovery and enjoyment.`
-      } else {
-        narrativeText = `Today included ${activities.join(' and ')}. It's been a great day filled with meaningful activities and experiences.`
+        // Extract specific activities from actual message content
+        if (message.includes('open range grill')) {
+          activities.push('Dinner at Open Range Grill');
+        } else if (
+          message.includes('dinner') &&
+          message.includes('restaurant')
+        ) {
+          activities.push('Restaurant dinner');
+        } else if (message.includes('dinner')) {
+          activities.push('Dinner plans');
+        }
+
+        if (message.includes('uptown sedona')) {
+          activities.push('Exploring uptown Sedona');
+        } else if (message.includes('sedona')) {
+          activities.push('Sedona exploration');
+        }
+
+        // More specific activity detection
+        if (message.includes('golf')) activities.push('Golf');
+        if (message.includes('hike')) activities.push('Hiking');
+        if (message.includes('workout')) activities.push('Workout');
+        if (message.includes('coffee')) activities.push('Coffee time');
+        if (message.includes('pool')) activities.push('Pool time');
+
+        // Add insights as notes with cleaning
+        if (insight.insights && Array.isArray(insight.insights)) {
+          insight.insights.forEach((insightText: string) => {
+            const cleanInsight = insightText
+              .replace(/^User\s+/i, '')
+              .replace(/^I\s+/i, '');
+            notes.push(cleanInsight);
+          });
+        }
+      });
+
+      // Get narrative from journal entries
+      const reflectionEntry = journalEntries.find(
+        entry => entry.entry_type === 'reflection'
+      );
+      const activityEntry = journalEntries.find(
+        entry => entry.entry_type === 'note' && entry.category === 'fitness'
+      );
+      const healthEntry = journalEntries.find(
+        entry => entry.category === 'health'
+      );
+      const followUpEntry = journalEntries.find(
+        entry => entry.entry_type === 'goal'
+      );
+
+      // Use AI-generated narrative if available, otherwise build from insights
+      let narrativeText = reflectionEntry?.content || '';
+
+      if (!narrativeText && activities.length > 0) {
+        // Build rich narrative from activities
+        if (activities.some(a => a.includes('Open Range Grill'))) {
+          narrativeText = `Planning an evening at Open Range Grill in Sedona tonight. Looking forward to exploring the local dining scene and enjoying a relaxing dinner in this beautiful area.`;
+        } else if (activities.some(a => a.includes('Sedona'))) {
+          narrativeText = `Spending time exploring the beautiful Sedona area. ${activities.join(' and ')} made for a wonderful day of discovery and enjoyment.`;
+        } else {
+          narrativeText = `Today included ${activities.join(' and ')}. It's been a great day filled with meaningful activities and experiences.`;
+        }
+      } else if (!narrativeText && notes.length > 0) {
+        narrativeText = `${notes.join('. ')}. It's been a meaningful day with good conversations and connections.`;
+      } else if (!narrativeText) {
+        narrativeText =
+          "Today was a day of natural conversation and connection. Sometimes the best moments come from simply sharing what's on your mind.";
       }
-    } else if (!narrativeText && notes.length > 0) {
-      narrativeText = `${notes.join('. ')}. It's been a meaningful day with good conversations and connections.`
-    } else if (!narrativeText) {
-      narrativeText = "Today was a day of natural conversation and connection. Sometimes the best moments come from simply sharing what's on your mind."
-    }
 
-    return {
-      activities: Array.from(new Set(activities)),
-      narrative_text: narrativeText,
-      notes: Array.from(new Set(notes)),
-      health_context: healthEntry?.content || '',
-      follow_up: followUpEntry?.content?.replace('Tomorrow\'s reflection: ', '') || '',
-      journal_entries: journalEntries
-    }
-  }, [])
+      return {
+        activities: Array.from(new Set(activities)),
+        narrative_text: narrativeText,
+        notes: Array.from(new Set(notes)),
+        health_context: healthEntry?.content || '',
+        follow_up:
+          followUpEntry?.content?.replace("Tomorrow's reflection: ", '') || '',
+        journal_entries: journalEntries,
+      };
+    },
+    []
+  );
 
   // Build narrative from existing journal entries only
-  const buildNarrativeFromJournalEntries = useCallback((journalEntries: any[]) => {
-    const reflectionEntry = journalEntries.find(entry => entry.entry_type === 'reflection')
-    const activityEntry = journalEntries.find(entry => entry.entry_type === 'note' && entry.category === 'fitness')
-    const healthEntry = journalEntries.find(entry => entry.category === 'health')
-    const followUpEntry = journalEntries.find(entry => entry.entry_type === 'goal')
-    const noteEntries = journalEntries.filter(entry => entry.entry_type === 'note' && entry.category === 'lifestyle')
+  const buildNarrativeFromJournalEntries = useCallback(
+    (journalEntries: any[]) => {
+      const reflectionEntry = journalEntries.find(
+        entry => entry.entry_type === 'reflection'
+      );
+      const activityEntry = journalEntries.find(
+        entry => entry.entry_type === 'note' && entry.category === 'fitness'
+      );
+      const healthEntry = journalEntries.find(
+        entry => entry.category === 'health'
+      );
+      const followUpEntry = journalEntries.find(
+        entry => entry.entry_type === 'goal'
+      );
+      const noteEntries = journalEntries.filter(
+        entry => entry.entry_type === 'note' && entry.category === 'lifestyle'
+      );
 
-    // Extract activities from activity entry
-    const activities = activityEntry?.content?.replace('Activities: ', '').split(', ') || []
-    
-    // Combine all health and lifestyle insights for Key Insights section
-    const allInsights = [
-      ...noteEntries.map(entry => entry.content),
-      ...(healthEntry?.content ? [healthEntry.content] : [])
-    ]
-    
-    return {
-      activities,
-      narrative_text: reflectionEntry?.content || 'Journal entries available for this day.',
-      notes: allInsights, // Use the rich health insights from AI
-      health_context: healthEntry?.content || '',
-      follow_up: followUpEntry?.content?.replace('Tomorrow\'s reflection: ', '') || '',
-      journal_entries: journalEntries
-    }
-  }, [])
+      // Extract activities from activity entry
+      const activities =
+        activityEntry?.content?.replace('Activities: ', '').split(', ') || [];
+
+      // Combine all health and lifestyle insights for Key Insights section
+      const allInsights = [
+        ...noteEntries.map(entry => entry.content),
+        ...(healthEntry?.content ? [healthEntry.content] : []),
+      ];
+
+      return {
+        activities,
+        narrative_text:
+          reflectionEntry?.content || 'Journal entries available for this day.',
+        notes: allInsights, // Use the rich health insights from AI
+        health_context: healthEntry?.content || '',
+        follow_up:
+          followUpEntry?.content?.replace("Tomorrow's reflection: ", '') || '',
+        journal_entries: journalEntries,
+      };
+    },
+    []
+  );
 
   // Load narrative data for a specific date
-  const loadNarrativeData = useCallback(async (dateString: string) => {
-    setIsLoading(true)
-    try {
-      const supabase = createClient()
-      const preferredTimezone = getUserPreferredTimezone(userTimezone)
-      
-      console.log('🔍 Loading narrative data for date:', dateString, 'in timezone:', preferredTimezone)
-      
-      // Load conversation insights
-      const { data: conversationInsights, error: insightsError } = await supabase
-        .from('conversation_insights')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('conversation_date', dateString)
-        .order('created_at', { ascending: true })
+  const loadNarrativeData = useCallback(
+    async (dateString: string) => {
+      setIsLoading(true);
+      try {
+        const supabase = createClient();
+        const preferredTimezone = getUserPreferredTimezone(userTimezone);
 
-      if (insightsError) {
-        console.error('Error fetching conversation insights:', insightsError)
-        throw insightsError
+        console.log(
+          '🔍 Loading narrative data for date:',
+          dateString,
+          'in timezone:',
+          preferredTimezone
+        );
+
+        // Load conversation insights
+        const { data: conversationInsights, error: insightsError } =
+          await supabase
+            .from('conversation_insights')
+            .select('*')
+            .eq('user_id', userId)
+            .eq('conversation_date', dateString)
+            .order('created_at', { ascending: true });
+
+        if (insightsError) {
+          console.error('Error fetching conversation insights:', insightsError);
+          throw insightsError;
+        }
+
+        // Load existing journal entries for the date
+        const { data: journalEntries, error: journalError } = await supabase
+          .from('daily_journal')
+          .select('*')
+          .eq('user_id', userId)
+          .eq('journal_date', dateString)
+          .order('created_at', { ascending: true });
+
+        if (journalError) {
+          console.error('Error fetching journal entries:', journalError);
+        }
+
+        console.log(
+          '🔍 Found conversation insights:',
+          conversationInsights?.length || 0
+        );
+        console.log('🔍 Found journal entries:', journalEntries?.length || 0);
+
+        if (journalEntries && journalEntries.length > 0) {
+          // Prioritize rich journal entries created by AI enhancement
+          const narrativeData =
+            buildNarrativeFromJournalEntries(journalEntries);
+          setNarrativeData(narrativeData);
+        } else if (conversationInsights && conversationInsights.length > 0) {
+          // Fallback to conversation insights if no enhanced journal entries exist
+          const narrativeData = buildNarrativeFromConversationsAndJournal(
+            conversationInsights,
+            []
+          );
+          setNarrativeData(narrativeData);
+        } else {
+          // No data found
+          console.log(
+            '🔍 No journal entries or conversation insights found for this date'
+          );
+          setNarrativeData(null);
+        }
+      } catch (error) {
+        console.error('Error loading narrative data:', error);
+        setNarrativeData(null);
+      } finally {
+        setIsLoading(false);
       }
-
-      // Load existing journal entries for the date
-      const { data: journalEntries, error: journalError } = await supabase
-        .from('daily_journal')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('journal_date', dateString)
-        .order('created_at', { ascending: true })
-
-      if (journalError) {
-        console.error('Error fetching journal entries:', journalError)
-      }
-
-      console.log('🔍 Found conversation insights:', conversationInsights?.length || 0)
-      console.log('🔍 Found journal entries:', journalEntries?.length || 0)
-
-      if (journalEntries && journalEntries.length > 0) {
-        // Prioritize rich journal entries created by AI enhancement
-        const narrativeData = buildNarrativeFromJournalEntries(journalEntries)
-        setNarrativeData(narrativeData)
-      } else if (conversationInsights && conversationInsights.length > 0) {
-        // Fallback to conversation insights if no enhanced journal entries exist
-        const narrativeData = buildNarrativeFromConversationsAndJournal(conversationInsights, [])
-        setNarrativeData(narrativeData)
-      } else {
-        // No data found
-        console.log('🔍 No journal entries or conversation insights found for this date')
-        setNarrativeData(null)
-      }
-    } catch (error) {
-      console.error('Error loading narrative data:', error)
-      setNarrativeData(null)
-    } finally {
-      setIsLoading(false)
-    }
-  }, [userId, userTimezone])
+    },
+    [userId, userTimezone]
+  );
 
   // Generate narrative using conversation insights (simplified approach)
   const generateNarrative = async (dateString: string) => {
-    setIsGenerating(true)
+    setIsGenerating(true);
     try {
       // Simply reload the narrative data from conversation insights
-      await loadNarrativeData(dateString)
+      await loadNarrativeData(dateString);
     } catch (error) {
-      console.error('Error generating narrative:', error)
+      console.error('Error generating narrative:', error);
       // Fall back to basic narrative on error
-      setNarrativeData(generateBasicNarrative())
+      setNarrativeData(generateBasicNarrative());
     } finally {
-      setIsGenerating(false)
+      setIsGenerating(false);
     }
-  }
+  };
 
   // Fallback basic narrative
   const generateBasicNarrative = (): NarrativeData => {
@@ -337,33 +369,33 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
       narrative_text: 'Had a good day with various activities and experiences.',
       notes: ['Day included meaningful moments'],
       health_context: '',
-      follow_up: 'How are you feeling about tomorrow?'
-    }
-  }
+      follow_up: 'How are you feeling about tomorrow?',
+    };
+  };
 
   // Load data when currentDate changes or modal opens
   useEffect(() => {
     if (currentDate && isOpen) {
-      loadNarrativeData(currentDate)
+      loadNarrativeData(currentDate);
     }
-  }, [currentDate, isOpen, userId, userTimezone]) // Removed loadNarrativeData dependency to prevent infinite loops
+  }, [currentDate, isOpen, userId, userTimezone]); // Removed loadNarrativeData dependency to prevent infinite loops
 
   // Real-time updates: Listen for new conversation insights and update narrative
   useEffect(() => {
-    if (!isOpen || !userId || !currentDate) return
+    if (!isOpen || !userId || !currentDate) return;
 
-    const supabase = createClient()
-    
+    const supabase = createClient();
+
     // Subscribe to new conversation insights for the currently selected date
-    const startOfDay = new Date(currentDate)
-    startOfDay.setHours(0, 0, 0, 0)
-    const endOfDay = new Date(currentDate)
-    endOfDay.setHours(23, 59, 59, 999)
+    const startOfDay = new Date(currentDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(currentDate);
+    endOfDay.setHours(23, 59, 59, 999);
 
-    console.log('Setting up real-time subscription for date:', currentDate)
+    console.log('Setting up real-time subscription for date:', currentDate);
 
-    const channelName = `narrative-updates-${currentDate}-${userId}`
-    
+    const channelName = `narrative-updates-${currentDate}-${userId}`;
+
     const channel = supabase
       .channel(channelName)
       .on(
@@ -372,49 +404,60 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
           event: 'INSERT', // Only listen to new insights (not updates/deletes)
           schema: 'public',
           table: 'conversation_insights',
-          filter: `user_id=eq.${userId}`
+          filter: `user_id=eq.${userId}`,
         },
-        async (payload) => {
-          console.log('Real-time insight detected:', (payload.new as any)?.message?.substring(0, 50))
-          
+        async payload => {
+          console.log(
+            'Real-time insight detected:',
+            (payload.new as any)?.message?.substring(0, 50)
+          );
+
           // Check if this insight is for the currently selected date
-          const insightDate = new Date((payload.new as any)?.conversation_date)
-          
+          const insightDate = new Date((payload.new as any)?.conversation_date);
+
           if (insightDate >= startOfDay && insightDate <= endOfDay) {
-            console.log('Insight matches selected date - triggering narrative update')
+            console.log(
+              'Insight matches selected date - triggering narrative update'
+            );
             // Debounce the update to prevent excessive calls
             setTimeout(async () => {
-              await loadNarrativeData(currentDate)
-            }, 2000) // 2 second delay to batch multiple insights
+              await loadNarrativeData(currentDate);
+            }, 2000); // 2 second delay to batch multiple insights
           }
         }
       )
-      .subscribe((status) => {
+      .subscribe(status => {
         if (status === 'SUBSCRIBED') {
-          console.log('Real-time subscription active for narrative updates on date:', currentDate)
+          console.log(
+            'Real-time subscription active for narrative updates on date:',
+            currentDate
+          );
         }
-      })
+      });
 
     return () => {
       if (channel) {
-        console.log('Cleaning up real-time subscription for date:', currentDate)
-        supabase.removeChannel(channel)
+        console.log(
+          'Cleaning up real-time subscription for date:',
+          currentDate
+        );
+        supabase.removeChannel(channel);
       }
-    }
-  }, [isOpen, userId, currentDate]) // Removed loadNarrativeData dependency to prevent infinite loops
+    };
+  }, [isOpen, userId, currentDate]); // Removed loadNarrativeData dependency to prevent infinite loops
 
   // Refresh current narrative
   const handleRefresh = () => {
-    generateNarrative(currentDate)
-  }
+    generateNarrative(currentDate);
+  };
 
   // Toggle pattern insights
   const togglePatterns = () => {
-    setShowPatterns(!showPatterns)
+    setShowPatterns(!showPatterns);
     if (!showPatterns && patterns) {
-      refreshPatterns()
+      refreshPatterns();
     }
-  }
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -426,61 +469,22 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
           </DialogTitle>
         </DialogHeader>
 
-        {/* Date Navigation */}
-        <div className="flex items-center justify-between mb-6 p-4 bg-card-2 rounded-lg border border-line">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={goToPreviousDay}
-            className="flex items-center gap-2"
-          >
-            <ChevronLeft className="h-4 w-4" />
-            Previous
-          </Button>
-
-          <div className="flex items-center gap-4">
-            {/* Main date display - full format */}
-            <h2 className="text-lg font-semibold">{formatDate(currentDate)}</h2>
-            
-            {/* Calendar button showing previous day in short format */}
-            <Calendar 
+        {/* Date Navigation - Single Calendar Picker */}
+        {currentDate && (
+          <div className="flex justify-center mb-6 p-4 bg-card-2 rounded-lg border border-line">
+            <Calendar
               selectedDate={currentDate}
               onDateSelect={handleDateSelect}
               journalEntryDates={journalEntryDates}
-              previousDayDate={navigateDateInTimezone(currentDate, 'prev', getUserPreferredTimezone(userTimezone))}
             />
-            
-            {/* Today button - only show when not on today */}
-            {!isToday() && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={goToToday}
-                className="flex items-center gap-2"
-              >
-                <CalendarIcon className="h-4 w-4" />
-                Today
-              </Button>
-            )}
           </div>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={goToNextDay}
-            className="flex items-center gap-2"
-            disabled={!canGoToNextDay()}
-          >
-            Next
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
+        )}
 
         {/* Pattern Recognition Toggle */}
         <div className="flex justify-center mb-4">
           <Button
             onClick={togglePatterns}
-            variant={showPatterns ? "default" : "outline"}
+            variant={showPatterns ? 'default' : 'outline'}
             size="sm"
             className="flex items-center gap-2"
           >
@@ -505,7 +509,7 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
               <Brain className="h-5 w-5" />
               AI Discovered Patterns
             </h3>
-            
+
             {patternsLoading ? (
               <div className="flex items-center justify-center py-4">
                 <Loader2 className="h-6 w-6 animate-spin mr-2" />
@@ -528,7 +532,9 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
                       {getTopTopics(3).map((topic, index) => (
                         <div key={index} className="text-sm">
                           <span className="font-medium">{topic.topic}</span>
-                          <span className="text-gray-500 ml-2">({topic.frequency} mentions)</span>
+                          <span className="text-gray-500 ml-2">
+                            ({topic.frequency} mentions)
+                          </span>
                         </div>
                       ))}
                     </div>
@@ -545,8 +551,12 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
                     <div className="space-y-1">
                       {getTopActivities(3).map((activity, index) => (
                         <div key={index} className="text-sm">
-                          <span className="font-medium">{activity.activity}</span>
-                          <span className="text-gray-500 ml-2">({activity.frequency} times)</span>
+                          <span className="font-medium">
+                            {activity.activity}
+                          </span>
+                          <span className="text-gray-500 ml-2">
+                            ({activity.frequency} times)
+                          </span>
                         </div>
                       ))}
                     </div>
@@ -564,7 +574,9 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
                       {getTopMoods(3).map((mood, index) => (
                         <div key={index} className="text-sm">
                           <span className="font-medium">{mood.mood}</span>
-                          <span className="text-gray-500 ml-2">({mood.frequency} times)</span>
+                          <span className="text-gray-500 ml-2">
+                            ({mood.frequency} times)
+                          </span>
                         </div>
                       ))}
                     </div>
@@ -579,12 +591,18 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
                       Sleep Patterns
                     </h4>
                     <div className="space-y-1">
-                      {getSleepInsights().slice(0, 2).map((sleep, index) => (
-                        <div key={index} className="text-sm">
-                          <span className="font-medium">Quality: {sleep.sleepQuality}/10</span>
-                          <span className="text-gray-500 ml-2">({sleep.sleepDuration}h)</span>
-                        </div>
-                      ))}
+                      {getSleepInsights()
+                        .slice(0, 2)
+                        .map((sleep, index) => (
+                          <div key={index} className="text-sm">
+                            <span className="font-medium">
+                              Quality: {sleep.sleepQuality}/10
+                            </span>
+                            <span className="text-gray-500 ml-2">
+                              ({sleep.sleepDuration}h)
+                            </span>
+                          </div>
+                        ))}
                     </div>
                   </div>
                 )}
@@ -593,7 +611,9 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
               <div className="text-center py-4 text-gray-600">
                 <Lightbulb className="h-8 w-8 mx-auto mb-2 text-gray-400" />
                 <p>Start more conversations to discover your patterns!</p>
-                <p className="text-sm">AI will analyze your chat history to find insights.</p>
+                <p className="text-sm">
+                  AI will analyze your chat history to find insights.
+                </p>
               </div>
             )}
           </div>
@@ -623,17 +643,14 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
         {!isLoading && !isGenerating && narrativeData && (
           <div className="space-y-6">
             {/* Daily Metrics Section */}
-            <JournalMetrics 
-              userId={userId}
-              date={currentDate}
-            />
+            <JournalMetrics userId={userId} date={currentDate} />
 
             {/* Natural Narrative Journal */}
             <div className="bg-card-2 p-4 rounded-lg border border-line">
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                 📖 {formatDate(currentDate)} - Your Day
               </h3>
-              
+
               {/* Natural narrative content */}
               <div className="space-y-6">
                 {/* Main Narrative */}
@@ -647,21 +664,31 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
                   <div className="text-center py-8 text-muted-foreground">
                     <div className="text-4xl mb-2">📝</div>
                     <p>Start a conversation to build your daily journal!</p>
-                    <p className="text-xs mt-2">Tell me about your day, activities, thoughts, or anything on your mind.</p>
+                    <p className="text-xs mt-2">
+                      Tell me about your day, activities, thoughts, or anything
+                      on your mind.
+                    </p>
                   </div>
                 )}
 
                 {/* Key Activities - Clean Bullets */}
                 {narrativeData.activities?.length > 0 && (
                   <div className="border-l-4 border-blue-400 pl-4">
-                    <h4 className="font-medium text-blue-400 mb-3">🎯 Key Activities Today</h4>
+                    <h4 className="font-medium text-blue-400 mb-3">
+                      🎯 Key Activities Today
+                    </h4>
                     <div className="space-y-2">
-                      {narrativeData.activities.map((activity: string, index: number) => (
-                        <div key={index} className="flex items-center gap-2 text-sm">
-                          <span className="text-green-500">•</span>
-                          <span>{activity}</span>
-                        </div>
-                      ))}
+                      {narrativeData.activities.map(
+                        (activity: string, index: number) => (
+                          <div
+                            key={index}
+                            className="flex items-center gap-2 text-sm"
+                          >
+                            <span className="text-green-500">•</span>
+                            <span>{activity}</span>
+                          </div>
+                        )
+                      )}
                     </div>
                   </div>
                 )}
@@ -669,7 +696,9 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
                 {/* Health Context - From AI analysis */}
                 {narrativeData.health_context && (
                   <div className="border-l-4 border-green-400 pl-4">
-                    <h4 className="font-medium text-green-400 mb-3">💚 Health Context</h4>
+                    <h4 className="font-medium text-green-400 mb-3">
+                      💚 Health Context
+                    </h4>
                     <div className="text-sm">
                       <p>{narrativeData.health_context}</p>
                     </div>
@@ -679,14 +708,18 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
                 {/* Additional Notes */}
                 {narrativeData.notes?.length > 0 && (
                   <div className="border-l-4 border-purple-400 pl-4">
-                    <h4 className="font-medium text-purple-400 mb-3">💭 Key Insights</h4>
+                    <h4 className="font-medium text-purple-400 mb-3">
+                      💭 Key Insights
+                    </h4>
                     <div className="space-y-2 text-sm">
-                      {narrativeData.notes.map((note: string, index: number) => (
-                        <div key={index} className="flex items-center gap-2">
-                          <span>💡</span>
-                          <span>{note}</span>
-                        </div>
-                      ))}
+                      {narrativeData.notes.map(
+                        (note: string, index: number) => (
+                          <div key={index} className="flex items-center gap-2">
+                            <span>💡</span>
+                            <span>{note}</span>
+                          </div>
+                        )
+                      )}
                     </div>
                   </div>
                 )}
@@ -694,7 +727,9 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
                 {/* Tomorrow's Reflection */}
                 {narrativeData.follow_up && (
                   <div className="border-l-4 border-yellow-400 pl-4">
-                    <h4 className="font-medium text-yellow-400 mb-3">🌅 Tomorrow's Reflection</h4>
+                    <h4 className="font-medium text-yellow-400 mb-3">
+                      🌅 Tomorrow's Reflection
+                    </h4>
                     <div className="text-sm italic">
                       <p>{narrativeData.follow_up}</p>
                     </div>
@@ -710,8 +745,13 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
           <div className="text-center py-8 text-muted-foreground">
             <div className="text-4xl mb-2">📝</div>
             <p>No journal entry for this day yet.</p>
-            <p className="text-xs mt-2">Start a conversation to create your daily journal!</p>
-            <p className="text-xs mt-1">Share your activities, thoughts, or upload files to generate rich entries.</p>
+            <p className="text-xs mt-2">
+              Start a conversation to create your daily journal!
+            </p>
+            <p className="text-xs mt-1">
+              Share your activities, thoughts, or upload files to generate rich
+              entries.
+            </p>
           </div>
         )}
 
@@ -730,5 +770,5 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

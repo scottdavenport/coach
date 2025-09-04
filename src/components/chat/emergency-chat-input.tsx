@@ -11,18 +11,21 @@ interface EmergencyChatInputProps {
 }
 
 // Emergency input component with minimal dependencies to fix typing lag
-export function EmergencyChatInput({ 
-  onSendMessage, 
-  onFileUpload, 
-  disabled = false, 
+export function EmergencyChatInput({
+  onSendMessage,
+  onFileUpload,
+  disabled = false,
   isLoading = false,
-  fileCount = 0 
+  fileCount = 0,
 }: EmergencyChatInputProps) {
   const [value, setValue] = useState('');
 
-  const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setValue(e.target.value);
-  }, []);
+  const handleChange = useCallback(
+    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      setValue(e.target.value);
+    },
+    []
+  );
 
   const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -43,11 +46,12 @@ export function EmergencyChatInput({
         {fileCount > 0 && (
           <div className="mb-3 p-2 bg-primary/10 border border-primary/30 rounded-lg">
             <p className="text-sm text-center">
-              {fileCount} file{fileCount > 1 ? 's' : ''} attached (files managed separately)
+              {fileCount} file{fileCount > 1 ? 's' : ''} attached (files managed
+              separately)
             </p>
           </div>
         )}
-        
+
         <div className="flex items-center space-x-3">
           {/* Attachment Button */}
           <Button

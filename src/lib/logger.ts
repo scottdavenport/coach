@@ -15,14 +15,21 @@ interface LogEntry {
 
 class Logger {
   private isDevelopment = process.env.NODE_ENV === 'development';
-  
-  private formatMessage(level: LogLevel, message: string, context?: Record<string, any>, error?: Error): LogEntry {
+
+  private formatMessage(
+    level: LogLevel,
+    message: string,
+    context?: Record<string, any>,
+    error?: Error
+  ): LogEntry {
     return {
       level,
       message,
       timestamp: new Date().toISOString(),
       ...(context && { context }),
-      ...(error && { error: { name: error.name, message: error.message, stack: error.stack } })
+      ...(error && {
+        error: { name: error.name, message: error.message, stack: error.stack },
+      }),
     };
   }
 
@@ -64,20 +71,34 @@ class Logger {
   }
 
   apiResponse(method: string, path: string, status: number, duration?: number) {
-    this.info(`API ${method} ${path} - ${status}`, { status, duration, type: 'api_response' });
+    this.info(`API ${method} ${path} - ${status}`, {
+      status,
+      duration,
+      type: 'api_response',
+    });
   }
 
   apiError(method: string, path: string, error: Error, userId?: string) {
-    this.error(`API ${method} ${path} failed`, error, { userId, type: 'api_error' });
+    this.error(`API ${method} ${path} failed`, error, {
+      userId,
+      type: 'api_error',
+    });
   }
 
   // Database-specific logging
   dbQuery(query: string, duration?: number) {
-    this.debug('Database query executed', { query: query.substring(0, 100), duration, type: 'db_query' });
+    this.debug('Database query executed', {
+      query: query.substring(0, 100),
+      duration,
+      type: 'db_query',
+    });
   }
 
   dbError(query: string, error: Error) {
-    this.error('Database query failed', error, { query: query.substring(0, 100), type: 'db_error' });
+    this.error('Database query failed', error, {
+      query: query.substring(0, 100),
+      type: 'db_error',
+    });
   }
 }
 

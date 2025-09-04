@@ -1,0 +1,15 @@
+node_modules
+.next
+out
+build
+dist
+*.log
+.env*
+.DS_Store
+coverage
+.nyc_output
+*.tgz
+*.tar.gz
+package-lock.json
+yarn.lock
+pnpm-lock.yaml

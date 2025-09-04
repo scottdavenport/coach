@@ -1,57 +1,62 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
-:root { 
-  color-scheme: dark; 
+:root {
+  color-scheme: dark;
 }
 
 html,
-[data-theme='dark'] body { 
-  background: hsl(var(--bg)); 
-  color: hsl(var(--text)); 
+[data-theme='dark'] body {
+  background: hsl(var(--bg));
+  color: hsl(var(--text));
 }
 
 /* Design System CSS Variables */
-:root[data-theme="dark"] {
+:root[data-theme='dark'] {
   /* Base surfaces */
-  --bg:               240 10% 6%;   /* page */
-  --panel:            240 12% 8%;   /* app shell */
-  --card:             240 12% 12%;  /* cards - slightly lighter for better contrast */
-  --card-2:           240 12% 15%;  /* raised cards - slightly lighter */
-  --overlay:          240 14% 4% / 0.6;  /* modal scrim */
+  --bg: 240 10% 6%; /* page */
+  --panel: 240 12% 8%; /* app shell */
+  --card: 240 12% 12%; /* cards - slightly lighter for better contrast */
+  --card-2: 240 12% 15%; /* raised cards - slightly lighter */
+  --overlay: 240 14% 4% / 0.6; /* modal scrim */
 
   /* Text */
-  --text:             210 12% 94%;  /* primary */
-  --muted:            215 10% 65%;  /* secondary */
-  --subtle:           215 8% 45%;   /* tertiary */
+  --text: 210 12% 94%; /* primary */
+  --muted: 215 10% 65%; /* secondary */
+  --subtle: 215 8% 45%; /* tertiary */
 
   /* Brand + accents */
-  --primary:          188 94% 35%;  /* darker cyan for better contrast */
-  --primary-weak:     188 94% 35% / 0.18;
-  --secondary:        295 88% 60%;  /* orchid */
-  --secondary-weak:   295 88% 60% / 0.18;
-  --accent:           155 80% 54%;  /* lime‑mint */
+  --primary: 188 94% 35%; /* darker cyan for better contrast */
+  --primary-weak: 188 94% 35% / 0.18;
+  --secondary: 295 88% 60%; /* orchid */
+  --secondary-weak: 295 88% 60% / 0.18;
+  --accent: 155 80% 54%; /* lime‑mint */
 
   /* State */
-  --success:          150 70% 45%;
-  --warning:          40 100% 55%;
-  --destructive:      0 80% 58%;
-  --info:             200 95% 62%;
+  --success: 150 70% 45%;
+  --warning: 40 100% 55%;
+  --destructive: 0 80% 58%;
+  --info: 200 95% 62%;
 
   /* Borders/lines */
-  --line:             220 8% 22%;
-  --line-strong:      220 8% 28%;
-  --ring:             var(--primary);
+  --line: 220 8% 22%;
+  --line-strong: 220 8% 28%;
+  --ring: var(--primary);
 
   /* Effects */
-  --glow-cyan:        188 94% 49% / 0.35;
-  --glow-magenta:     295 88% 60% / 0.35;
-  --glass:            240 16% 10% / 0.65; /* for bg‑blur */
+  --glow-cyan: 188 94% 49% / 0.35;
+  --glow-magenta: 295 88% 60% / 0.35;
+  --glass: 240 16% 10% / 0.65; /* for bg‑blur */
 }
 
 /* Typography */
 :root {
-  --font-sans: ui-sans-serif, Inter, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --font-sans:
+    ui-sans-serif, Inter, system-ui, -apple-system, Segoe UI, Roboto,
+    'Helvetica Neue', Arial, 'Noto Sans', 'Apple Color Emoji', 'Segoe UI Emoji',
+    'Segoe UI Symbol', 'Noto Color Emoji';
+  --font-mono:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
+    'Courier New', monospace;
 }
 
 /* Ensure emojis render properly */
@@ -64,7 +69,8 @@ body {
 
 /* Better emoji support */
 .emoji {
-  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  font-family:
+    'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
   font-style: normal;
   font-weight: normal;
   font-variant: normal;
@@ -74,7 +80,7 @@ body {
 }
 
 /* Shadows & Blur */
-:root[data-theme="dark"] {
+:root[data-theme='dark'] {
   --shadow-1: 0 1px 0 hsl(0 0% 100% / 0.03), 0 8px 24px hsl(240 60% 3% / 0.6);
   --shadow-2: 0 1px 0 hsl(0 0% 100% / 0.04), 0 16px 40px hsl(240 60% 3% / 0.65);
   --blur-1: 8px; /* chips, pills */
@@ -82,26 +88,37 @@ body {
 }
 
 /* Thin separators */
-.hr, .divider { 
-  border-top: 1px solid hsl(var(--line)); 
+.hr,
+.divider {
+  border-top: 1px solid hsl(var(--line));
 }
 
 /* Focus ring */
 *:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px hsl(var(--ring) / 0.5), 0 0 0 6px hsl(var(--ring) / 0.15);
+  box-shadow:
+    0 0 0 2px hsl(var(--ring) / 0.5),
+    0 0 0 6px hsl(var(--ring) / 0.15);
   border-radius: 10px;
 }
 
 /* Modal animations */
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes slideIn {
-  from { transform: translateX(100%); }
-  to { transform: translateX(0); }
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
 }
 
 /* Tailwind Theme Configuration */
@@ -121,25 +138,38 @@ body {
   --color-destructive: hsl(var(--destructive));
   --color-info: hsl(var(--info));
   --color-line: hsl(var(--line));
-  
+
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
-  
+
   --border-radius-sm: 8px;
   --border-radius-md: 12px;
   --border-radius-lg: 16px;
   --border-radius-xl: 20px;
   --border-radius-2xl: 24px;
-  
-  --box-shadow-glow: 0 0 0 2px hsl(var(--ring) / 0.3), 0 0 30px hsl(var(--ring) / 0.35);
+
+  --box-shadow-glow:
+    0 0 0 2px hsl(var(--ring) / 0.3), 0 0 30px hsl(var(--ring) / 0.35);
   --box-shadow-card: var(--shadow-1);
   --box-shadow-card2: var(--shadow-2);
-  
+
   --backdrop-blur-xs: 8px;
   --backdrop-blur-sm: 12px;
   --backdrop-blur-md: 16px;
-  
-  --background-image-grid-faint: radial-gradient(hsl(0 0% 100%/0.06) 1px, transparent 1px);
-  --background-image-radial-soft: radial-gradient(80% 80% at 50% 0%, hsl(var(--primary)/0.08) 0%, transparent 60%);
-  --background-image-diagonal-sheen: linear-gradient(120deg, transparent 0%, hsl(var(--secondary)/0.08) 50%, transparent 100%);
+
+  --background-image-grid-faint: radial-gradient(
+    hsl(0 0% 100%/0.06) 1px,
+    transparent 1px
+  );
+  --background-image-radial-soft: radial-gradient(
+    80% 80% at 50% 0%,
+    hsl(var(--primary) / 0.08) 0%,
+    transparent 60%
+  );
+  --background-image-diagonal-sheen: linear-gradient(
+    120deg,
+    transparent 0%,
+    hsl(var(--secondary) / 0.08) 50%,
+    transparent 100%
+  );
 }

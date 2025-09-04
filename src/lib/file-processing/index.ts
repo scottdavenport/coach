@@ -8,7 +8,7 @@ export class FileProcessor {
   static getSupportedFileTypes(): SupportedFileType[] {
     return [
       'image/jpeg',
-      'image/png', 
+      'image/png',
       'image/gif',
       'image/webp',
       'application/pdf',
@@ -19,31 +19,36 @@ export class FileProcessor {
       'text/csv',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'application/vnd.oasis.opendocument.spreadsheet',
-      'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     ];
   }
 
-  static getFileTypeCategory(mimeType: string): 'image' | 'document' | 'unknown' {
+  static getFileTypeCategory(
+    mimeType: string
+  ): 'image' | 'document' | 'unknown' {
     if (mimeType.startsWith('image/')) return 'image';
-    if (this.getSupportedFileTypes().includes(mimeType as SupportedFileType)) return 'document';
+    if (this.getSupportedFileTypes().includes(mimeType as SupportedFileType))
+      return 'document';
     return 'unknown';
   }
 
   static getFileIcon(mimeType: string): string {
     const typeMap: Record<string, string> = {
       'application/pdf': '📄',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '📝',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+        '📝',
       'application/msword': '📝',
       'text/plain': '📄',
       'text/markdown': '📝',
       'text/csv': '📊',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '📊',
       'application/vnd.oasis.opendocument.spreadsheet': '📊',
-      'application/vnd.openxmlformats-officedocument.presentationml.presentation': '📊',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation':
+        '📊',
       'image/jpeg': '🖼️',
       'image/png': '🖼️',
       'image/gif': '🖼️',
-      'image/webp': '🖼️'
+      'image/webp': '🖼️',
     };
     return typeMap[mimeType] || '📎';
   }
@@ -53,7 +58,7 @@ export class FileProcessor {
     if (file.size > this.MAX_FILE_SIZE) {
       return {
         isValid: false,
-        error: `File too large: ${(file.size / 1024 / 1024).toFixed(1)}MB. Maximum size is 10MB.`
+        error: `File too large: ${(file.size / 1024 / 1024).toFixed(1)}MB. Maximum size is 10MB.`,
       };
     }
 
@@ -62,7 +67,7 @@ export class FileProcessor {
     if (!supportedTypes.includes(file.type as SupportedFileType)) {
       return {
         isValid: false,
-        error: `Unsupported file type: ${file.type}. Please upload images, PDFs, Word docs, spreadsheets, or text files.`
+        error: `Unsupported file type: ${file.type}. Please upload images, PDFs, Word docs, spreadsheets, or text files.`,
       };
     }
 
@@ -74,7 +79,7 @@ export class FileProcessor {
     if (files.length > this.MAX_FILES) {
       return {
         isValid: false,
-        error: `Too many files: ${files.length}. Maximum is ${this.MAX_FILES} files.`
+        error: `Too many files: ${files.length}. Maximum is ${this.MAX_FILES} files.`,
       };
     }
 
@@ -102,13 +107,13 @@ export class FileProcessor {
       'image/*',
       '.pdf',
       '.doc',
-      '.docx', 
+      '.docx',
       '.txt',
       '.md',
       '.csv',
       '.xlsx',
       '.ods',
-      '.pptx'
+      '.pptx',
     ].join(',');
   }
 }

@@ -1,9 +1,11 @@
 // Client-side file processing utilities
 import { FileProcessingResult } from '@/types';
 
-export async function processFileContentClient(file: File): Promise<FileProcessingResult> {
+export async function processFileContentClient(
+  file: File
+): Promise<FileProcessingResult> {
   const fileId = `${Date.now()}-${Math.random().toString(36).substring(2)}`;
-  
+
   try {
     const mimeType = file.type;
 
@@ -14,22 +16,23 @@ export async function processFileContentClient(file: File): Promise<FileProcessi
         fileId,
         content: 'Image file - will be processed by OCR',
         metadata: {
-          requiresOcr: true
-        }
+          requiresOcr: true,
+        },
       };
     }
 
     // Handle text files
     if (mimeType === 'text/plain' || mimeType === 'text/markdown') {
       const content = await file.text();
-      const truncatedContent = content.length > 2000 ? content.substring(0, 2000) + '...' : content;
+      const truncatedContent =
+        content.length > 2000 ? content.substring(0, 2000) + '...' : content;
       return {
         success: true,
         fileId,
         content: `Text Document\n\nContent:\n${truncatedContent}`,
         metadata: {
-          wordCount: content.split(/\s+/).length
-        }
+          wordCount: content.split(/\s+/).length,
+        },
       };
     }
 
@@ -39,17 +42,20 @@ export async function processFileContentClient(file: File): Promise<FileProcessi
       try {
         // Simple CSV parsing for client-side (TRUNCATED for tokens)
         const lines = text.split('\n').filter(line => line.trim());
-        const headers = lines[0]?.split(',').map(h => h.trim().replace(/"/g, ''));
+        const headers = lines[0]
+          ?.split(',')
+          .map(h => h.trim().replace(/"/g, ''));
         const dataRows = lines.slice(1, 4); // Show only first 3 rows
 
         let content = `CSV (${lines.length - 1} rows, ${headers?.length || 0} cols)\n`;
         if (headers) {
           content += `Headers: ${headers.slice(0, 5).join(', ')}${headers.length > 5 ? '...' : ''}\n`;
           content += `Sample:\n`;
-          
+
           dataRows.forEach((row, index) => {
             const values = row.split(',').map(v => v.trim().replace(/"/g, ''));
-            const rowStr = values.slice(0, 3).join(' | ') + (values.length > 3 ? '...' : '');
+            const rowStr =
+              values.slice(0, 3).join(' | ') + (values.length > 3 ? '...' : '');
             content += `${index + 1}: ${rowStr}\n`;
           });
 
@@ -64,14 +70,14 @@ export async function processFileContentClient(file: File): Promise<FileProcessi
           content,
           metadata: {
             rowCount: lines.length - 1,
-            columnCount: headers?.length || 0
-          }
+            columnCount: headers?.length || 0,
+          },
         };
       } catch (error) {
         return {
           success: false,
           fileId,
-          error: `Failed to parse CSV: ${error instanceof Error ? error.message : 'Unknown error'}`
+          error: `Failed to parse CSV: ${error instanceof Error ? error.message : 'Unknown error'}`,
         };
       }
     }
@@ -83,7 +89,7 @@ export async function processFileContentClient(file: File): Promise<FileProcessi
       'application/msword',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'application/vnd.oasis.opendocument.spreadsheet',
-      'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     ];
 
     if (documentTypes.includes(mimeType)) {
@@ -93,22 +99,22 @@ export async function processFileContentClient(file: File): Promise<FileProcessi
         content: `Document file (${getFileTypeDisplayName(mimeType)}) - content will be processed`,
         metadata: {
           requiresServerProcessing: true,
-          fileType: mimeType
-        }
+          fileType: mimeType,
+        },
       };
     }
 
     return {
       success: false,
       fileId,
-      error: `Unsupported file type: ${mimeType}`
+      error: `Unsupported file type: ${mimeType}`,
     };
-
   } catch (error) {
     return {
       success: false,
       fileId,
-      error: error instanceof Error ? error.message : 'Unknown processing error'
+      error:
+        error instanceof Error ? error.message : 'Unknown processing error',
     };
   }
 }
@@ -116,15 +122,19 @@ export async function processFileContentClient(file: File): Promise<FileProcessi
 function getFileTypeDisplayName(mimeType: string): string {
   const typeNames: Record<string, string> = {
     'application/pdf': 'PDF',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'Word Document',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+      'Word Document',
     'application/msword': 'Word Document',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'Excel Spreadsheet',
-    'application/vnd.oasis.opendocument.spreadsheet': 'OpenDocument Spreadsheet',
-    'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'PowerPoint Presentation',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
+      'Excel Spreadsheet',
+    'application/vnd.oasis.opendocument.spreadsheet':
+      'OpenDocument Spreadsheet',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation':
+      'PowerPoint Presentation',
     'text/plain': 'Text File',
     'text/markdown': 'Markdown File',
-    'text/csv': 'CSV File'
+    'text/csv': 'CSV File',
   };
-  
+
   return typeNames[mimeType] || 'Document';
 }

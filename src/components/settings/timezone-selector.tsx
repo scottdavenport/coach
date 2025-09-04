@@ -1,9 +1,9 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import { Button } from '@/components/ui/button'
-import { useUserTimezone } from '@/hooks/use-user-timezone'
-import { Clock, Check, RefreshCw } from 'lucide-react'
+import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { useUserTimezone } from '@/hooks/use-user-timezone';
+import { Clock, Check, RefreshCw } from 'lucide-react';
 
 // Common timezones for the dropdown
 const COMMON_TIMEZONES = [
@@ -26,11 +26,11 @@ const COMMON_TIMEZONES = [
   { value: 'Asia/Dubai', label: 'Dubai (GST)' },
   { value: 'Australia/Sydney', label: 'Sydney (AEST/AEDT)' },
   { value: 'Australia/Melbourne', label: 'Melbourne (AEST/AEDT)' },
-  { value: 'Pacific/Auckland', label: 'Auckland (NZST/NZDT)' }
-]
+  { value: 'Pacific/Auckland', label: 'Auckland (NZST/NZDT)' },
+];
 
 interface TimezoneSelectorProps {
-  userId: string
+  userId: string;
 }
 
 export function TimezoneSelector({ userId }: TimezoneSelectorProps) {
@@ -40,57 +40,61 @@ export function TimezoneSelector({ userId }: TimezoneSelectorProps) {
     isLoading,
     error,
     updateTimezone,
-    refreshTimezone
-  } = useUserTimezone()
+    refreshTimezone,
+  } = useUserTimezone();
 
-  const [selectedTimezone, setSelectedTimezone] = useState(userTimezone)
-  const [isUpdating, setIsUpdating] = useState(false)
+  const [selectedTimezone, setSelectedTimezone] = useState(userTimezone);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   // Update local state when user timezone changes
   useEffect(() => {
-    setSelectedTimezone(userTimezone)
-  }, [userTimezone])
+    setSelectedTimezone(userTimezone);
+  }, [userTimezone]);
 
   const handleTimezoneChange = async (timezone: string) => {
-    setSelectedTimezone(timezone)
-    setIsUpdating(true)
-    
+    setSelectedTimezone(timezone);
+    setIsUpdating(true);
+
     try {
-      await updateTimezone(timezone)
+      await updateTimezone(timezone);
     } catch (err) {
-      console.error('Failed to update timezone:', err)
+      console.error('Failed to update timezone:', err);
     } finally {
-      setIsUpdating(false)
+      setIsUpdating(false);
     }
-  }
+  };
 
   const handleUseDetected = async () => {
     if (detectedTimezone && detectedTimezone !== userTimezone) {
-      await handleTimezoneChange(detectedTimezone)
+      await handleTimezoneChange(detectedTimezone);
     }
-  }
+  };
 
   const formatTimezoneDisplay = (timezone: string) => {
     try {
-      const now = new Date()
+      const now = new Date();
       const formatter = new Intl.DateTimeFormat('en-US', {
         timeZone: timezone,
         timeZoneName: 'short',
         hour: 'numeric',
         minute: '2-digit',
-        hour12: true
-      })
-      const parts = formatter.formatToParts(now)
-      const timeZoneName = parts.find(part => part.type === 'timeZoneName')?.value || ''
-      const time = parts.find(part => part.type === 'hour')?.value + ':' + 
-                   parts.find(part => part.type === 'minute')?.value + ' ' +
-                   parts.find(part => part.type === 'dayPeriod')?.value
-      
-      return `${timezone} (${time} ${timeZoneName})`
+        hour12: true,
+      });
+      const parts = formatter.formatToParts(now);
+      const timeZoneName =
+        parts.find(part => part.type === 'timeZoneName')?.value || '';
+      const time =
+        parts.find(part => part.type === 'hour')?.value +
+        ':' +
+        parts.find(part => part.type === 'minute')?.value +
+        ' ' +
+        parts.find(part => part.type === 'dayPeriod')?.value;
+
+      return `${timezone} (${time} ${timeZoneName})`;
     } catch (error) {
-      return timezone
+      return timezone;
     }
-  }
+  };
 
   if (isLoading) {
     return (
@@ -98,7 +102,7 @@ export function TimezoneSelector({ userId }: TimezoneSelectorProps) {
         <RefreshCw className="h-4 w-4 animate-spin" />
         Loading timezone settings...
       </div>
-    )
+    );
   }
 
   return (
@@ -154,11 +158,11 @@ export function TimezoneSelector({ userId }: TimezoneSelectorProps) {
           </label>
           <select
             value={selectedTimezone}
-            onChange={(e) => handleTimezoneChange(e.target.value)}
+            onChange={e => handleTimezoneChange(e.target.value)}
             disabled={isUpdating}
             className="w-full p-3 border border-line/40 rounded-lg bg-card/60 backdrop-blur-sm text-foreground focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-colors"
           >
-            {COMMON_TIMEZONES.map((tz) => (
+            {COMMON_TIMEZONES.map(tz => (
               <option key={tz.value} value={tz.value}>
                 {tz.label}
               </option>
@@ -168,11 +172,12 @@ export function TimezoneSelector({ userId }: TimezoneSelectorProps) {
 
         <div className="text-xs text-muted-foreground bg-card/30 border border-line/20 rounded-lg p-3">
           <p>
-            Your timezone preference affects how dates and times are displayed throughout the app.
-            All data is stored in UTC and converted to your preferred timezone for display.
+            Your timezone preference affects how dates and times are displayed
+            throughout the app. All data is stored in UTC and converted to your
+            preferred timezone for display.
           </p>
         </div>
       </div>
     </div>
-  )
+  );
 }

@@ -1,54 +1,57 @@
-import { useState, useEffect, useCallback } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { useState, useEffect, useCallback } from 'react';
+import { createClient } from '@/lib/supabase/client';
 
 interface WeeklySummary {
-  id: string
-  user_id: string
-  week_start: string
-  summary: string
-  trends: Record<string, any>
-  created_at: string
-  updated_at: string
+  id: string;
+  user_id: string;
+  week_start: string;
+  summary: string;
+  trends: Record<string, any>;
+  created_at: string;
+  updated_at: string;
 }
 
 export function useWeeklySummary(weekStart?: string) {
-  const [summary, setSummary] = useState<WeeklySummary | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const supabase = createClient()
+  const [summary, setSummary] = useState<WeeklySummary | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const supabase = createClient();
 
-  const fetchWeeklySummary = useCallback(async (startDate: string) => {
-    setLoading(true)
-    setError(null)
-    
-    try {
-      const { data, error } = await supabase
-        .from('weekly_summaries')
-        .select('*')
-        .eq('week_start', startDate)
-        .single()
+  const fetchWeeklySummary = useCallback(
+    async (startDate: string) => {
+      setLoading(true);
+      setError(null);
 
-      if (error) {
-        if (error.code === 'PGRST116') {
-          // No summary found for this week
-          setSummary(null)
+      try {
+        const { data, error } = await supabase
+          .from('weekly_summaries')
+          .select('*')
+          .eq('week_start', startDate)
+          .single();
+
+        if (error) {
+          if (error.code === 'PGRST116') {
+            // No summary found for this week
+            setSummary(null);
+          } else {
+            setError(error.message);
+          }
         } else {
-          setError(error.message)
+          setSummary(data);
         }
-      } else {
-        setSummary(data)
+      } catch {
+        setError('Failed to fetch weekly summary');
+      } finally {
+        setLoading(false);
       }
-    } catch {
-      setError('Failed to fetch weekly summary')
-    } finally {
-      setLoading(false)
-    }
-  }, [supabase])
+    },
+    [supabase]
+  );
 
   const generateWeeklySummary = async (startDate: string) => {
-    setLoading(true)
-    setError(null)
-    
+    setLoading(true);
+    setError(null);
+
     try {
       const response = await fetch('/api/summaries/weekly', {
         method: 'POST',
@@ -56,32 +59,32 @@ export function useWeeklySummary(weekStart?: string) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ weekStart: startDate }),
-      })
+      });
 
       if (!response.ok) {
-        throw new Error('Failed to generate weekly summary')
+        throw new Error('Failed to generate weekly summary');
       }
 
-      const result = await response.json()
-      setSummary(result.summary)
+      const result = await response.json();
+      setSummary(result.summary);
     } catch {
-      setError('Failed to generate weekly summary')
+      setError('Failed to generate weekly summary');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
     if (weekStart) {
-      fetchWeeklySummary(weekStart)
+      fetchWeeklySummary(weekStart);
     }
-  }, [weekStart, fetchWeeklySummary])
+  }, [weekStart, fetchWeeklySummary]);
 
   return {
     summary,
     loading,
     error,
     generateWeeklySummary,
-    refreshSummary: () => weekStart ? fetchWeeklySummary(weekStart) : null
-  }
+    refreshSummary: () => (weekStart ? fetchWeeklySummary(weekStart) : null),
+  };
 }

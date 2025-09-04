@@ -1,63 +1,71 @@
-'use client'
+'use client';
 
-import { useEffect, useRef } from 'react'
-import { X } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { createPortal } from 'react-dom'
+import { useEffect, useRef } from 'react';
+import { X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { createPortal } from 'react-dom';
 
 interface CardModalProps {
-  isOpen: boolean
-  onClose: () => void
-  children: React.ReactNode
-  title?: string
-  headerContent?: React.ReactNode
+  isOpen: boolean;
+  onClose: () => void;
+  children: React.ReactNode;
+  title?: string;
+  headerContent?: React.ReactNode;
 }
 
-export function CardModal({ isOpen, onClose, children, title, headerContent }: CardModalProps) {
-  const modalRef = useRef<HTMLDivElement>(null)
+export function CardModal({
+  isOpen,
+  onClose,
+  children,
+  title,
+  headerContent,
+}: CardModalProps) {
+  const modalRef = useRef<HTMLDivElement>(null);
 
   // Handle escape key
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        onClose()
+        onClose();
       }
-    }
+    };
 
     if (isOpen) {
-      document.addEventListener('keydown', handleEscape)
+      document.addEventListener('keydown', handleEscape);
       // Prevent body scroll when modal is open
-      document.body.style.overflow = 'hidden'
+      document.body.style.overflow = 'hidden';
     }
 
     return () => {
-      document.removeEventListener('keydown', handleEscape)
-      document.body.style.overflow = 'unset'
-    }
-  }, [isOpen, onClose])
+      document.removeEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen, onClose]);
 
   // Handle click outside
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
-      onClose()
+      onClose();
     }
-  }
+  };
 
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
   const modalContent = (
-    <div 
+    <div
       className="fixed inset-0 z-50 flex items-center justify-end"
       onClick={handleBackdropClick}
     >
       {/* Backdrop */}
-      <div 
+      <div
         className="absolute inset-0 bg-overlay backdrop-blur-sm transition-opacity duration-320 ease-out"
         style={{
-          animation: isOpen ? 'fadeIn 320ms cubic-bezier(0.2, 0.8, 0.2, 1)' : 'none'
+          animation: isOpen
+            ? 'fadeIn 320ms cubic-bezier(0.2, 0.8, 0.2, 1)'
+            : 'none',
         }}
       />
-      
+
       {/* Modal */}
       <div
         ref={modalRef}
@@ -67,7 +75,9 @@ export function CardModal({ isOpen, onClose, children, title, headerContent }: C
           ${isOpen ? 'translate-x-0' : 'translate-x-full'}
         `}
         style={{
-          animation: isOpen ? 'slideIn 320ms cubic-bezier(0.2, 0.8, 0.2, 1)' : 'none'
+          animation: isOpen
+            ? 'slideIn 320ms cubic-bezier(0.2, 0.8, 0.2, 1)'
+            : 'none',
         }}
       >
         {/* Header */}
@@ -75,7 +85,7 @@ export function CardModal({ isOpen, onClose, children, title, headerContent }: C
           <h2 className="text-xl font-semibold text-text">
             {title || 'Daily Card'}
           </h2>
-          
+
           <div className="flex items-center gap-4">
             {headerContent}
             <Button
@@ -90,13 +100,11 @@ export function CardModal({ isOpen, onClose, children, title, headerContent }: C
         </div>
 
         {/* Content */}
-        <div className="h-[calc(100vh-80px)] overflow-y-auto">
-          {children}
-        </div>
+        <div className="h-[calc(100vh-80px)] overflow-y-auto">{children}</div>
       </div>
     </div>
-  )
+  );
 
   // Use portal to render modal at document body level
-  return createPortal(modalContent, document.body)
+  return createPortal(modalContent, document.body);
 }

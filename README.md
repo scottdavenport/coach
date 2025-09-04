@@ -5,6 +5,7 @@ Coach is an intelligent AI-powered health and fitness companion that helps users
 ## 🚀 Features
 
 ### Core Functionality
+
 - **AI-Powered Coaching**: GPT-4 powered conversations for personalized health guidance
 - **Pattern Recognition**: Advanced analysis of user behavior across health, activity, mood, and sleep
 - **Multi-Modal Input**: Support for text conversations, photo uploads (OCR), and file uploads
@@ -12,12 +13,14 @@ Coach is an intelligent AI-powered health and fitness companion that helps users
 - **Conversation Insights**: Automatic extraction and storage of health-related data from conversations
 
 ### File Upload Support
+
 - **Images**: OCR processing for workout screenshots and health data
 - **Documents**: CSV, PDF, DOC, DOCX, TXT, MD, XLSX, ODS, PPTX
 - **Smart Processing**: AI-powered content analysis and data extraction
 - **Combined Limits**: Up to 10 files total with intelligent type detection
 
 ### Data Management
+
 - **Conversation History**: Persistent chat history with context awareness
 - **Health Metrics**: Daily, weekly, and trend-based health insights
 - **Pattern Analysis**: Recognition of user behavior patterns and trends
@@ -60,13 +63,15 @@ src/
 ## 🚀 Getting Started
 
 ### Prerequisites
-- Node.js 18+ 
+
+- Node.js 18+
 - npm or yarn
 - Supabase account and project
 - OpenAI API key
 - Oura Ring account (optional)
 
 ### Environment Setup
+
 1. Clone the repository
 2. Copy `env.example` to `.env.local`
 3. Fill in your environment variables:
@@ -80,6 +85,7 @@ src/
    ```
 
 ### Installation
+
 ```bash
 npm install
 npm run dev
@@ -90,6 +96,7 @@ Open [http://localhost:3000](http://localhost:3000) to see the app.
 ## 📊 Database Schema
 
 The app uses several key tables:
+
 - `users`: User profiles and preferences
 - `conversations`: Chat history and metadata
 - `conversation_insights`: Extracted health data from conversations
@@ -108,16 +115,19 @@ npm run build      # Build for production
 ## 🔧 Development
 
 ### Code Quality
+
 - ESLint configuration for consistent code style
 - TypeScript for type safety
 - Pre-commit hooks for code quality
 
 ### API Development
+
 - RESTful API routes in `/app/api`
 - Supabase client for database operations
 - OpenAI integration for AI features
 
 ### File Processing
+
 - OCR processing for images using Supabase Edge Functions
 - Document parsing for various file types
 - Intelligent content extraction and analysis
@@ -125,6 +135,7 @@ npm run build      # Build for production
 ## 🚀 Deployment
 
 The app is configured for deployment on Vercel with:
+
 - Automatic builds and deployments
 - Environment variable management
 - Edge function support for OCR processing

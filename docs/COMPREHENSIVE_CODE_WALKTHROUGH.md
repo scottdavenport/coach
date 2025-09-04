@@ -1,6 +1,7 @@
 # Coach App - Comprehensive Code Walkthrough
 
 ## Table of Contents
+
 1. [App Overview & Core Value](#app-overview--core-value)
 2. [Architecture Overview](#architecture-overview)
 3. [How Everything Connects](#how-everything-connects)
@@ -18,11 +19,12 @@
 **Coach** is an AI-powered health and fitness companion that adapts to your unique personality and needs. The core value proposition is that you can talk to your coach about anything, and it will:
 
 - **Follow your lead** - The AI doesn't force rigid health tracking
-- **Adapt to your personality** - Learns your communication style and preferences  
+- **Adapt to your personality** - Learns your communication style and preferences
 - **Focus on health and longevity** - Always encouraging and supportive
 - **Gather context naturally** - From conversations, files, and connected devices
 
 ### Key Differentiators
+
 - **Conversational AI** that feels natural, not clinical
 - **Multi-modal input** - text, images, documents, health device data
 - **Context-aware** - Remembers your patterns and preferences
@@ -41,19 +43,19 @@ graph TB
         B[Dashboard Tiles]
         C[File Upload System]
     end
-    
+
     subgraph "Next.js Application"
         D[Frontend Components]
         E[API Routes - Backend]
         F[Custom Hooks - State Mgmt]
     end
-    
+
     subgraph "External Services"
         G[Supabase - Database + Storage]
         H[OpenAI GPT-4]
         I[Oura Ring API]
     end
-    
+
     A --> D
     B --> D
     C --> D
@@ -66,6 +68,7 @@ graph TB
 ```
 
 ### Technology Stack
+
 - **Frontend**: Next.js 15 + React 19 + TypeScript
 - **Backend**: Next.js API Routes (serverless functions)
 - **Database**: PostgreSQL via Supabase with Row Level Security
@@ -79,6 +82,7 @@ graph TB
 ## How Everything Connects
 
 ### 1. User Journey Flow
+
 ```
 User Login → Dashboard → Chat Interface → AI Processing → Context Storage → Personalized Response
 ```
@@ -92,19 +96,19 @@ flowchart LR
         B[File Uploads]
         C[Oura Data]
     end
-    
+
     subgraph "AI Processing"
         D[Context Assembly]
         E[Analysis & Response]
         F[Data Extraction]
     end
-    
+
     subgraph "Database Storage"
         G[Insights]
         H[Metrics]
         I[History]
     end
-    
+
     A --> D
     B --> D
     C --> D
@@ -116,6 +120,7 @@ flowchart LR
 ```
 
 ### 3. Component Connection Map
+
 ```
 App Layout (Root)
 ├── AuthProvider (Authentication Context)
@@ -138,6 +143,7 @@ App Layout (Root)
 This is the heart of your app - how the AI becomes truly personalized and adaptive.
 
 ### Context Sources
+
 The AI gathers context from multiple sources to understand you better:
 
 1. **Conversation History** - Your chat patterns and preferences
@@ -147,15 +153,18 @@ The AI gathers context from multiple sources to understand you better:
 5. **User Preferences** - Timezone, metric preferences, goals
 
 ### Context Building Process
+
 ```typescript
 // From /src/app/api/chat/route.ts - How context is built
 const systemPrompt = [
-  baseSystemPrompt,           // "You are Coach, an AI health companion..."
-  limitedUserContext,         // Recent health metrics and trends
-  limitedStateContext,        // Current conversation state
-  ocrSection,                 // File upload data
-  multiFileSection           // Document content
-].filter(Boolean).join('\n\n')
+  baseSystemPrompt, // "You are Coach, an AI health companion..."
+  limitedUserContext, // Recent health metrics and trends
+  limitedStateContext, // Current conversation state
+  ocrSection, // File upload data
+  multiFileSection, // Document content
+]
+  .filter(Boolean)
+  .join('\n\n');
 ```
 
 ### AI Processing Pipeline
@@ -167,7 +176,7 @@ sequenceDiagram
     participant A as API Route
     participant O as OpenAI
     participant D as Database
-    
+
     U->>C: Sends message
     C->>A: POST /api/chat
     A->>D: Fetch conversation history
@@ -181,41 +190,46 @@ sequenceDiagram
 ```
 
 **Step 1: Context Assembly**
+
 - Fetches last 6 conversation messages
 - Gets recent health metrics (last 2 days)
 - Includes file upload data (OCR, documents)
 - Adds user preferences and timezone
 
 **Step 2: AI Analysis**
+
 - Sends context + message to OpenAI GPT-4
 - AI analyzes for health insights
 - Generates personalized response
 - Extracts structured data from conversation
 
 **Step 3: Data Storage**
+
 - Saves conversation to database
 - Stores extracted insights
 - Links file attachments
 - Triggers daily narrative generation
 
 ### Conversation Analysis
+
 The AI doesn't just respond - it actively learns from every conversation:
 
 ```typescript
 // From parseConversationForRichContext function
 interface ParsedConversation {
-  has_health_data: boolean
-  has_activity_data: boolean
-  has_mood_data: boolean
-  has_nutrition_data: boolean
-  has_sleep_data: boolean
-  has_workout_data: boolean
-  insights: string[]                    // What the user shared
-  follow_up_questions: string[]         // Natural follow-ups
+  has_health_data: boolean;
+  has_activity_data: boolean;
+  has_mood_data: boolean;
+  has_nutrition_data: boolean;
+  has_sleep_data: boolean;
+  has_workout_data: boolean;
+  insights: string[]; // What the user shared
+  follow_up_questions: string[]; // Natural follow-ups
 }
 ```
 
 This analysis helps the AI:
+
 - **Remember** what you've shared before
 - **Connect** patterns across conversations
 - **Adapt** its coaching style to your needs
@@ -228,12 +242,14 @@ This analysis helps the AI:
 ### 1. Chat Interface (`/src/components/chat/`)
 
 **Main Components:**
+
 - `chat-interface.tsx` - Main chat UI with message history
 - `optimized-input.tsx` - Text input with file upload support
 - `file-upload-menu.tsx` - File selection and upload handling
 - `file-preview-chip.tsx` - Display uploaded files
 
 **Key Features:**
+
 - **Real-time messaging** with conversation history
 - **Multi-file upload** (up to 10 files: images, PDFs, docs, spreadsheets)
 - **OCR processing** for workout screenshots and health data
@@ -241,6 +257,7 @@ This analysis helps the AI:
 - **Drag & drop** file upload interface
 
 **Performance Optimizations:**
+
 - `emergency-chat-input.tsx` - Fallback for typing lag issues
 - `performance-test-input.tsx` - Isolated testing component
 - `isolated-file-manager.tsx` - Separate file management to prevent input lag
@@ -248,12 +265,14 @@ This analysis helps the AI:
 ### 2. Dashboard System (`/src/app/dashboard/`)
 
 **Main Components:**
+
 - `dashboard-client.tsx` - Main dashboard container
 - `dashboard-header.tsx` - User info and navigation
 - `simple-tile.tsx` - Reusable metric display tiles
 - `workout-card.tsx` - Activity tracking cards
 
 **Key Features:**
+
 - **Personalized health metrics** display
 - **Activity tracking** and planning
 - **Weekly summaries** and trends
@@ -263,17 +282,20 @@ This analysis helps the AI:
 ### 3. File Processing System (`/src/lib/file-processing/`)
 
 **Processing Pipeline:**
+
 ```
 File Upload → Type Detection → Content Extraction → AI Analysis → Database Storage
 ```
 
 **Supported Formats:**
+
 - **Images**: PNG, JPG, JPEG (OCR processing via Supabase Edge Functions)
 - **Documents**: PDF, DOC, DOCX, TXT, MD
 - **Spreadsheets**: CSV, XLSX, ODS
 - **Presentations**: PPTX
 
 **Technical Implementation:**
+
 - **Client-side**: File validation and preview
 - **Server-side**: Content extraction and processing
 - **AI Integration**: Context-aware analysis of extracted content
@@ -282,12 +304,14 @@ File Upload → Type Detection → Content Extraction → AI Analysis → Databa
 ### 4. Oura Integration (`/src/lib/oura/`)
 
 **Integration Points:**
+
 - **OAuth Flow**: Secure token management
 - **Data Sync**: Automatic sleep, activity, and readiness data
 - **Pattern Analysis**: AI analysis of health trends
 - **Personalization**: Adapts coaching based on Oura data
 
 **Data Flow:**
+
 ```
 Oura Ring → Oura API → Supabase → AI Analysis → Personalized Insights
 ```
@@ -299,6 +323,7 @@ Oura Ring → Oura API → Supabase → AI Analysis → Personalized Insights
 ### Core Database Tables
 
 **User Management:**
+
 ```sql
 users                    -- User profiles and preferences
 oura_integrations        -- Oura Ring API tokens
@@ -306,6 +331,7 @@ oura_data               -- Raw Oura data storage
 ```
 
 **Conversation System:**
+
 ```sql
 conversations           -- Chat messages (raw)
 conversation_insights   -- AI-extracted insights
@@ -313,6 +339,7 @@ conversation_file_attachments -- File links to conversations
 ```
 
 **Structured Metrics:**
+
 ```sql
 metric_categories       -- Health metric categories (sleep, fitness, etc.)
 standard_metrics        -- Individual metrics within categories
@@ -321,6 +348,7 @@ user_metric_preferences -- Which metrics user wants to track
 ```
 
 **Activity & Analysis:**
+
 ```sql
 daily_activities        -- Planned and completed activities
 daily_journal          -- AI-generated tips and notes
@@ -339,14 +367,14 @@ erDiagram
     CONVERSATIONS ||--o| CONVERSATION_INSIGHTS : generates
     USERS ||--o{ DAILY_ACTIVITIES : plans
     USERS ||--o{ WEEKLY_SUMMARIES : receives
-    
+
     USERS {
         uuid id PK
         text email
         jsonb profile
         timestamp created_at
     }
-    
+
     CONVERSATIONS {
         uuid id PK
         uuid user_id FK
@@ -355,7 +383,7 @@ erDiagram
         jsonb metadata
         timestamp created_at
     }
-    
+
     CONVERSATION_INSIGHTS {
         uuid id PK
         uuid user_id FK
@@ -368,11 +396,13 @@ erDiagram
 ```
 
 ### Row Level Security (RLS)
+
 Every table has RLS policies ensuring users can only access their own data:
+
 ```sql
 -- Example RLS policy
-CREATE POLICY "Users can manage own conversations" 
-ON conversations FOR ALL 
+CREATE POLICY "Users can manage own conversations"
+ON conversations FOR ALL
 USING (user_id = auth.uid());
 ```
 
@@ -381,6 +411,7 @@ USING (user_id = auth.uid());
 ## File Structure Analysis
 
 ### Clean Architecture
+
 Your codebase follows a clean, logical structure:
 
 ```
@@ -400,14 +431,17 @@ src/
 ```
 
 ### Identified Extraneous Files
+
 I found a few files that appear to be development/testing artifacts:
 
 **Performance Testing Files (Can be removed):**
+
 - `src/components/chat/performance-test-input.tsx` - Isolated performance testing
-- `src/components/chat/emergency-chat-input.tsx` - Fallback for typing lag  
+- `src/components/chat/emergency-chat-input.tsx` - Fallback for typing lag
 - `src/components/chat/isolated-file-manager.tsx` - Performance optimization
 
 **Documentation Files (Consider consolidating):**
+
 - `prompts/` folder - Contains 9 markdown files with development notes
 - `docs/` folder - Contains 4 markdown files with implementation details
 
@@ -418,25 +452,25 @@ I found a few files that appear to be development/testing artifacts:
 ```mermaid
 graph TD
     A[Current Structure] --> B[Recommended Cleanup]
-    
+
     subgraph "Files to Remove"
         C[performance-test-input.tsx]
         D[emergency-chat-input.tsx]
         E[isolated-file-manager.tsx]
     end
-    
+
     subgraph "Folders to Consolidate"
         F[prompts/ → dev-notes/]
         G[docs/ → keep main docs]
     end
-    
+
     subgraph "Clean Structure"
         H[src/components/chat/]
         I[src/app/api/]
         J[src/lib/]
         K[docs/]
     end
-    
+
     A --> C
     A --> D
     A --> E
@@ -449,6 +483,7 @@ graph TD
 ```
 
 ### Well-Organized Areas
+
 - **API Routes**: Clear separation by feature (`/api/chat`, `/api/files`, `/api/metrics`)
 - **Components**: Logical grouping by functionality
 - **Hooks**: Reusable state management logic
@@ -459,9 +494,11 @@ graph TD
 ## Authentication Flow
 
 ### Supabase Auth Integration
+
 Your app uses Supabase Auth for a complete authentication solution:
 
 **Flow:**
+
 ```
 1. User visits app → AuthProvider checks session
 2. If not authenticated → Redirect to login page
@@ -471,11 +508,13 @@ Your app uses Supabase Auth for a complete authentication solution:
 ```
 
 **Key Components:**
+
 - `src/components/providers/auth-provider.tsx` - Authentication context
 - `src/components/auth/auth-form.tsx` - Login/signup form
 - `src/app/auth/callback/route.ts` - OAuth callback handling
 
 **Security Features:**
+
 - **JWT Tokens**: Secure session management
 - **Row Level Security**: Database-level access control
 - **API Protection**: Server-side authentication checks
@@ -488,17 +527,19 @@ Your app uses Supabase Auth for a complete authentication solution:
 ### Key Patterns Used
 
 **1. Custom Hooks Pattern**
+
 ```typescript
 // Example: useCardModal.ts
 export function useCardModal() {
-  const [isOpen, setIsOpen] = useState(false)
-  const [cardData, setCardData] = useState(null)
+  const [isOpen, setIsOpen] = useState(false);
+  const [cardData, setCardData] = useState(null);
   // ... hook logic
-  return { isOpen, setIsOpen, cardData, setCardData }
+  return { isOpen, setIsOpen, cardData, setCardData };
 }
 ```
 
 **2. Context Pattern**
+
 ```typescript
 // AuthProvider wraps the entire app
 <AuthProvider>
@@ -507,6 +548,7 @@ export function useCardModal() {
 ```
 
 **3. API Route Pattern**
+
 ```typescript
 // Each API route is a serverless function
 export async function POST(request: NextRequest) {
@@ -515,11 +557,12 @@ export async function POST(request: NextRequest) {
 ```
 
 **4. Component Composition**
+
 ```typescript
 // Reusable components with clear interfaces
-<SimpleTile 
-  title="Sleep Hours" 
-  value={sleepHours} 
+<SimpleTile
+  title="Sleep Hours"
+  value={sleepHours}
   trend={trend}
   onClick={handleClick}
 />
@@ -528,6 +571,7 @@ export async function POST(request: NextRequest) {
 ### Performance Considerations
 
 **Optimizations Implemented:**
+
 - **Token Management**: Strict limits to prevent OpenAI token overflow
 - **Context Truncation**: Limits conversation history and context size
 - **Emergency Mode**: Fallback for large contexts
@@ -535,6 +579,7 @@ export async function POST(request: NextRequest) {
 - **Database Indexing**: Optimized queries with proper indexes
 
 **Areas for Improvement:**
+
 - **Caching**: Could implement Redis for frequently accessed data
 - **Image Optimization**: Could add image compression
 - **Code Splitting**: Could implement lazy loading for components
@@ -542,6 +587,7 @@ export async function POST(request: NextRequest) {
 ### Error Handling Strategy
 
 **Comprehensive Error Handling:**
+
 - **API Routes**: Try-catch blocks with detailed logging
 - **Database Operations**: Error handling with fallbacks
 - **File Processing**: Graceful degradation for unsupported files
@@ -562,12 +608,14 @@ export async function POST(request: NextRequest) {
 ### For Your Learning Journey
 
 **Start Here:**
+
 1. **Chat Interface** (`/src/components/chat/chat-interface.tsx`) - Main user interaction
 2. **API Route** (`/src/app/api/chat/route.ts`) - Backend processing
 3. **Database Schema** (`/src/lib/supabase/schema.sql`) - Data structure
 4. **AI Integration** - How context is built and used
 
 **Next Steps:**
+
 1. **Add a new metric category** - Extend the metrics system
 2. **Create a new dashboard tile** - Build a custom component
 3. **Implement file type validation** - Add security checks

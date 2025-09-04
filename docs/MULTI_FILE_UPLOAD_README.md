@@ -1,16 +1,19 @@
 # ChatGPT-Style Multi-File Upload System
 
 ## Overview
+
 This implementation transforms the existing photo-only upload system into a comprehensive multi-file upload experience similar to ChatGPT's interface.
 
 ## Features Implemented
 
 ### File Type Support
+
 - **Images**: JPG, PNG, GIF, WebP with existing OCR functionality
 - **Documents**: PDF, DOC, DOCX, TXT, MD, CSV, XLSX, ODS, PPTX
 - **Combined limit**: Maximum 10 files total
 
 ### File Processing
+
 - **Images**: Maintained existing OCR functionality for workout/health screenshots
 - **CSV**: Client-side parsing with preview of first 10 rows
 - **PDF**: Server-side text extraction using pdf-parse
@@ -19,6 +22,7 @@ This implementation transforms the existing photo-only upload system into a comp
 - **Text files**: Direct content reading
 
 ### UI/UX Features
+
 - **Combined upload area** for both photos and files
 - **Preview chips** like ChatGPT with filename, file type icon, and remove button
 - **File size display** and validation
@@ -27,6 +31,7 @@ This implementation transforms the existing photo-only upload system into a comp
 - **Real-time upload status** with loading indicators
 
 ### Technical Implementation
+
 - **Storage**: Uses existing Supabase Storage setup
 - **Database**: Added `conversation_file_attachments` junction table
 - **API**: Updated `/api/chat` to handle multiple file types
@@ -36,10 +41,12 @@ This implementation transforms the existing photo-only upload system into a comp
 ## Database Changes
 
 ### New Tables
+
 1. `conversation_file_attachments` - Junction table linking conversations to files
 2. `conversation_insights` - Enhanced conversation analysis storage
 
 ### Updated Tables
+
 - `user_uploads` - Added support for new file types and processing metadata
 - Enhanced with `mime_type`, `processing_status`, `extracted_content` columns
 
@@ -63,6 +70,7 @@ src/
 ## Usage
 
 ### For Users
+
 1. Click the plus icon to open the file picker menu
 2. Choose "All File Types", "Images Only", or "Documents Only"
 3. Select multiple files (up to 10 total)
@@ -74,12 +82,14 @@ src/
 ### For Developers
 
 #### Adding New File Types
+
 1. Add MIME type to `SupportedFileType` in `types/index.ts`
 2. Add processing logic to `client.ts` or `extract/route.ts`
 3. Update `FileProcessor.getFileIcon()` for the icon
 4. Test with sample files
 
 #### File Processing Flow
+
 1. **Client validation** - File type, size, count limits
 2. **Upload to Supabase** - Parallel upload of all files
 3. **Content extraction** - Client-side for simple files, server-side for complex
@@ -89,11 +99,13 @@ src/
 ## Configuration
 
 ### File Limits
+
 - **Max files**: 10 per conversation
 - **Max size**: 10MB per file
 - **Supported types**: See `SupportedFileType` in types
 
 ### Processing Approach
+
 - **Client-side**: Text files, CSV, Markdown
 - **Server-side**: PDF, DOCX, XLSX (requires Node.js libraries)
 - **OCR**: Images processed by existing Supabase Edge Function
@@ -137,15 +149,18 @@ Or manually run the SQL from `supabase/migrations/20250131_add_conversation_file
 ## Troubleshooting
 
 ### Build Issues
+
 - Ensure Node.js packages are properly externalized in `next.config.ts`
 - Check that client-side code doesn't import server-only modules
 
 ### Upload Failures
+
 - Verify Supabase Storage bucket permissions
 - Check file size and type restrictions
 - Monitor browser network tab for API errors
 
 ### Processing Errors
+
 - Check server logs for document extraction errors
 - Verify file format compatibility
 - Test with smaller sample files first
