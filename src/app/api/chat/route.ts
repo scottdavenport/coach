@@ -3,26 +3,13 @@ import { createClient } from '@/lib/supabase/server'
 import OpenAI from 'openai'
 import { logger } from '@/lib/logger'
 import { getTodayInTimezone } from '@/lib/timezone-utils'
+import { ParsedConversation } from '@/types'
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 })
 
-// REMOVED: Old complex interface types - now using simplified ParsedConversation
-
-interface ParsedConversation {
-  // Simplified structure - just basic flags for what we found
-  has_health_data: boolean
-  has_activity_data: boolean
-  has_mood_data: boolean
-  has_nutrition_data: boolean
-  has_sleep_data: boolean
-  has_workout_data: boolean
-  // Simple insights without rigid categorization
-  insights: string[]
-  // Natural follow-up questions
-  follow_up_questions: string[]
-}
+// REMOVED: Old complex interface types - now using enhanced ParsedConversation from types
 
 export async function POST(request: NextRequest) {
   try {
@@ -162,36 +149,103 @@ export async function POST(request: NextRequest) {
     logger.debug('Starting conversation parsing')
     const parsedData = await parseConversationForRichContext(message)
     logger.debug('Conversation parsing complete', {
-      hasHealthData: parsedData.has_health_data,
-      hasActivityData: parsedData.has_activity_data,
-      insightsCount: parsedData.insights.length,
+      hasHealthData: parsedData.data_types?.health || false,
+      hasActivityData: parsedData.data_types?.activity || false,
+      insightsCount: parsedData.insights?.observations?.length || 0,
       userId: user.id
     })
 
     // Log extracted data for development review
-    if (parsedData && (parsedData.has_health_data || parsedData.has_activity_data || parsedData.has_mood_data || parsedData.has_nutrition_data || parsedData.has_sleep_data || parsedData.has_workout_data)) {
+    if (parsedData && (parsedData.data_types?.health || parsedData.data_types?.activity || parsedData.data_types?.mood || parsedData.data_types?.nutrition || parsedData.data_types?.sleep || parsedData.data_types?.workout)) {
       logger.debug('Conversation insights detected', {
         userId: user.id,
         messagePreview: message.substring(0, 100),
-        insights: parsedData.insights,
-        followUpQuestions: parsedData.follow_up_questions,
+        insights: parsedData.insights?.observations || [],
+        followUpQuestions: parsedData.follow_up_questions?.immediate || [],
         dataTypes: {
-          health: parsedData.has_health_data,
-          activity: parsedData.has_activity_data,
-          mood: parsedData.has_mood_data,
-          nutrition: parsedData.has_nutrition_data,
-          sleep: parsedData.has_sleep_data,
-          workout: parsedData.has_workout_data
+          health: parsedData.data_types?.health,
+          activity: parsedData.data_types?.activity,
+          mood: parsedData.data_types?.mood,
+          nutrition: parsedData.data_types?.nutrition,
+          sleep: parsedData.data_types?.sleep,
+          workout: parsedData.data_types?.workout
         }
       })
     }
 
     // Build system prompt with token counting
-    const baseSystemPrompt = `You are Coach, an AI health and fitness companion. You're warm, encouraging, and help users achieve their health goals through actionable insights and personalized coaching.`
+    const baseSystemPrompt = `You are Coach, an AI health and fitness companion designed to help users achieve their health and longevity goals through personalized, evidence-based guidance. You combine the expertise of a personal trainer, health coach, and supportive friend.
+
+## CORE IDENTITY
+- **Professional but warm**: Knowledgeable and encouraging without being overly enthusiastic or generic
+- **Honest yet supportive**: Give honest feedback while always encouraging simple steps forward
+- **Adaptive companion**: Meet users exactly where they are on their health journey
+- **Evidence-based**: Ground recommendations in trusted sources and scientific evidence
+
+## CORE PRINCIPLES
+- **Consistency over perfection**: Focus on sustainable habits rather than perfect execution
+- **Holistic approach**: Balance prevention and optimization across all health domains
+- **Data-driven personalization**: Use rich user data to make custom recommendations
+- **Adaptive responses**: Adjust advice based on real-time data (sleep quality, recovery, etc.)
+
+## YOUR CAPABILITIES & DATA ACCESS
+You have access to comprehensive user data including:
+- **Health metrics**: Sleep, heart rate, HRV, weight, blood pressure, glucose, etc.
+- **Activity data**: Steps, workouts, recovery scores, VO2 max, etc.
+- **Wellness indicators**: Mood, energy, stress, mental clarity, etc.
+- **Nutrition tracking**: Water intake, calories, macros, caffeine, etc.
+- **Lifestyle factors**: Screen time, social activities, work stress, travel, etc.
+- **Conversation history**: Past discussions, goals, preferences, patterns
+- **File uploads**: Workout screenshots, health documents, OCR data
+- **Oura integration**: Sleep, activity, and readiness scores
+- **Pattern recognition**: Trends, correlations, and behavioral insights
+
+## INTERACTION GUIDELINES
+
+### Data Integration & Personalization
+- **Proactively reference** past conversations, patterns, and uploaded data
+- **Adapt recommendations** based on real-time data (e.g., adjust workout intensity if sleep was poor)
+- **Use data contextually** when building training plans and daily journal entries
+- **Ask for clarification** when data conflicts rather than making assumptions
+- **Track user-specified trends** and share insights about patterns you notice
+
+### Response Style
+- **Highly context-aware**: Reference relevant data and conversation history
+- **Ask thoughtful follow-ups** that build on what users share
+- **Make specific recommendations** based on their unique data and goals
+- **Incorporate all knowledge domains** - this is a journaling, workout, health metrics, and trends app
+- **Adapt to skill levels** and accommodate injuries, pain, or soreness
+
+### Health Guidance Boundaries
+- **Provide evidence-based recommendations** for areas with high confidence
+- **Always encourage professional consultation** for medical concerns
+- **Use disclaimers sparingly** - only when giving specific health advice
+- **Position yourself as guidance**, not healthcare
+- **Focus on optimization and prevention** while respecting medical boundaries
+
+### Daily Journal & Workout Integration
+- **Document health data** in daily journal entries for historical tracking
+- **Use metrics to build personalized training plans** that adapt to current body state
+- **Reference uploaded data** when creating journal entries and workout recommendations
+- **Share trend insights** and help users understand their data patterns
+
+## CONVERSATION FLOW
+1. **Acknowledge** what the user shared with warmth and understanding
+2. **Reference relevant data** from their metrics, history, or uploads when applicable
+3. **Provide specific, actionable guidance** based on their unique situation
+4. **Ask thoughtful follow-ups** that deepen the conversation
+5. **Suggest next steps** that align with their goals and current state
+
+## EXAMPLE RESPONSES
+- "I see your sleep score was lower last night (72 vs your usual 85). Given that, let's adjust today's workout to focus on lighter movement rather than high-intensity training."
+- "Your heart rate variability has been trending upward over the past week - that's a great sign of improved recovery. What changes have you noticed in your routine?"
+- "I remember you mentioned feeling stressed about work last week. How has that been affecting your sleep and energy levels?"
+
+Remember: You're not just responding to messages - you're building a comprehensive understanding of each user's health journey and providing personalized guidance that evolves with their data and needs.`
     
-    // Build context sections with strict limits
-    const limitedUserContext = userContext.length > 1000 ? userContext.substring(0, 1000) + '...' : userContext
-    const limitedStateContext = stateContext.length > 500 ? stateContext.substring(0, 500) + '...' : stateContext
+    // Build context sections with reasonable limits
+    const limitedUserContext = userContext.length > 2500 ? userContext.substring(0, 2500) + '...' : userContext
+    const limitedStateContext = stateContext.length > 1500 ? stateContext.substring(0, 1500) + '...' : stateContext
     
     // Handle OCR data with strict limits
     const ocrSection = ocrData ? `OCR DATA: ${JSON.stringify(ocrData).substring(0, 1000)}${JSON.stringify(ocrData).length > 1000 ? '...' : ''}` : ''
@@ -299,7 +353,7 @@ export async function POST(request: NextRequest) {
     const aiResponse = completion.choices[0]?.message?.content || "I'm sorry, I couldn't process that request."
 
     // Store conversation insights if we have any data types detected
-    if (parsedData && (parsedData.has_health_data || parsedData.has_activity_data || parsedData.has_mood_data || parsedData.has_nutrition_data || parsedData.has_sleep_data || parsedData.has_workout_data)) {
+    if (parsedData && (parsedData.data_types?.health || parsedData.data_types?.activity || parsedData.data_types?.mood || parsedData.data_types?.nutrition || parsedData.data_types?.sleep || parsedData.data_types?.workout)) {
       try {
         logger.info('Conversation insights detected for storage', {
           userId: user.id,
@@ -307,12 +361,12 @@ export async function POST(request: NextRequest) {
           insights: parsedData?.insights,
           followUpQuestions: parsedData?.follow_up_questions,
           dataTypes: {
-            health: parsedData?.has_health_data,
-            activity: parsedData?.has_activity_data,
-            mood: parsedData?.has_mood_data,
-            nutrition: parsedData?.has_nutrition_data,
-            sleep: parsedData?.has_sleep_data,
-            workout: parsedData?.has_workout_data
+            health: parsedData?.data_types?.health,
+            activity: parsedData?.data_types?.activity,
+            mood: parsedData?.data_types?.mood,
+            nutrition: parsedData?.data_types?.nutrition,
+            sleep: parsedData?.data_types?.sleep,
+            workout: parsedData?.data_types?.workout
           }
         })
 
@@ -339,19 +393,19 @@ export async function POST(request: NextRequest) {
           user_id: user.id,
           conversation_date: userDate, // Using user's timezone date for consistency
           message: message,
-          insights: parsedData.insights,
+          insights: Array.isArray(parsedData.insights) ? parsedData.insights : parsedData.insights?.observations || [],
           data_types: {
-            health: parsedData.has_health_data,
-            activity: parsedData.has_activity_data,
-            mood: parsedData.has_mood_data,
-            nutrition: parsedData.has_nutrition_data,
-            sleep: parsedData.has_sleep_data,
-            workout: parsedData.has_workout_data,
+            health: parsedData.data_types?.health,
+            activity: parsedData.data_types?.activity,
+            mood: parsedData.data_types?.mood,
+            nutrition: parsedData.data_types?.nutrition,
+            sleep: parsedData.data_types?.sleep,
+            workout: parsedData.data_types?.workout,
             // Add flags for file data
             has_ocr_data: !!ocrData,
             has_multifile_data: !!multiFileData
           },
-          follow_up_questions: parsedData.follow_up_questions,
+          follow_up_questions: Array.isArray(parsedData.follow_up_questions) ? parsedData.follow_up_questions : parsedData.follow_up_questions?.immediate || [],
           created_at: new Date().toISOString()
         }
 
@@ -373,14 +427,33 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        const { error: insightError } = await supabase
+        // Debug: Log the data being inserted
+        logger.debug('Attempting to store conversation insights', {
+          userId: user.id,
+          userDate,
+          userTimezone,
+          insightsCount: enhancedInsights.insights.length,
+          dataTypes: enhancedInsights.data_types,
+          enhancedInsights: JSON.stringify(enhancedInsights, null, 2)
+        })
+
+        const { data: insertedData, error: insightError } = await supabase
           .from('conversation_insights')
           .insert(enhancedInsights)
+          .select()
 
         if (insightError) {
-          logger.error('Failed to store conversation insights', insightError, { userId: user.id })
+          logger.error('Failed to store conversation insights', insightError, { 
+            userId: user.id,
+            errorDetails: insightError,
+            attemptedData: enhancedInsights
+          })
         } else {
-          logger.info('Conversation insights stored successfully', { userId: user.id })
+          logger.info('Conversation insights stored successfully', { 
+            userId: user.id,
+            insertedRecordId: insertedData?.[0]?.id,
+            conversationDate: userDate
+          })
           
           // Link any uploaded files to this conversation
           if (conversationData?.id && multiFileData) {
@@ -430,16 +503,22 @@ export async function POST(request: NextRequest) {
           }
           
           // Trigger daily narrative generation (non-blocking)
-          const today = new Date().toISOString().split('T')[0] // Note: Using UTC date for database consistency
+          // Use the same userDate that we used for storing insights to ensure consistency
           
           // Call narrative generation directly - this should work now
           try {
             const { generateDailyNarrative } = await import('@/lib/narrative-generator')
-            const result = await generateDailyNarrative(user.id, today)
+            logger.debug('Calling narrative generation', {
+              userId: user.id,
+              userDate,
+              userTimezone,
+              utcDate: new Date().toISOString().split('T')[0]
+            })
+            const result = await generateDailyNarrative(user.id, userDate)
             if (result.success) {
-              logger.info('Daily narrative generation completed', { userId: user.id, date: today })
+              logger.info('Daily narrative generation completed', { userId: user.id, date: userDate })
             } else {
-              logger.error('Daily narrative generation failed', new Error(result.error), { userId: user.id, date: today })
+              logger.error('Daily narrative generation failed', new Error(result.error), { userId: user.id, date: userDate })
             }
           } catch (error) {
             logger.error('Failed to trigger narrative generation', error instanceof Error ? error : new Error('Unknown error'), { userId: user.id })
@@ -536,49 +615,140 @@ function buildStateContext(conversationState: string): string {
   return ""
 }
 
-async function parseConversationForRichContext(message: string): Promise<ParsedConversation> {
+async function parseConversationForRichContext(
+  message: string, 
+  userHistory?: any, // Optional: past conversation context
+  fileData?: any // Optional: OCR/file upload data
+): Promise<ParsedConversation> {
   try {
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
         {
           role: "system",
-          content: `You are a smart conversation analyzer. Your job is to identify what types of information the user shared and suggest natural follow-up questions. Keep it simple and natural.
+          content: `You are an advanced conversation analyzer for a health and fitness AI companion. Extract rich, contextual information from user messages to enable personalized coaching.
 
 RESPONSE FORMAT (JSON only):
 {
-  "has_health_data": boolean,
-  "has_activity_data": boolean, 
-  "has_mood_data": boolean,
-  "has_nutrition_data": boolean,
-  "has_sleep_data": boolean,
-  "has_workout_data": boolean,
-  "insights": [
-    "Brief insight about what the user shared"
+  "data_types": {
+    "health": boolean,
+    "activity": boolean,
+    "mood": boolean,
+    "nutrition": boolean,
+    "sleep": boolean,
+    "workout": boolean,
+    "lifestyle": boolean,
+    "biometric": boolean,
+    "wellness": boolean,
+    "social": boolean,
+    "work": boolean,
+    "travel": boolean
+  },
+  "extracted_metrics": {
+    "metric_key": {
+      "value": any,
+      "confidence": number,
+      "source": "conversation|ocr|file|inferred",
+      "time_reference": "string (optional)",
+      "comparative": "better|worse|same|improving|declining (optional)"
+    }
+  },
+  "goals_mentioned": [
+    {
+      "goal": "string",
+      "category": "string",
+      "timeframe": "string (optional)",
+      "confidence": number
+    }
   ],
-  "follow_up_questions": [
-    "Natural, conversational question to ask"
-  ]
+  "emotional_context": {
+    "tone": "positive|negative|neutral|frustrated|excited|concerned",
+    "intensity": number,
+    "specific_emotions": ["string"]
+  },
+  "time_references": [
+    {
+      "reference": "string",
+      "associated_date": "ISO date (optional)",
+      "context": "string"
+    }
+  ],
+  "preferences": [
+    {
+      "type": "workout_time|equipment|activity_type|diet|schedule",
+      "value": "string",
+      "confidence": number
+    }
+  ],
+  "insights": {
+    "observations": ["string"],
+    "patterns": ["string"],
+    "recommendations": ["string"],
+    "concerns": ["string"],
+    "data_quality_issues": ["string"]
+  },
+  "follow_up_questions": {
+    "immediate": ["string"],
+    "contextual": ["string"],
+    "data_driven": ["string"]
+  },
+  "file_context": {
+    "has_ocr_data": boolean,
+    "has_document_data": boolean,
+    "extracted_data": ["string"],
+    "data_validation_needed": ["string"]
+  },
+  "conversation_themes": ["string"],
+  "historical_context": {
+    "references_past_data": boolean,
+    "pattern_continuations": ["string"],
+    "trend_mentions": ["string"]
+  }
 }
 
-RULES:
-- Keep it simple - just identify what types of information are present
-- Don't force rigid categorization
-- Focus on natural, engaging follow-up questions
-- Insights should be brief observations, not data extractions
-- Questions should feel conversational, not interrogative
+ANALYSIS GUIDELINES:
+- Extract specific values when mentioned (e.g., "slept 8 hours" → sleep_duration: 8)
+- Detect emotional context and intensity
+- Identify time references and associate with proper dates when possible
+- Extract user preferences and goals
+- Look for comparative statements ("better than yesterday", "worse than usual")
+- Identify data quality issues (conflicting information)
+- Generate context-aware follow-ups based on user's likely patterns
+- Detect conversation themes and ongoing topics
+- Reference past data patterns when relevant
 
 EXAMPLES:
-- User says "I slept great last night" → has_sleep_data: true, insights: ["User had good sleep"], follow_up_questions: ["What do you think contributed to the good sleep?"]
-- User says "I'm going golfing today" → has_activity_data: true, insights: ["User has golf planned"], follow_up_questions: ["How are you feeling about your golf game lately?"]
-- User says "I'm feeling a bit tired" → has_mood_data: true, insights: ["User is experiencing fatigue"], follow_up_questions: ["What's been going on that might be contributing to the tiredness?"]`
+User: "I slept terribly last night, only 5 hours, but I'm feeling surprisingly energetic this morning"
+→ {
+  "data_types": {"sleep": true, "mood": true},
+  "extracted_metrics": {
+    "sleep_duration": {"value": 5, "confidence": 0.9, "source": "conversation", "time_reference": "last night"},
+    "energy_level": {"value": "high", "confidence": 0.8, "source": "conversation", "time_reference": "this morning", "comparative": "better"}
+  },
+  "emotional_context": {"tone": "neutral", "intensity": 6, "specific_emotions": ["surprised"]},
+  "insights": {
+    "observations": ["User had poor sleep but high energy - unusual pattern"],
+    "patterns": ["Disconnect between sleep quality and energy levels"],
+    "concerns": ["Poor sleep quality may impact recovery"]
+  }
+}
+
+User: "I want to start working out in the mornings before work"
+→ {
+  "data_types": {"workout": true, "lifestyle": true},
+  "goals_mentioned": [{"goal": "morning workouts", "category": "fitness", "timeframe": "ongoing", "confidence": 0.9}],
+  "preferences": [{"type": "workout_time", "value": "morning", "confidence": 0.9}],
+  "insights": {
+    "recommendations": ["Consider gradual transition to morning workouts", "Plan workout routine that fits morning schedule"]
+  }
+}`
         },
         {
           role: "user",
           content: message
         }
       ],
-      max_tokens: 400,
+      max_tokens: 800,
       temperature: 0.7,
     })
 
@@ -586,41 +756,38 @@ EXAMPLES:
     
     try {
       const parsed = JSON.parse(responseText)
-      return {
-        has_health_data: parsed.has_health_data || false,
-        has_activity_data: parsed.has_activity_data || false,
-        has_mood_data: parsed.has_mood_data || false,
-        has_nutrition_data: parsed.has_nutrition_data || false,
-        has_sleep_data: parsed.has_sleep_data || false,
-        has_workout_data: parsed.has_workout_data || false,
-        insights: parsed.insights || [],
-        follow_up_questions: parsed.follow_up_questions || []
+      
+      // Return the parsed data directly
+      const enhancedParsed: ParsedConversation = {
+        ...parsed
       }
+      
+      return enhancedParsed
     } catch (parseError) {
       logger.error('Failed to parse AI response', parseError instanceof Error ? parseError : new Error('Parse error'))
-      // Return simple fallback
-      return {
-        has_health_data: false,
-        has_activity_data: false,
-        has_mood_data: false,
-        has_nutrition_data: false,
-        has_sleep_data: false,
-        has_workout_data: false,
-        insights: [],
-        follow_up_questions: []
-      }
+      // Return enhanced fallback
+      return createEnhancedFallback()
     }
   } catch (error) {
     logger.error('Error in conversation parsing', error instanceof Error ? error : new Error('Unknown error'))
-    return {
-      has_health_data: false,
-      has_activity_data: false,
-      has_mood_data: false,
-      has_nutrition_data: false,
-      has_sleep_data: false,
-      has_workout_data: false,
-      insights: [],
-      follow_up_questions: []
-    }
+    return createEnhancedFallback()
+  }
+}
+
+function createEnhancedFallback(): ParsedConversation {
+  return {
+    data_types: {
+      health: false, activity: false, mood: false, nutrition: false,
+      sleep: false, workout: false, lifestyle: false, biometric: false,
+      wellness: false, social: false, work: false, travel: false
+    },
+    extracted_metrics: {},
+    goals_mentioned: [],
+    emotional_context: { tone: 'neutral', intensity: 5, specific_emotions: [] },
+    time_references: [],
+    preferences: [],
+    insights: { observations: [], patterns: [], recommendations: [], concerns: [], data_quality_issues: [] },
+    follow_up_questions: { immediate: [], contextual: [], data_driven: [] },
+    conversation_themes: []
   }
 }

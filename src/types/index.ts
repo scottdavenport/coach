@@ -33,31 +33,96 @@ export interface ConversationMessage {
 }
 
 export interface ParsedConversation {
-  events: Array<{
-    event_type: string;
-    data: Record<string, unknown>;
-    confidence: number;
-    should_store: boolean;
-  }>;
-  context_data: Array<{
-    category: string;
-    key: string;
-    value: unknown;
-    confidence: number;
-    should_store: boolean;
-    source: string;
-    needsClarification: boolean;
-  }>;
-  daily_summary: {
-    sleep_hours?: number;
-    sleep_quality?: number;
-    mood?: number;
-    energy?: number;
-    stress?: number;
-    readiness?: number;
-  };
-  should_update_card: boolean;
-  clarification_needed: boolean;
+  // Enhanced data type detection (expanded categories)
+  data_types: {
+    health: boolean
+    activity: boolean
+    mood: boolean
+    nutrition: boolean
+    sleep: boolean
+    workout: boolean
+    lifestyle: boolean
+    biometric: boolean
+    wellness: boolean
+    social: boolean
+    work: boolean
+    travel: boolean
+  }
+  
+  // Extracted specific values with confidence
+  extracted_metrics: {
+    [metric_key: string]: {
+      value: any
+      confidence: number
+      source: 'conversation' | 'ocr' | 'file' | 'inferred'
+      time_reference?: string // "yesterday", "this morning", etc.
+      comparative?: 'better' | 'worse' | 'same' | 'improving' | 'declining'
+    }
+  }
+  
+  // Goals and intentions mentioned
+  goals_mentioned: Array<{
+    goal: string
+    category: string
+    timeframe?: string
+    confidence: number
+  }>
+  
+  // Emotional context and tone
+  emotional_context: {
+    tone: 'positive' | 'negative' | 'neutral' | 'frustrated' | 'excited' | 'concerned'
+    intensity: number // 1-10
+    specific_emotions: string[]
+  }
+  
+  // Time references with proper date association
+  time_references: Array<{
+    reference: string // "yesterday", "this morning", "last week"
+    associated_date?: string // ISO date if determinable
+    context: string // what happened at that time
+  }>
+  
+  // User preferences mentioned
+  preferences: Array<{
+    type: 'workout_time' | 'equipment' | 'activity_type' | 'diet' | 'schedule'
+    value: string
+    confidence: number
+  }>
+  
+  // Enhanced insights with pattern recognition
+  insights: {
+    observations: string[]
+    patterns: string[] // "This is the third time you've mentioned poor sleep"
+    recommendations: string[]
+    concerns: string[]
+    data_quality_issues: string[] // conflicting data, missing context
+  }
+  
+  // Context-aware follow-ups
+  follow_up_questions: {
+    immediate: string[] // natural conversational follow-ups
+    contextual: string[] // based on user's history and patterns
+    data_driven: string[] // based on extracted metrics and trends
+  }
+  
+  // File upload context
+  file_context?: {
+    has_ocr_data: boolean
+    has_document_data: boolean
+    extracted_data: string[]
+    data_validation_needed: string[]
+  }
+  
+  // Conversation themes and topics
+  conversation_themes: string[]
+  
+  // Historical context references
+  historical_context?: {
+    references_past_data: boolean
+    pattern_continuations: string[]
+    trend_mentions: string[]
+  }
+  
 }
 
 export interface WeeklyCard {

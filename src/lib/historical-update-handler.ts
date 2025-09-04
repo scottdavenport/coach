@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
+import { ParsedConversation } from '@/types'
 
 export interface HistoricalUpdate {
   date: string
@@ -6,16 +7,6 @@ export interface HistoricalUpdate {
   description: string
   confidence: number
   should_update_historical: boolean
-}
-
-export interface ParsedConversation {
-  health_events: any[]
-  context_data: any[]
-  daily_summary?: any
-  historical_updates: HistoricalUpdate[]
-  follow_up_questions: string[]
-  should_update_card: boolean
-  clarification_needed: boolean
 }
 
 /**

@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { ChevronLeft, ChevronRight, Sun, Calendar, RefreshCw, Loader2, Brain, TrendingUp, Lightbulb } from 'lucide-react'
+import { Calendar } from '@/components/ui/calendar'
+import { ChevronLeft, ChevronRight, Sun, Calendar as CalendarIcon, RefreshCw, Loader2, Brain, TrendingUp, Lightbulb } from 'lucide-react'
 import { 
   getTodayInTimezone, 
   formatDateLong, 
@@ -14,6 +15,7 @@ import {
   getUserPreferredTimezone
 } from '@/lib/timezone-utils'
 import { useUserTimezone } from '@/hooks/use-user-timezone'
+import { useJournalEntries } from '@/hooks/use-journal-entries'
 import { JournalMetrics } from './journal-metrics'
 import { usePatternRecognition } from '@/hooks/use-pattern-recognition'
 
@@ -43,13 +45,16 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
   
   // Initialize with today's date using user's preferred timezone
   const [currentDate, setCurrentDate] = useState(() => {
-    const today = new Date()
-    return new Date(today.getFullYear(), today.getMonth(), today.getDate())
+    const preferredTimezone = getUserPreferredTimezone(userTimezone)
+    return getTodayInTimezone(preferredTimezone)
   })
   const [narrativeData, setNarrativeData] = useState<NarrativeData | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
   const [showPatterns, setShowPatterns] = useState(false)
+
+  // Get journal entry dates for calendar indicators
+  const { journalEntryDates } = useJournalEntries({ userId })
 
   // Pattern recognition hook - TEMPORARILY DISABLED for performance debugging
   // const {
@@ -76,7 +81,7 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
   // Update currentDate when selectedDate prop changes
   useEffect(() => {
     if (selectedDate) {
-      setCurrentDate(new Date(selectedDate))
+      setCurrentDate(selectedDate)
     }
   }, [selectedDate])
 
@@ -85,54 +90,55 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
     if (!selectedDate) {
       const preferredTimezone = getUserPreferredTimezone(userTimezone)
       const todayString = getTodayInTimezone(preferredTimezone)
-      const todayDate = new Date(todayString + 'T00:00:00')
       console.log('🔍 Setting current date to today:', todayString, 'in timezone:', preferredTimezone)
-      setCurrentDate(todayDate)
+      setCurrentDate(todayString)
     }
   }, [selectedDate, userTimezone])
 
   // Format date for display
-  const formatDate = (date: Date) => {
-    return formatDateLong(date)
+  const formatDate = (dateString: string) => {
+    const preferredTimezone = getUserPreferredTimezone(userTimezone)
+    return formatDateLong(new Date(dateString + 'T00:00:00'), preferredTimezone)
   }
 
   // Navigate to previous/next day using timezone utilities
   const goToPreviousDay = () => {
-    const currentDateString = currentDate.toISOString().split('T')[0]
     const preferredTimezone = getUserPreferredTimezone(userTimezone)
-    const prevDateString = navigateDateInTimezone(currentDateString, 'prev', preferredTimezone)
-    setCurrentDate(new Date(prevDateString + 'T00:00:00'))
+    const prevDateString = navigateDateInTimezone(currentDate, 'prev', preferredTimezone)
+    setCurrentDate(prevDateString)
   }
 
   const goToNextDay = () => {
-    const currentDateString = currentDate.toISOString().split('T')[0]
     const preferredTimezone = getUserPreferredTimezone(userTimezone)
     
     // Don't allow navigation to future dates
-    if (!isFutureDateInTimezone(currentDateString, preferredTimezone)) {
-      const nextDateString = navigateDateInTimezone(currentDateString, 'next', preferredTimezone)
-      setCurrentDate(new Date(nextDateString + 'T00:00:00'))
+    if (!isFutureDateInTimezone(currentDate, preferredTimezone)) {
+      const nextDateString = navigateDateInTimezone(currentDate, 'next', preferredTimezone)
+      setCurrentDate(nextDateString)
     }
   }
 
   const goToToday = () => {
     const preferredTimezone = getUserPreferredTimezone(userTimezone)
     const todayString = getTodayInTimezone(preferredTimezone)
-    setCurrentDate(new Date(todayString + 'T00:00:00'))
+    setCurrentDate(todayString)
+  }
+
+  // Handle date selection from calendar
+  const handleDateSelect = (dateString: string) => {
+    setCurrentDate(dateString)
   }
 
   // Check if current date is today using timezone utilities
   const isToday = () => {
-    const currentDateString = currentDate.toISOString().split('T')[0]
     const preferredTimezone = getUserPreferredTimezone(userTimezone)
-    return isTodayInTimezone(currentDateString, preferredTimezone)
+    return isTodayInTimezone(currentDate, preferredTimezone)
   }
 
   // Check if current date is in the future using timezone utilities
   const isFutureDate = () => {
-    const currentDateString = currentDate.toISOString().split('T')[0]
     const preferredTimezone = getUserPreferredTimezone(userTimezone)
-    return isFutureDateInTimezone(currentDateString, preferredTimezone)
+    return isFutureDateInTimezone(currentDate, preferredTimezone)
   }
 
   // Check if we can navigate to next day
@@ -257,19 +263,11 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
   }, [])
 
   // Load narrative data for a specific date
-  const loadNarrativeData = useCallback(async (date: Date) => {
+  const loadNarrativeData = useCallback(async (dateString: string) => {
     setIsLoading(true)
     try {
       const supabase = createClient()
       const preferredTimezone = getUserPreferredTimezone(userTimezone)
-      
-      // Convert the date to user's timezone for querying
-      const dateString = new Intl.DateTimeFormat('en-CA', {
-        timeZone: preferredTimezone,
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-      }).format(date)
       
       console.log('🔍 Loading narrative data for date:', dateString, 'in timezone:', preferredTimezone)
       
@@ -323,11 +321,11 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
   }, [userId, userTimezone])
 
   // Generate narrative using conversation insights (simplified approach)
-  const generateNarrative = async (date: Date) => {
+  const generateNarrative = async (dateString: string) => {
     setIsGenerating(true)
     try {
       // Simply reload the narrative data from conversation insights
-      await loadNarrativeData(date)
+      await loadNarrativeData(dateString)
     } catch (error) {
       console.error('Error generating narrative:', error)
       // Fall back to basic narrative on error
@@ -374,9 +372,9 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
     const endOfDay = new Date(currentDate)
     endOfDay.setHours(23, 59, 59, 999)
 
-    console.log('Setting up real-time subscription for date:', currentDate.toISOString().split('T')[0])
+    console.log('Setting up real-time subscription for date:', currentDate)
 
-    const channelName = `narrative-updates-${currentDate.toISOString().split('T')[0]}-${userId}`
+    const channelName = `narrative-updates-${currentDate}-${userId}`
     
     const channel = supabase
       .channel(channelName)
@@ -405,13 +403,13 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
       )
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
-          console.log('Real-time subscription active for narrative updates on date:', currentDate.toISOString().split('T')[0])
+          console.log('Real-time subscription active for narrative updates on date:', currentDate)
         }
       })
 
     return () => {
       if (channel) {
-        console.log('Cleaning up real-time subscription for date:', currentDate.toISOString().split('T')[0])
+        console.log('Cleaning up real-time subscription for date:', currentDate)
         supabase.removeChannel(channel)
       }
     }
@@ -454,6 +452,11 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
 
           <div className="flex items-center gap-4">
             <h2 className="text-lg font-semibold">{formatDate(currentDate)}</h2>
+            <Calendar 
+              selectedDate={currentDate}
+              onDateSelect={handleDateSelect}
+              journalEntryDates={journalEntryDates}
+            />
             {!isToday() && (
               <Button
                 variant="outline"
@@ -461,7 +464,7 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
                 onClick={goToToday}
                 className="flex items-center gap-2"
               >
-                <Calendar className="h-4 w-4" />
+                <CalendarIcon className="h-4 w-4" />
                 Today
               </Button>
             )}
@@ -628,7 +631,7 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
             {/* Daily Metrics Section */}
             <JournalMetrics 
               userId={userId}
-              date={currentDate.toISOString().split('T')[0]}
+              date={currentDate}
             />
 
             {/* Natural Narrative Journal */}
