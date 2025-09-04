@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { useOuraIntegration } from '@/hooks/use-oura-integration'
 import { OuraOAuthFlow } from './oura-oauth-flow'
 import { TrendPreferences } from './trend-preferences'
+import { TimezoneSelector } from './timezone-selector'
 import { 
   Settings, 
   X, 
@@ -263,7 +264,11 @@ export function SettingsModal({ isOpen, onClose, userId }: SettingsModalProps) {
 
           {activeTab === 'preferences' && (
             <div className="space-y-6">
-              <TrendPreferences userId={userId} />
+              <TimezoneSelector userId={userId} />
+              
+              <div className="border-t border-line/40 pt-6">
+                <TrendPreferences userId={userId} />
+              </div>
               
               <div className="border-t border-line/40 pt-6">
                 <h3 className="text-lg font-semibold mb-4">Sync Preferences</h3>

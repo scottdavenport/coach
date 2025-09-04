@@ -8,6 +8,7 @@ export interface User {
 
 export interface UserProfile {
   trend_preferences?: TrendPreferences;
+  timezone?: string; // User's preferred timezone (e.g., 'America/New_York', 'Europe/London')
   [key: string]: unknown;
 }
 

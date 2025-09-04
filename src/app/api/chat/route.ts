@@ -317,10 +317,27 @@ export async function POST(request: NextRequest) {
         })
 
         // Store the conversation insights with enhanced context
-        // Note: We'll use UTC date for storage but need to ensure frontend queries match
+        // Get user's timezone preference for proper date handling
+        const { data: userData } = await supabase
+          .from('users')
+          .select('timezone')
+          .eq('id', user.id)
+          .single()
+        
+        const userTimezone = userData?.timezone || 'UTC'
+        
+        // Convert current UTC time to user's timezone for date storage
+        const now = new Date()
+        const userDate = new Intl.DateTimeFormat('en-CA', {
+          timeZone: userTimezone,
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit'
+        }).format(now)
+        
         const enhancedInsights = {
           user_id: user.id,
-          conversation_date: new Date().toISOString().split('T')[0], // Using UTC date for database consistency
+          conversation_date: userDate, // Using user's timezone date for consistency
           message: message,
           insights: parsedData.insights,
           data_types: {

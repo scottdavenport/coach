@@ -32,6 +32,22 @@ export function getUserTimezone(): string {
 }
 
 /**
+ * Get user's preferred timezone from stored preference or browser detection
+ * This should be used in components that have access to user context
+ * @param userTimezone - User's stored timezone preference (optional)
+ * @returns The user's preferred timezone
+ */
+export function getUserPreferredTimezone(userTimezone?: string): string {
+  // Use stored preference if available
+  if (userTimezone && userTimezone !== 'UTC') {
+    return userTimezone
+  }
+  
+  // Fall back to browser detection
+  return getUserTimezone()
+}
+
+/**
  * Get today's date in the user's timezone as a YYYY-MM-DD string
  * @param timezone - Optional timezone override
  * @returns Date string in YYYY-MM-DD format
