@@ -102,36 +102,36 @@ export function TimezoneSelector({ userId }: TimezoneSelectorProps) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex items-center gap-2">
         <Clock className="h-5 w-5 text-primary" />
         <h3 className="text-lg font-semibold">Timezone Settings</h3>
       </div>
 
       {error && (
-        <div className="p-3 bg-red-50 border border-red-200 rounded-md text-red-700 text-sm">
+        <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
           {error}
         </div>
       )}
 
-      <div className="space-y-3">
+      <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium mb-2">
+          <label className="block text-sm font-medium text-muted-foreground mb-2">
             Current Timezone
           </label>
-          <div className="p-3 bg-muted rounded-md text-sm">
+          <div className="p-3 bg-card/60 backdrop-blur-sm border border-line/40 rounded-lg text-sm">
             {formatTimezoneDisplay(userTimezone)}
           </div>
         </div>
 
         {detectedTimezone && detectedTimezone !== userTimezone && (
-          <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+          <div className="p-4 bg-primary/10 border border-primary/20 rounded-lg">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-blue-900">
+                <p className="text-sm font-medium text-primary">
                   Browser detected timezone
                 </p>
-                <p className="text-sm text-blue-700">
+                <p className="text-sm text-muted-foreground">
                   {formatTimezoneDisplay(detectedTimezone)}
                 </p>
               </div>
@@ -140,7 +140,7 @@ export function TimezoneSelector({ userId }: TimezoneSelectorProps) {
                 variant="outline"
                 onClick={handleUseDetected}
                 disabled={isUpdating}
-                className="text-blue-700 border-blue-300 hover:bg-blue-100"
+                className="text-primary border-primary/30 hover:bg-primary/10"
               >
                 Use Detected
               </Button>
@@ -149,14 +149,14 @@ export function TimezoneSelector({ userId }: TimezoneSelectorProps) {
         )}
 
         <div>
-          <label className="block text-sm font-medium mb-2">
+          <label className="block text-sm font-medium text-muted-foreground mb-2">
             Select Timezone
           </label>
           <select
             value={selectedTimezone}
             onChange={(e) => handleTimezoneChange(e.target.value)}
             disabled={isUpdating}
-            className="w-full p-3 border border-line rounded-md bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent"
+            className="w-full p-3 border border-line/40 rounded-lg bg-card/60 backdrop-blur-sm text-foreground focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-colors"
           >
             {COMMON_TIMEZONES.map((tz) => (
               <option key={tz.value} value={tz.value}>
@@ -166,7 +166,7 @@ export function TimezoneSelector({ userId }: TimezoneSelectorProps) {
           </select>
         </div>
 
-        <div className="text-xs text-muted-foreground">
+        <div className="text-xs text-muted-foreground bg-card/30 border border-line/20 rounded-lg p-3">
           <p>
             Your timezone preference affects how dates and times are displayed throughout the app.
             All data is stored in UTC and converted to your preferred timezone for display.

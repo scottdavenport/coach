@@ -263,55 +263,64 @@ export function SettingsModal({ isOpen, onClose, userId }: SettingsModalProps) {
           )}
 
           {activeTab === 'preferences' && (
-            <div className="space-y-6">
+            <div className="space-y-8">
               <TimezoneSelector userId={userId} />
               
-              <div className="border-t border-line/40 pt-6">
+              <div className="border-t border-line/40 pt-8">
                 <TrendPreferences userId={userId} />
               </div>
               
-              <div className="border-t border-line/40 pt-6">
-                <h3 className="text-lg font-semibold mb-4">Sync Preferences</h3>
+              <div className="border-t border-line/40 pt-8">
+                <div className="flex items-center gap-2 mb-6">
+                  <RefreshCw className="h-5 w-5 text-primary" />
+                  <h3 className="text-lg font-semibold">Sync Preferences</h3>
+                </div>
                 
-                <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-medium">Auto-sync frequency</h4>
-                    <p className="text-sm text-muted-foreground">How often to automatically sync data</p>
+                <div className="space-y-6">
+                  <div className="bg-card/60 backdrop-blur-sm border border-line/40 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="font-medium">Auto-sync frequency</h4>
+                        <p className="text-sm text-muted-foreground">How often to automatically sync data</p>
+                      </div>
+                      <select className="bg-card/60 backdrop-blur-sm border border-line/40 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-colors">
+                        <option value="multiple">Multiple times per day</option>
+                        <option value="daily">Once daily</option>
+                        <option value="manual">Manual only</option>
+                      </select>
+                    </div>
                   </div>
-                  <select className="bg-background border border-line/40 rounded-md px-3 py-2 text-sm">
-                    <option value="multiple">Multiple times per day</option>
-                    <option value="daily">Once daily</option>
-                    <option value="manual">Manual only</option>
-                  </select>
-                </div>
 
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-medium">Import historical data</h4>
-                    <p className="text-sm text-muted-foreground">Import past data when connecting</p>
+                  <div className="bg-card/60 backdrop-blur-sm border border-line/40 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="font-medium">Import historical data</h4>
+                        <p className="text-sm text-muted-foreground">Import past data when connecting</p>
+                      </div>
+                      <select className="bg-card/60 backdrop-blur-sm border border-line/40 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-colors">
+                        <option value="30">Last 30 days</option>
+                        <option value="7">Last 7 days</option>
+                        <option value="0">No historical data</option>
+                      </select>
+                    </div>
                   </div>
-                  <select className="bg-background border border-line/40 rounded-md px-3 py-2 text-sm">
-                    <option value="30">Last 30 days</option>
-                    <option value="7">Last 7 days</option>
-                    <option value="0">No historical data</option>
-                  </select>
-                </div>
 
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-medium">Data priority</h4>
-                    <p className="text-sm text-muted-foreground">Which data source to trust when conflicts occur</p>
+                  <div className="bg-card/60 backdrop-blur-sm border border-line/40 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="font-medium">Data priority</h4>
+                        <p className="text-sm text-muted-foreground">Which data source to trust when conflicts occur</p>
+                      </div>
+                      <select className="bg-card/60 backdrop-blur-sm border border-line/40 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-colors">
+                        <option value="api">API data (recommended)</option>
+                        <option value="manual">Manual entries</option>
+                        <option value="prompt">Ask me each time</option>
+                      </select>
+                    </div>
                   </div>
-                  <select className="bg-background border border-line/40 rounded-md px-3 py-2 text-sm">
-                    <option value="api">API data (recommended)</option>
-                    <option value="manual">Manual entries</option>
-                    <option value="prompt">Ask me each time</option>
-                  </select>
                 </div>
               </div>
             </div>
-          </div>
           )}
 
           {activeTab === 'data' && (

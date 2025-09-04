@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
@@ -116,120 +115,114 @@ export function TrendPreferences({ userId }: TrendPreferencesProps) { // eslint-
 
   if (loading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="w-5 h-5" />
-            Trend Preferences
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-            <span className="ml-2 text-muted">Loading preferences...</span>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="space-y-6">
+        <div className="flex items-center gap-2">
+          <TrendingUp className="h-5 w-5 text-primary" />
+          <h3 className="text-lg font-semibold">Trend Preferences</h3>
+        </div>
+        <div className="flex items-center justify-center py-8">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+          <span className="ml-2 text-muted-foreground">Loading preferences...</span>
+        </div>
+      </div>
     )
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <TrendingUp className="w-5 h-5" />
-          Trend Preferences
-        </CardTitle>
-        <p className="text-sm text-muted">
-          Choose which metrics to include in your weekly trend analysis. At least one metric must be enabled.
-        </p>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {error && (
-          <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
-            <p className="text-red-400 text-sm">{error}</p>
-          </div>
-        )}
+    <div className="space-y-6">
+      <div className="flex items-center gap-2">
+        <TrendingUp className="h-5 w-5 text-primary" />
+        <h3 className="text-lg font-semibold">Trend Preferences</h3>
+      </div>
+      
+      <p className="text-sm text-muted-foreground">
+        Choose which metrics to include in your weekly trend analysis. At least one metric must be enabled.
+      </p>
 
-        <div className="space-y-4">
-          <h4 className="text-sm font-semibold text-muted flex items-center gap-2">
-            <Settings className="w-4 h-4" />
-            Available Metrics
-          </h4>
-          
-          <div className="grid gap-3">
-            {AVAILABLE_METRICS.map((metric) => {
-              const isEnabled = preferences.enabled_metrics.includes(metric.key)
-              const isDefault = ['sleep_hours', 'energy', 'mood', 'workout_completed', 'weight'].includes(metric.key)
-              
-              return (
-                <div key={metric.key} className="flex items-start space-x-3 p-3 border border-line rounded-lg">
-                  <Checkbox
-                    id={metric.key}
-                    checked={isEnabled}
-                    onCheckedChange={() => handleMetricToggle(metric.key)}
-                    disabled={isEnabled && preferences.enabled_metrics.length === 1}
-                  />
-                  <div className="flex-1 space-y-1">
-                    <div className="flex items-center gap-2">
-                      <label 
-                        htmlFor={metric.key} 
-                        className="text-sm font-medium cursor-pointer"
-                      >
-                        {metric.label}
-                      </label>
-                      {isDefault && (
-                        <Badge variant="secondary" className="text-xs">Default</Badge>
-                      )}
-                    </div>
-                    <p className="text-xs text-muted">{metric.description}</p>
+      {error && (
+        <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+          <p className="text-destructive text-sm">{error}</p>
+        </div>
+      )}
+
+      <div className="space-y-4">
+        <h4 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+          <Settings className="w-4 h-4" />
+          Available Metrics
+        </h4>
+        
+        <div className="grid gap-3">
+          {AVAILABLE_METRICS.map((metric) => {
+            const isEnabled = preferences.enabled_metrics.includes(metric.key)
+            const isDefault = ['sleep_hours', 'energy', 'mood', 'workout_completed', 'weight'].includes(metric.key)
+            
+            return (
+              <div key={metric.key} className="flex items-start space-x-3 p-4 bg-card/60 backdrop-blur-sm border border-line/40 rounded-lg hover:border-primary/30 transition-colors">
+                <Checkbox
+                  id={metric.key}
+                  checked={isEnabled}
+                  onCheckedChange={() => handleMetricToggle(metric.key)}
+                  disabled={isEnabled && preferences.enabled_metrics.length === 1}
+                />
+                <div className="flex-1 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <label 
+                      htmlFor={metric.key} 
+                      className="text-sm font-medium cursor-pointer"
+                    >
+                      {metric.label}
+                    </label>
+                    {isDefault && (
+                      <Badge variant="secondary" className="text-xs">Default</Badge>
+                    )}
                   </div>
+                  <p className="text-xs text-muted-foreground">{metric.description}</p>
                 </div>
-              )
-            })}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {preferences.suggested_metrics.length > 0 && (
+        <div className="space-y-4">
+          <h4 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+            <Info className="w-4 h-4" />
+            Suggested Metrics
+          </h4>
+          <div className="grid gap-3">
+            {preferences.suggested_metrics.map((metric) => (
+              <div key={metric} className="flex items-center space-x-3 p-4 bg-primary/10 border border-primary/20 rounded-lg">
+                <Checkbox
+                  id={`suggested-${metric}`}
+                  checked={preferences.enabled_metrics.includes(metric)}
+                  onCheckedChange={() => handleMetricToggle(metric)}
+                />
+                <label 
+                  htmlFor={`suggested-${metric}`} 
+                  className="text-sm font-medium cursor-pointer"
+                >
+                  {metric.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                </label>
+                <Badge variant="outline" className="text-xs">New</Badge>
+              </div>
+            ))}
           </div>
         </div>
+      )}
 
-        {preferences.suggested_metrics.length > 0 && (
-          <div className="space-y-4">
-            <h4 className="text-sm font-semibold text-muted flex items-center gap-2">
-              <Info className="w-4 h-4" />
-              Suggested Metrics
-            </h4>
-            <div className="grid gap-3">
-              {preferences.suggested_metrics.map((metric) => (
-                <div key={metric} className="flex items-center space-x-3 p-3 border border-line rounded-lg bg-primary/5">
-                  <Checkbox
-                    id={`suggested-${metric}`}
-                    checked={preferences.enabled_metrics.includes(metric)}
-                    onCheckedChange={() => handleMetricToggle(metric)}
-                  />
-                  <label 
-                    htmlFor={`suggested-${metric}`} 
-                    className="text-sm font-medium cursor-pointer"
-                  >
-                    {metric.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                  </label>
-                  <Badge variant="outline" className="text-xs">New</Badge>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div className="flex justify-between items-center pt-4 border-t border-line">
-          <div className="text-sm text-muted">
-            {preferences.enabled_metrics.length} metric{preferences.enabled_metrics.length !== 1 ? 's' : ''} enabled
-          </div>
-          <Button 
-            onClick={handleSave} 
-            disabled={saving || preferences.enabled_metrics.length === 0}
-            size="sm"
-          >
-            {saving ? 'Saving...' : 'Save Preferences'}
-          </Button>
+      <div className="flex justify-between items-center pt-4 border-t border-line/40">
+        <div className="text-sm text-muted-foreground">
+          {preferences.enabled_metrics.length} metric{preferences.enabled_metrics.length !== 1 ? 's' : ''} enabled
         </div>
-      </CardContent>
-    </Card>
+        <Button 
+          onClick={handleSave} 
+          disabled={saving || preferences.enabled_metrics.length === 0}
+          size="sm"
+        >
+          {saving ? 'Saving...' : 'Save Preferences'}
+        </Button>
+      </div>
+    </div>
   )
 }
