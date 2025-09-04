@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { StructuredCardData } from '@/types'
+import { getTodayInTimezone } from '@/lib/timezone-utils'
 
 interface UseCardModalProps {
   userId: string
@@ -42,7 +43,7 @@ export function useCardModal({ userId }: UseCardModalProps) {
         setSelectedDate(dates[0])
       } else if (dates.length === 0 && !selectedDate) {
         // If no data exists, set to today's date
-        const today = new Date().toISOString().split('T')[0]
+        const today = getTodayInTimezone()
         console.log('No data exists, setting selectedDate to today:', today)
         setSelectedDate(today)
       }

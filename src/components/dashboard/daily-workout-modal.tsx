@@ -19,6 +19,13 @@ import {
   Play,
   Clock
 } from 'lucide-react'
+import { 
+  getTodayInTimezone, 
+  formatDateInTimezone, 
+  navigateDateInTimezone,
+  isTodayInTimezone,
+  isFutureDateInTimezone
+} from '@/lib/timezone-utils'
 
 interface DailyWorkoutModalProps {
   userId: string
@@ -44,10 +51,10 @@ export const DailyWorkoutModal = forwardRef<DailyWorkoutModalRef, DailyWorkoutMo
       getCompletedActivities
     } = useDailyActivities({ userId })
 
-    // Initialize with today's date
+    // Initialize with today's date in user's timezone
     useEffect(() => {
       if (!selectedDate) {
-        const today = new Date().toISOString().split('T')[0]
+        const today = getTodayInTimezone()
         setSelectedDate(today)
         setHookDate(today)
       }
@@ -56,7 +63,7 @@ export const DailyWorkoutModal = forwardRef<DailyWorkoutModalRef, DailyWorkoutMo
     // Expose methods to parent component
     useImperativeHandle(ref, () => ({
       openModal: (date?: string) => {
-        const targetDate = date || new Date().toISOString().split('T')[0]
+        const targetDate = date || getTodayInTimezone()
         setSelectedDate(targetDate)
         setHookDate(targetDate)
         setIsOpen(true)
@@ -67,13 +74,7 @@ export const DailyWorkoutModal = forwardRef<DailyWorkoutModalRef, DailyWorkoutMo
     }))
 
     const navigateDate = (direction: 'prev' | 'next') => {
-      const currentDate = new Date(selectedDate)
-      if (direction === 'prev') {
-        currentDate.setDate(currentDate.getDate() - 1)
-      } else {
-        currentDate.setDate(currentDate.getDate() + 1)
-      }
-      const newDate = currentDate.toISOString().split('T')[0]
+      const newDate = navigateDateInTimezone(selectedDate, direction)
       setSelectedDate(newDate)
       setHookDate(newDate)
     }
@@ -85,12 +86,7 @@ export const DailyWorkoutModal = forwardRef<DailyWorkoutModalRef, DailyWorkoutMo
     }
 
     const formatDate = (dateString: string) => {
-      const date = new Date(dateString)
-      return date.toLocaleDateString('en-US', { 
-        weekday: 'short', 
-        month: 'short', 
-        day: 'numeric' 
-      })
+      return formatDateInTimezone(dateString, 'short')
     }
 
     const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -166,7 +162,7 @@ export const DailyWorkoutModal = forwardRef<DailyWorkoutModalRef, DailyWorkoutMo
                   variant="ghost" 
                   size="sm" 
                   onClick={() => {
-                    const today = new Date().toISOString().split('T')[0]
+                    const today = getTodayInTimezone()
                     navigateToDate(today)
                   }}
                   className="text-xs"

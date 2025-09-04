@@ -84,7 +84,8 @@ export async function POST(request: NextRequest) {
       .limit(6)
 
     // Fetch last 2 days of structured metrics for context (minimal)
-    const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
+    const twoDaysAgoString = twoDaysAgo.toISOString().split('T')[0]
     const { data: weeklyMetrics } = await supabase
       .from('user_daily_metrics')
       .select(`
@@ -97,7 +98,7 @@ export async function POST(request: NextRequest) {
         )
       `)
       .eq('user_id', user.id)
-      .gte('metric_date', twoDaysAgo)
+      .gte('metric_date', twoDaysAgoString)
       .order('metric_date', { ascending: false })
       .limit(10)
 

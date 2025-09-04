@@ -5,6 +5,13 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { ChevronLeft, ChevronRight, Sun, Calendar, RefreshCw, Loader2, Brain, TrendingUp, Lightbulb } from 'lucide-react'
+import { 
+  getTodayInTimezone, 
+  formatDateLong, 
+  navigateDateInTimezone,
+  isTodayInTimezone,
+  isFutureDateInTimezone
+} from '@/lib/timezone-utils'
 import { JournalMetrics } from './journal-metrics'
 import { usePatternRecognition } from '@/hooks/use-pattern-recognition'
 
@@ -82,12 +89,7 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
 
   // Format date for display
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', { 
-      weekday: 'long', 
-      month: 'short', 
-      day: 'numeric', 
-      year: 'numeric' 
-    })
+    return formatDateLong(date)
   }
 
   // Navigate to previous/next day
