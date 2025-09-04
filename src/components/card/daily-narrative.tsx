@@ -191,6 +191,12 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
         if (message.includes('resort') || message.includes('sedona') || message.includes('views')) {
           activities.push('Resort time')
         }
+        if (message.includes('dinner') || message.includes('restaurant') || message.includes('grill')) {
+          activities.push('Dining out')
+        }
+        if (message.includes('uptown') || message.includes('shops') || message.includes('shopping')) {
+          activities.push('Exploring town')
+        }
       }
       
       // Extract sleep insights
@@ -257,12 +263,20 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
         narrativeText = `Got an early start to the day and felt energized.`
       }
     } else if (notes.length > 0) {
-      // Use the cleaned insights
+      // Create rich narrative from actual insights
       const cleanNotes = notes.map(note => note.toLowerCase())
-      if (cleanNotes.some(note => note.includes('sleep') && note.includes('outdoors'))) {
-        narrativeText = `Had a great night's sleep and spent time enjoying the beautiful outdoors. The fresh air and peaceful surroundings were exactly what was needed.`
+      
+      // Check for specific patterns and create contextual narratives
+      if (cleanNotes.some(note => note.includes('dinner') && note.includes('restaurant'))) {
+        const restaurantNote = notes.find(note => note.toLowerCase().includes('restaurant'))
+        narrativeText = `Planning a nice dinner out tonight. ${restaurantNote} Looking forward to a relaxing evening with good food and company.`
+      } else if (cleanNotes.some(note => note.includes('walk') || note.includes('hike'))) {
+        narrativeText = `Enjoyed some outdoor time today. ${notes.join('. ')}. Fresh air and movement are always energizing.`
+      } else if (cleanNotes.some(note => note.includes('sedona') || note.includes('uptown'))) {
+        narrativeText = `Exploring the beautiful Sedona area. ${notes.join('. ')}. The scenery and atmosphere here are truly special.`
       } else {
-        narrativeText = `Shared some thoughts and experiences from the day. ${notes.join('. ')}.`
+        // Use insights directly for rich, personalized narrative
+        narrativeText = `${notes.join('. ')}. It's been a meaningful day with good experiences and connections.`
       }
     } else {
       // Fallback
