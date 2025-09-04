@@ -337,13 +337,16 @@ export async function POST(request: NextRequest) {
           
           // Trigger daily narrative generation (non-blocking)
           const today = new Date().toISOString().split('T')[0]
-          fetch('/api/narratives/generate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ date: today })
-          }).catch(error => {
+          
+          // Call narrative generation directly instead of HTTP fetch
+          try {
+            // Import and call the narrative generation logic directly
+            const { generateDailyNarrative } = await import('@/lib/narrative-generator')
+            await generateDailyNarrative(user.id, today)
+            console.log('✅ Daily narrative generation triggered')
+          } catch (error) {
             console.error('Error triggering narrative generation:', error)
-          })
+          }
         }
       } catch (error) {
         console.error('Error storing conversation insights:', error)
