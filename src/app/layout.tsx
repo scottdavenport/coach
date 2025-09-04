@@ -1,16 +1,17 @@
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import "./globals.css";
-import { AuthProvider } from "@/components/providers/auth-provider";
+import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
+import './globals.css';
+import { AuthProvider } from '@/components/providers/auth-provider';
 
 const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
+  subsets: ['latin'],
+  variable: '--font-inter',
 });
 
 export const metadata: Metadata = {
-  title: "Coach - Your AI Health & Fitness Companion",
-  description: "A conversational AI coach that helps you track your health, fitness, and wellness journey through natural conversation.",
+  title: 'Coach - Your AI Health & Fitness Companion',
+  description:
+    'A conversational AI coach that helps you track your health, fitness, and wellness journey through natural conversation.',
 };
 
 export default function RootLayout({
@@ -21,9 +22,7 @@ export default function RootLayout({
   return (
     <html lang="en" data-theme="dark">
       <body className={`${inter.variable} font-sans antialiased`}>
-        <AuthProvider>
-          {children}
-        </AuthProvider>
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );

@@ -1,12 +1,12 @@
-import { createClient } from '@/lib/supabase/client'
-import { ParsedConversation } from '@/types'
+import { createClient } from '@/lib/supabase/client';
+import { ParsedConversation } from '@/types';
 
 export interface HistoricalUpdate {
-  date: string
-  type: 'activity' | 'mood' | 'energy' | 'note' | 'context'
-  description: string
-  confidence: number
-  should_update_historical: boolean
+  date: string;
+  type: 'activity' | 'mood' | 'energy' | 'note' | 'context';
+  description: string;
+  confidence: number;
+  should_update_historical: boolean;
 }
 
 /**
@@ -18,18 +18,21 @@ export async function processHistoricalUpdates(
   historicalUpdates: HistoricalUpdate[]
 ): Promise<void> {
   if (!historicalUpdates || historicalUpdates.length === 0) {
-    return
+    return;
   }
 
-  const supabase = createClient()
+  const supabase = createClient();
 
   for (const update of historicalUpdates) {
     if (!update.should_update_historical || !update.date) {
-      continue
+      continue;
     }
 
     try {
-      console.log(`🔄 Processing historical update for ${update.date}:`, update)
+      console.log(
+        `🔄 Processing historical update for ${update.date}:`,
+        update
+      );
 
       // Check if a journal entry exists for this date
       const { data: existingEntry } = await supabase
@@ -37,22 +40,30 @@ export async function processHistoricalUpdates(
         .select('*')
         .eq('user_id', userId)
         .eq('narrative_date', update.date)
-        .single()
+        .single();
 
       if (existingEntry) {
         // Update existing journal entry with new context
-        await updateExistingJournalEntry(userId, update.date, update, existingEntry)
+        await updateExistingJournalEntry(
+          userId,
+          update.date,
+          update,
+          existingEntry
+        );
       } else {
         // Create new journal entry for this date
-        await createNewJournalEntry(userId, update.date, update)
+        await createNewJournalEntry(userId, update.date, update);
       }
 
       // Also update the events table for historical tracking
-      await updateEventsTable(userId, update.date, update)
+      await updateEventsTable(userId, update.date, update);
 
-      console.log(`✅ Historical update processed for ${update.date}`)
+      console.log(`✅ Historical update processed for ${update.date}`);
     } catch (error) {
-      console.error(`❌ Error processing historical update for ${update.date}:`, error)
+      console.error(
+        `❌ Error processing historical update for ${update.date}:`,
+        error
+      );
     }
   }
 }
@@ -66,23 +77,26 @@ async function updateExistingJournalEntry(
   update: HistoricalUpdate,
   existingEntry: any
 ): Promise<void> {
-  const supabase = createClient()
+  const supabase = createClient();
 
   // Merge new context with existing data
-  const updatedData = mergeHistoricalContext(existingEntry, update)
+  const updatedData = mergeHistoricalContext(existingEntry, update);
 
   const { error } = await supabase
     .from('daily_narratives')
     .update({
       ...updatedData,
       last_updated: new Date().toISOString(),
-      data_sources: [...(existingEntry.data_sources || []), 'historical_update']
+      data_sources: [
+        ...(existingEntry.data_sources || []),
+        'historical_update',
+      ],
     })
     .eq('user_id', userId)
-    .eq('narrative_date', date)
+    .eq('narrative_date', date);
 
   if (error) {
-    throw new Error(`Failed to update journal entry: ${error.message}`)
+    throw new Error(`Failed to update journal entry: ${error.message}`);
   }
 }
 
@@ -94,22 +108,20 @@ async function createNewJournalEntry(
   date: string,
   update: HistoricalUpdate
 ): Promise<void> {
-  const supabase = createClient()
+  const supabase = createClient();
 
-  const journalData = createJournalFromHistoricalUpdate(update)
+  const journalData = createJournalFromHistoricalUpdate(update);
 
-  const { error } = await supabase
-    .from('daily_narratives')
-    .insert({
-      user_id: userId,
-      narrative_date: date,
-      ...journalData,
-      data_sources: ['historical_update'],
-      last_updated: new Date().toISOString()
-    })
+  const { error } = await supabase.from('daily_narratives').insert({
+    user_id: userId,
+    narrative_date: date,
+    ...journalData,
+    data_sources: ['historical_update'],
+    last_updated: new Date().toISOString(),
+  });
 
   if (error) {
-    throw new Error(`Failed to create journal entry: ${error.message}`)
+    throw new Error(`Failed to create journal entry: ${error.message}`);
   }
 }
 
@@ -121,7 +133,7 @@ async function updateEventsTable(
   date: string,
   update: HistoricalUpdate
 ): Promise<void> {
-  const supabase = createClient()
+  const supabase = createClient();
 
   const eventData = {
     user_id: userId,
@@ -131,17 +143,15 @@ async function updateEventsTable(
       source: 'historical_update',
       confidence: update.confidence,
       original_date: date,
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
     },
-    created_at: new Date().toISOString()
-  }
+    created_at: new Date().toISOString(),
+  };
 
-  const { error } = await supabase
-    .from('events')
-    .insert(eventData)
+  const { error } = await supabase.from('events').insert(eventData);
 
   if (error) {
-    console.error('Failed to update events table:', error)
+    console.error('Failed to update events table:', error);
     // Don't throw here as this is secondary to journal updates
   }
 }
@@ -149,58 +159,64 @@ async function updateEventsTable(
 /**
  * Merge new historical context with existing journal data
  */
-function mergeHistoricalContext(existingEntry: any, update: HistoricalUpdate): any {
-  const merged = { ...existingEntry }
+function mergeHistoricalContext(
+  existingEntry: any,
+  update: HistoricalUpdate
+): any {
+  const merged = { ...existingEntry };
 
   switch (update.type) {
     case 'activity':
-      if (!merged.daily_schedule) merged.daily_schedule = { activities: [] }
-      if (!merged.daily_schedule.activities) merged.daily_schedule.activities = []
-      
+      if (!merged.daily_schedule) merged.daily_schedule = { activities: [] };
+      if (!merged.daily_schedule.activities)
+        merged.daily_schedule.activities = [];
+
       // Add new activity if it doesn't already exist
       const activityExists = merged.daily_schedule.activities.some(
         (a: any) => a.description === update.description
-      )
+      );
       if (!activityExists) {
         merged.daily_schedule.activities.push({
           type: 'activity',
           title: update.description,
           description: update.description,
           status: 'completed',
-          source: 'historical_update'
-        })
+          source: 'historical_update',
+        });
       }
-      break
+      break;
 
     case 'mood':
-      if (!merged.notes_flags) merged.notes_flags = {}
-      merged.notes_flags.mood = extractMoodFromDescription(update.description)
+      if (!merged.notes_flags) merged.notes_flags = {};
+      merged.notes_flags.mood = extractMoodFromDescription(update.description);
       merged.notes_flags.flags = [
         ...(merged.notes_flags.flags || []),
-        `Historical: ${update.description}`
-      ]
-      break
+        `Historical: ${update.description}`,
+      ];
+      break;
 
     case 'energy':
-      if (!merged.notes_flags) merged.notes_flags = {}
-      merged.notes_flags.energy_level = extractEnergyFromDescription(update.description)
+      if (!merged.notes_flags) merged.notes_flags = {};
+      merged.notes_flags.energy_level = extractEnergyFromDescription(
+        update.description
+      );
       merged.notes_flags.flags = [
         ...(merged.notes_flags.flags || []),
-        `Historical: ${update.description}`
-      ]
-      break
+        `Historical: ${update.description}`,
+      ];
+      break;
 
     case 'note':
     case 'context':
-      if (!merged.notes_flags) merged.notes_flags = {}
+      if (!merged.notes_flags) merged.notes_flags = {};
       merged.notes_flags.flags = [
         ...(merged.notes_flags.flags || []),
-        `Historical: ${update.description}`
-      ]
-      break
+        `Historical: ${update.description}`,
+      ];
+      break;
   }
 
-  return merged
+  return merged;
 }
 
 /**
@@ -213,8 +229,8 @@ function createJournalFromHistoricalUpdate(update: HistoricalUpdate): any {
     session_data: {},
     notes_flags: { flags: [] },
     feedback_log: {},
-    weekly_averages: {}
-  }
+    weekly_averages: {},
+  };
 
   switch (update.type) {
     case 'activity':
@@ -223,55 +239,109 @@ function createJournalFromHistoricalUpdate(update: HistoricalUpdate): any {
         title: update.description,
         description: update.description,
         status: 'completed',
-        source: 'historical_update'
-      })
-      break
+        source: 'historical_update',
+      });
+      break;
 
     case 'mood':
-      journalData.notes_flags.mood = extractMoodFromDescription(update.description)
-      journalData.notes_flags.flags.push(`Historical: ${update.description}`)
-      break
+      journalData.notes_flags.mood = extractMoodFromDescription(
+        update.description
+      );
+      journalData.notes_flags.flags.push(`Historical: ${update.description}`);
+      break;
 
     case 'energy':
-      journalData.notes_flags.energy_level = extractEnergyFromDescription(update.description)
-      journalData.notes_flags.flags.push(`Historical: ${update.description}`)
-      break
+      journalData.notes_flags.energy_level = extractEnergyFromDescription(
+        update.description
+      );
+      journalData.notes_flags.flags.push(`Historical: ${update.description}`);
+      break;
 
     case 'note':
     case 'context':
-      journalData.notes_flags.flags.push(`Historical: ${update.description}`)
-      break
+      journalData.notes_flags.flags.push(`Historical: ${update.description}`);
+      break;
   }
 
-  return journalData
+  return journalData;
 }
 
 /**
  * Extract mood rating from description text
  */
 function extractMoodFromDescription(description: string): number {
-  const lowerDesc = description.toLowerCase()
-  
-  if (lowerDesc.includes('great') || lowerDesc.includes('amazing') || lowerDesc.includes('wonderful')) return 9
-  if (lowerDesc.includes('good') || lowerDesc.includes('happy') || lowerDesc.includes('positive')) return 7
-  if (lowerDesc.includes('okay') || lowerDesc.includes('fine') || lowerDesc.includes('neutral')) return 5
-  if (lowerDesc.includes('bad') || lowerDesc.includes('sad') || lowerDesc.includes('negative')) return 3
-  if (lowerDesc.includes('terrible') || lowerDesc.includes('awful') || lowerDesc.includes('depressed')) return 1
-  
-  return 5 // Default neutral
+  const lowerDesc = description.toLowerCase();
+
+  if (
+    lowerDesc.includes('great') ||
+    lowerDesc.includes('amazing') ||
+    lowerDesc.includes('wonderful')
+  )
+    return 9;
+  if (
+    lowerDesc.includes('good') ||
+    lowerDesc.includes('happy') ||
+    lowerDesc.includes('positive')
+  )
+    return 7;
+  if (
+    lowerDesc.includes('okay') ||
+    lowerDesc.includes('fine') ||
+    lowerDesc.includes('neutral')
+  )
+    return 5;
+  if (
+    lowerDesc.includes('bad') ||
+    lowerDesc.includes('sad') ||
+    lowerDesc.includes('negative')
+  )
+    return 3;
+  if (
+    lowerDesc.includes('terrible') ||
+    lowerDesc.includes('awful') ||
+    lowerDesc.includes('depressed')
+  )
+    return 1;
+
+  return 5; // Default neutral
 }
 
 /**
  * Extract energy level from description text
  */
 function extractEnergyFromDescription(description: string): number {
-  const lowerDesc = description.toLowerCase()
-  
-  if (lowerDesc.includes('energetic') || lowerDesc.includes('vibrant') || lowerDesc.includes('peppy')) return 9
-  if (lowerDesc.includes('good') || lowerDesc.includes('decent') || lowerDesc.includes('normal')) return 7
-  if (lowerDesc.includes('okay') || lowerDesc.includes('moderate') || lowerDesc.includes('average')) return 5
-  if (lowerDesc.includes('tired') || lowerDesc.includes('low') || lowerDesc.includes('fatigued')) return 3
-  if (lowerDesc.includes('exhausted') || lowerDesc.includes('drained') || lowerDesc.includes('dead')) return 1
-  
-  return 5 // Default moderate
+  const lowerDesc = description.toLowerCase();
+
+  if (
+    lowerDesc.includes('energetic') ||
+    lowerDesc.includes('vibrant') ||
+    lowerDesc.includes('peppy')
+  )
+    return 9;
+  if (
+    lowerDesc.includes('good') ||
+    lowerDesc.includes('decent') ||
+    lowerDesc.includes('normal')
+  )
+    return 7;
+  if (
+    lowerDesc.includes('okay') ||
+    lowerDesc.includes('moderate') ||
+    lowerDesc.includes('average')
+  )
+    return 5;
+  if (
+    lowerDesc.includes('tired') ||
+    lowerDesc.includes('low') ||
+    lowerDesc.includes('fatigued')
+  )
+    return 3;
+  if (
+    lowerDesc.includes('exhausted') ||
+    lowerDesc.includes('drained') ||
+    lowerDesc.includes('dead')
+  )
+    return 1;
+
+  return 5; // Default moderate
 }

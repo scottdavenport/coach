@@ -9,16 +9,24 @@ interface FilePreviewChipProps {
   className?: string;
 }
 
-export const FilePreviewChip = memo(function FilePreviewChip({ file, onRemove, className = '' }: FilePreviewChipProps) {
+export const FilePreviewChip = memo(function FilePreviewChip({
+  file,
+  onRemove,
+  className = '',
+}: FilePreviewChipProps) {
   const icon = FileProcessor.getFileIcon(file.fileType);
   const formattedSize = FileProcessor.formatFileSize(file.fileSize);
 
   const getStatusColor = () => {
     switch (file.uploadStatus) {
-      case 'uploaded': return 'bg-green-50 border-green-200 text-green-800';
-      case 'uploading': return 'bg-blue-50 border-blue-200 text-blue-800';
-      case 'error': return 'bg-red-50 border-red-200 text-red-800';
-      default: return 'bg-gray-50 border-gray-200 text-gray-800';
+      case 'uploaded':
+        return 'bg-green-50 border-green-200 text-green-800';
+      case 'uploading':
+        return 'bg-blue-50 border-blue-200 text-blue-800';
+      case 'error':
+        return 'bg-red-50 border-red-200 text-red-800';
+      default:
+        return 'bg-gray-50 border-gray-200 text-gray-800';
     }
   };
 
@@ -30,19 +38,25 @@ export const FilePreviewChip = memo(function FilePreviewChip({ file, onRemove, c
   };
 
   return (
-    <div className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg border ${getStatusColor()} ${className}`}>
+    <div
+      className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg border ${getStatusColor()} ${className}`}
+    >
       {/* File icon */}
       <span className="text-sm">{icon}</span>
-      
+
       {/* File info */}
       <div className="flex flex-col min-w-0">
-        <span className="text-sm font-medium truncate max-w-[150px]" title={file.fileName}>
+        <span
+          className="text-sm font-medium truncate max-w-[150px]"
+          title={file.fileName}
+        >
           {file.fileName}
         </span>
         <span className="text-xs opacity-70">
           {formattedSize}
           {file.uploadStatus === 'uploading' && ' • Uploading...'}
-          {file.uploadStatus === 'error' && ` • ${file.errorMessage || 'Error'}`}
+          {file.uploadStatus === 'error' &&
+            ` • ${file.errorMessage || 'Error'}`}
         </span>
       </div>
 
@@ -60,7 +74,7 @@ export const FilePreviewChip = memo(function FilePreviewChip({ file, onRemove, c
       </button>
     </div>
   );
-})
+});
 
 interface FilePreviewListProps {
   files: FileAttachment[];
@@ -68,12 +82,16 @@ interface FilePreviewListProps {
   className?: string;
 }
 
-export const FilePreviewList = memo(function FilePreviewList({ files, onRemoveFile, className = '' }: FilePreviewListProps) {
+export const FilePreviewList = memo(function FilePreviewList({
+  files,
+  onRemoveFile,
+  className = '',
+}: FilePreviewListProps) {
   if (files.length === 0) return null;
 
   return (
     <div className={`flex flex-wrap gap-2 ${className}`}>
-      {files.map((file) => (
+      {files.map(file => (
         <FilePreviewChip
           key={file.id}
           file={file}
@@ -82,4 +100,4 @@ export const FilePreviewList = memo(function FilePreviewList({ files, onRemoveFi
       ))}
     </div>
   );
-})
+});

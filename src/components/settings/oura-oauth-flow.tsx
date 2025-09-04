@@ -1,92 +1,97 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import { Button } from '@/components/ui/button'
-import { 
-  ExternalLink, 
-  CheckCircle, 
-  XCircle, 
+import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import {
+  ExternalLink,
+  CheckCircle,
+  XCircle,
   Loader2,
-  ArrowLeft
-} from 'lucide-react'
+  ArrowLeft,
+} from 'lucide-react';
 
 interface OuraOAuthFlowProps {
-  onSuccess: (accessToken: string, refreshToken: string) => void
-  onCancel: () => void
+  onSuccess: (accessToken: string, refreshToken: string) => void;
+  onCancel: () => void;
 }
 
 export function OuraOAuthFlow({ onSuccess, onCancel }: OuraOAuthFlowProps) {
-  const [step, setStep] = useState<'init' | 'authorizing' | 'success' | 'error'>('init')
-  const [error, setError] = useState<string | null>(null)
-  const [authUrl, setAuthUrl] = useState<string | null>(null)
+  const [step, setStep] = useState<
+    'init' | 'authorizing' | 'success' | 'error'
+  >('init');
+  const [error, setError] = useState<string | null>(null);
+  const [authUrl, setAuthUrl] = useState<string | null>(null);
 
   // Oura OAuth configuration
-  const OURA_CLIENT_ID = process.env.NEXT_PUBLIC_OURA_CLIENT_ID
-  const OURA_REDIRECT_URI = 'http://localhost:3000/auth/oura/callback'
+  const OURA_CLIENT_ID = process.env.NEXT_PUBLIC_OURA_CLIENT_ID;
+  const OURA_REDIRECT_URI = 'http://localhost:3000/auth/oura/callback';
 
   useEffect(() => {
     // Generate OAuth URL
     if (OURA_CLIENT_ID) {
-      const url = new URL('https://cloud.ouraring.com/oauth/authorize')
-      url.searchParams.set('client_id', OURA_CLIENT_ID)
-      url.searchParams.set('redirect_uri', OURA_REDIRECT_URI)
-      url.searchParams.set('response_type', 'code')
-      url.searchParams.set('scope', 'personal')
-      url.searchParams.set('state', generateState())
-      
-      console.log('Generated OAuth URL:', url.toString())
-      setAuthUrl(url.toString())
+      const url = new URL('https://cloud.ouraring.com/oauth/authorize');
+      url.searchParams.set('client_id', OURA_CLIENT_ID);
+      url.searchParams.set('redirect_uri', OURA_REDIRECT_URI);
+      url.searchParams.set('response_type', 'code');
+      url.searchParams.set('scope', 'personal');
+      url.searchParams.set('state', generateState());
+
+      console.log('Generated OAuth URL:', url.toString());
+      setAuthUrl(url.toString());
     } else {
-      setError('Oura client ID not configured')
+      setError('Oura client ID not configured');
     }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const generateState = () => {
     // Generate a random state parameter for security
-    return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
-  }
+    return (
+      Math.random().toString(36).substring(2, 15) +
+      Math.random().toString(36).substring(2, 15)
+    );
+  };
 
   const handleAuthorize = () => {
     if (authUrl) {
-      setStep('authorizing')
+      setStep('authorizing');
       // Open Oura authorization in a popup window
       const popup = window.open(
         authUrl,
         'oura-auth',
         'width=500,height=600,scrollbars=yes,resizable=yes'
-      )
+      );
 
       // Listen for the callback
       const checkClosed = setInterval(() => {
         if (popup?.closed) {
-          clearInterval(checkClosed)
+          clearInterval(checkClosed);
           // Check if we have the tokens in localStorage (set by callback page)
-          const tokens = localStorage.getItem('oura_tokens')
+          const tokens = localStorage.getItem('oura_tokens');
           if (tokens) {
             try {
-              const { access_token, refresh_token } = JSON.parse(tokens)
-              localStorage.removeItem('oura_tokens') // Clean up
-              setStep('success')
+              const { access_token, refresh_token } = JSON.parse(tokens);
+              localStorage.removeItem('oura_tokens'); // Clean up
+              setStep('success');
               setTimeout(() => {
-                onSuccess(access_token, refresh_token)
-              }, 1000)
+                onSuccess(access_token, refresh_token);
+              }, 1000);
             } catch {
-              setError('Failed to parse Oura tokens')
-              setStep('error')
+              setError('Failed to parse Oura tokens');
+              setStep('error');
             }
           } else {
-            setError('Authorization was cancelled or failed')
-            setStep('error')
+            setError('Authorization was cancelled or failed');
+            setStep('error');
           }
         }
-      }, 1000)
+      }, 1000);
     }
-  }
+  };
 
   const handleRetry = () => {
-    setStep('init')
-    setError(null)
-  }
+    setStep('init');
+    setError(null);
+  };
 
   if (step === 'authorizing') {
     return (
@@ -97,7 +102,7 @@ export function OuraOAuthFlow({ onSuccess, onCancel }: OuraOAuthFlowProps) {
           Please complete the authorization in the popup window...
         </p>
       </div>
-    )
+    );
   }
 
   if (step === 'success') {
@@ -109,7 +114,7 @@ export function OuraOAuthFlow({ onSuccess, onCancel }: OuraOAuthFlowProps) {
           Your Oura Ring is now connected. Redirecting...
         </p>
       </div>
-    )
+    );
   }
 
   if (step === 'error') {
@@ -129,7 +134,7 @@ export function OuraOAuthFlow({ onSuccess, onCancel }: OuraOAuthFlowProps) {
           </Button>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -170,13 +175,14 @@ export function OuraOAuthFlow({ onSuccess, onCancel }: OuraOAuthFlowProps) {
         {!OURA_CLIENT_ID && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4">
             <p className="text-sm text-red-600">
-              Oura integration is not configured. Please add NEXT_PUBLIC_OURA_CLIENT_ID to your environment variables.
+              Oura integration is not configured. Please add
+              NEXT_PUBLIC_OURA_CLIENT_ID to your environment variables.
             </p>
           </div>
         )}
 
         <div className="flex gap-2 pt-4">
-          <Button 
+          <Button
             onClick={handleAuthorize}
             disabled={!authUrl || !OURA_CLIENT_ID}
             className="flex items-center gap-2"
@@ -190,5 +196,5 @@ export function OuraOAuthFlow({ onSuccess, onCancel }: OuraOAuthFlowProps) {
         </div>
       </div>
     </div>
-  )
+  );
 }

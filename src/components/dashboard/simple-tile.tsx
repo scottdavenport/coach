@@ -1,18 +1,18 @@
-'use client'
+'use client';
 
-import { useState, useRef } from 'react'
+import { useState, useRef } from 'react';
 
 interface SimpleTileProps {
-  label: string
-  value: any
-  onSave: (value: any) => Promise<void>
-  fieldType?: 'text' | 'number'
-  placeholder?: string
-  icon?: string
-  unit?: string
-  source?: string
-  confidence?: number
-  className?: string
+  label: string;
+  value: any;
+  onSave: (value: any) => Promise<void>;
+  fieldType?: 'text' | 'number';
+  placeholder?: string;
+  icon?: string;
+  unit?: string;
+  source?: string;
+  confidence?: number;
+  className?: string;
 }
 
 export function SimpleTile({
@@ -24,55 +24,56 @@ export function SimpleTile({
   icon,
   unit,
   source,
-  confidence
+  confidence,
 }: SimpleTileProps) {
-  const [isEditing, setIsEditing] = useState(false)
-  const [editValue, setEditValue] = useState(value)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState(value);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const handleSave = async () => {
     try {
-      const parsedValue = fieldType === 'number' ? parseFloat(editValue) || 0 : editValue
-      await onSave(parsedValue)
-      setIsEditing(false)
+      const parsedValue =
+        fieldType === 'number' ? parseFloat(editValue) || 0 : editValue;
+      await onSave(parsedValue);
+      setIsEditing(false);
     } catch (error) {
-      console.error('Failed to save:', error)
-      setEditValue(value)
-      setIsEditing(false)
+      console.error('Failed to save:', error);
+      setEditValue(value);
+      setIsEditing(false);
     }
-  }
+  };
 
   const handleCancel = () => {
-    setEditValue(value)
-    setIsEditing(false)
-  }
+    setEditValue(value);
+    setIsEditing(false);
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
-      e.preventDefault()
-      handleSave()
+      e.preventDefault();
+      handleSave();
     } else if (e.key === 'Escape') {
-      e.preventDefault()
-      handleCancel()
+      e.preventDefault();
+      handleCancel();
     }
-  }
+  };
 
   const formatValue = (val: any) => {
-    if (val === null || val === undefined) return '—'
-    
+    if (val === null || val === undefined) return '—';
+
     // Handle nested objects (like the corrupted sleep_quality data)
     if (typeof val === 'object' && val !== null) {
       if (val.value !== undefined) {
-        return formatValue(val.value)
+        return formatValue(val.value);
       }
-      return JSON.stringify(val)
+      return JSON.stringify(val);
     }
-    
-    if (typeof val === 'number') return val.toString()
-    if (typeof val === 'string') return val
-    if (typeof val === 'boolean') return val ? 'Yes' : 'No'
-    return JSON.stringify(val)
-  }
+
+    if (typeof val === 'number') return val.toString();
+    if (typeof val === 'string') return val;
+    if (typeof val === 'boolean') return val ? 'Yes' : 'No';
+    return JSON.stringify(val);
+  };
 
   return (
     <div className="min-h-[120px] flex flex-col bg-card/60 backdrop-blur-sm border border-line/40 rounded-lg p-4 hover:bg-card/80 transition-colors">
@@ -106,7 +107,7 @@ export function SimpleTile({
               ref={inputRef}
               type={fieldType === 'number' ? 'number' : 'text'}
               value={editValue}
-              onChange={(e) => setEditValue(e.target.value)}
+              onChange={e => setEditValue(e.target.value)}
               onBlur={handleSave}
               onKeyDown={handleKeyDown}
               placeholder={placeholder}
@@ -120,12 +121,12 @@ export function SimpleTile({
                 textOverflow: 'clip',
                 wordBreak: 'break-word',
                 whiteSpace: 'normal',
-                overflowWrap: 'break-word'
+                overflowWrap: 'break-word',
               }}
             />
           </div>
         ) : (
-          <div 
+          <div
             className="text-sm font-medium break-words leading-tight w-full cursor-pointer hover:text-primary transition-colors"
             onClick={() => setIsEditing(true)}
             style={{
@@ -133,7 +134,7 @@ export function SimpleTile({
               lineHeight: '1.4',
               wordBreak: 'break-word',
               whiteSpace: 'normal',
-              overflowWrap: 'break-word'
+              overflowWrap: 'break-word',
             }}
           >
             {formatValue(value)}
@@ -148,5 +149,5 @@ export function SimpleTile({
         </div>
       )}
     </div>
-  )
+  );
 }

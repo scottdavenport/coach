@@ -1,18 +1,21 @@
-import { FileText, Image, Upload } from 'lucide-react'
+import { FileText, Image, Upload } from 'lucide-react';
 
 interface FileUploadMenuProps {
-  onFileSelect: (type: 'all' | 'images' | 'documents') => void
-  disabled?: boolean
+  onFileSelect: (type: 'all' | 'images' | 'documents') => void;
+  disabled?: boolean;
 }
 
-export function FileUploadMenu({ onFileSelect, disabled = false }: FileUploadMenuProps) {
+export function FileUploadMenu({
+  onFileSelect,
+  disabled = false,
+}: FileUploadMenuProps) {
   return (
     <div className="absolute bottom-full left-0 mb-2 bg-card border border-line rounded-xl shadow-card2 p-2 min-w-[220px]">
       <div className="space-y-1">
         <div className="px-3 py-1 text-xs font-medium text-muted border-b border-line">
           Upload Files
         </div>
-        
+
         <button
           onClick={() => onFileSelect('all')}
           disabled={disabled}
@@ -26,7 +29,7 @@ export function FileUploadMenu({ onFileSelect, disabled = false }: FileUploadMen
             </div>
           </div>
         </button>
-        
+
         <button
           onClick={() => onFileSelect('images')}
           disabled={disabled}
@@ -40,7 +43,7 @@ export function FileUploadMenu({ onFileSelect, disabled = false }: FileUploadMen
             </div>
           </div>
         </button>
-        
+
         <button
           onClick={() => onFileSelect('documents')}
           disabled={disabled}
@@ -50,7 +53,9 @@ export function FileUploadMenu({ onFileSelect, disabled = false }: FileUploadMen
             <FileText className="h-4 w-4 text-muted" />
             <div className="text-left">
               <div>Documents Only</div>
-              <div className="text-xs text-muted">PDF, Word, Excel, CSV, Text</div>
+              <div className="text-xs text-muted">
+                PDF, Word, Excel, CSV, Text
+              </div>
             </div>
           </div>
         </button>
@@ -60,5 +65,5 @@ export function FileUploadMenu({ onFileSelect, disabled = false }: FileUploadMen
         </div>
       </div>
     </div>
-  )
+  );
 }

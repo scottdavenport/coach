@@ -1,62 +1,69 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { FileProcessor } from '@/lib/file-processing'
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase/server';
+import { FileProcessor } from '@/lib/file-processing';
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const formData = await request.formData()
-    const files = formData.getAll('files') as File[]
+    const formData = await request.formData();
+    const files = formData.getAll('files') as File[];
 
     if (files.length === 0) {
-      return NextResponse.json({ error: 'No files provided' }, { status: 400 })
+      return NextResponse.json({ error: 'No files provided' }, { status: 400 });
     }
 
     // Validate files
-    const validationResult = FileProcessor.validateFileList(files)
+    const validationResult = FileProcessor.validateFileList(files);
     if (!validationResult.isValid) {
-      return NextResponse.json({ error: validationResult.error }, { status: 400 })
+      return NextResponse.json(
+        { error: validationResult.error },
+        { status: 400 }
+      );
     }
 
-    const results = []
+    const results = [];
 
     for (const file of files) {
       try {
         // Upload to Supabase Storage
-        const fileExt = file.name.split('.').pop()
-        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`
-        const filePath = `${user.id}/uploads/${fileName}`
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+        const filePath = `${user.id}/uploads/${fileName}`;
 
         const { error: uploadError } = await supabase.storage
           .from('user-uploads')
           .upload(filePath, file, {
             cacheControl: '3600',
-            upsert: false
-          })
+            upsert: false,
+          });
 
         if (uploadError) {
-          throw new Error(`Upload failed: ${uploadError.message}`)
+          throw new Error(`Upload failed: ${uploadError.message}`);
         }
 
         // Get signed URL
-        const { data: { signedUrl } } = await supabase.storage
+        const {
+          data: { signedUrl },
+        } = await supabase.storage
           .from('user-uploads')
-          .createSignedUrl(filePath, 3600)
+          .createSignedUrl(filePath, 3600);
 
         if (!signedUrl) {
-          throw new Error('Failed to create signed URL')
+          throw new Error('Failed to create signed URL');
         }
 
         // Process file content (for documents)
-        let processedContent = null
-        const category = FileProcessor.getFileTypeCategory(file.type)
-        
+        let processedContent = null;
+        const category = FileProcessor.getFileTypeCategory(file.type);
+
         if (category === 'document') {
           try {
             // For server-side processing, we'll need to implement these differently
@@ -65,14 +72,14 @@ export async function POST(request: NextRequest) {
               type: 'document',
               mimeType: file.type,
               size: file.size,
-              requiresProcessing: true
-            }
+              requiresProcessing: true,
+            };
           } catch (error) {
-            console.warn('Document processing failed:', error)
+            console.warn('Document processing failed:', error);
             processedContent = {
               type: 'document',
-              error: 'Processing failed'
-            }
+              error: 'Processing failed',
+            };
           }
         }
 
@@ -87,13 +94,15 @@ export async function POST(request: NextRequest) {
             file_size: file.size,
             mime_type: file.type,
             processing_status: category === 'image' ? 'pending' : 'completed',
-            extracted_content: processedContent ? JSON.stringify(processedContent) : null
+            extracted_content: processedContent
+              ? JSON.stringify(processedContent)
+              : null,
           })
           .select()
-          .single()
+          .single();
 
         if (dbError) {
-          console.error('Database error:', dbError)
+          console.error('Database error:', dbError);
         }
 
         results.push({
@@ -104,26 +113,27 @@ export async function POST(request: NextRequest) {
           fileSize: file.size,
           category,
           uploadId: uploadRecord?.id,
-          processedContent
-        })
-
+          processedContent,
+        });
       } catch (error) {
-        console.error('File processing error:', error)
+        console.error('File processing error:', error);
         results.push({
           success: false,
           fileName: file.name,
-          error: error instanceof Error ? error.message : 'Unknown error'
-        })
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
       }
     }
 
-    return NextResponse.json({ results })
-
+    return NextResponse.json({ results });
   } catch (error) {
-    console.error('File processing API error:', error)
-    return NextResponse.json({ 
-      error: 'Internal server error',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 })
+    console.error('File processing API error:', error);
+    return NextResponse.json(
+      {
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 }
+    );
   }
 }

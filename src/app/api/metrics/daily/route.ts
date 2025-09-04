@@ -1,25 +1,31 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase/server';
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { searchParams } = new URL(request.url)
-    const date = searchParams.get('date')
+    const { searchParams } = new URL(request.url);
+    const date = searchParams.get('date');
 
     if (!date) {
-      return NextResponse.json({ error: 'Date parameter required' }, { status: 400 })
+      return NextResponse.json(
+        { error: 'Date parameter required' },
+        { status: 400 }
+      );
     }
 
     const { data: metrics, error } = await supabase
       .from('user_daily_metrics')
-      .select(`
+      .select(
+        `
         *,
         standard_metrics (
           metric_key,
@@ -33,43 +39,51 @@ export async function GET(request: NextRequest) {
             color
           )
         )
-      `)
+      `
+      )
       .eq('user_id', user.id)
       .eq('metric_date', date)
-      .order('created_at')
+      .order('created_at');
 
     if (error) {
-      console.error('Error fetching daily metrics:', error)
-      return NextResponse.json({ error: 'Failed to fetch metrics' }, { status: 500 })
+      console.error('Error fetching daily metrics:', error);
+      return NextResponse.json(
+        { error: 'Failed to fetch metrics' },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({
       success: true,
-      metrics
-    })
-
+      metrics,
+    });
   } catch (error) {
-    console.error('Daily metrics error:', error)
+    console.error('Daily metrics error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
-    )
+    );
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { metrics } = await request.json()
+    const { metrics } = await request.json();
 
     if (!Array.isArray(metrics)) {
-      return NextResponse.json({ error: 'Metrics array required' }, { status: 400 })
+      return NextResponse.json(
+        { error: 'Metrics array required' },
+        { status: 400 }
+      );
     }
 
     const { data, error } = await supabase
@@ -84,27 +98,29 @@ export async function POST(request: NextRequest) {
           boolean_value: metric.boolean_value,
           time_value: metric.time_value,
           source: metric.source,
-          confidence: metric.confidence || 1.0
+          confidence: metric.confidence || 1.0,
         })),
         { onConflict: 'user_id,metric_id,metric_date' }
       )
-      .select()
+      .select();
 
     if (error) {
-      console.error('Error storing daily metrics:', error)
-      return NextResponse.json({ error: 'Failed to store metrics' }, { status: 500 })
+      console.error('Error storing daily metrics:', error);
+      return NextResponse.json(
+        { error: 'Failed to store metrics' },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({
       success: true,
-      metrics: data
-    })
-
+      metrics: data,
+    });
   } catch (error) {
-    console.error('Store daily metrics error:', error)
+    console.error('Store daily metrics error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
-    )
+    );
   }
 }

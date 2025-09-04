@@ -1,15 +1,15 @@
-import { createClient } from '@/lib/supabase/server'
-import OpenAI from 'openai'
+import { createClient } from '@/lib/supabase/server';
+import OpenAI from 'openai';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
-})
+});
 
 export async function generateDailyNarrative(userId: string, date: string) {
   try {
-    const supabase = await createClient()
-    
-    console.log(`📝 Generating daily narrative for ${date}`)
+    const supabase = await createClient();
+
+    console.log(`📝 Generating daily narrative for ${date}`);
 
     // Fetch conversation insights for the date
     const { data: insights, error: insightsError } = await supabase
@@ -17,16 +17,16 @@ export async function generateDailyNarrative(userId: string, date: string) {
       .select('*')
       .eq('user_id', userId)
       .eq('conversation_date', date)
-      .order('created_at', { ascending: true })
+      .order('created_at', { ascending: true });
 
     if (insightsError) {
-      console.error('Error fetching insights:', insightsError)
-      return { success: false, error: 'Failed to fetch insights' }
+      console.error('Error fetching insights:', insightsError);
+      return { success: false, error: 'Failed to fetch insights' };
     }
 
     if (!insights || insights.length === 0) {
-      console.log('No insights found for date:', date)
-      return { success: true, message: 'No insights to process' }
+      console.log('No insights found for date:', date);
+      return { success: true, message: 'No insights to process' };
     }
 
     // Fetch related file attachments via conversation links
@@ -35,15 +35,16 @@ export async function generateDailyNarrative(userId: string, date: string) {
       .select('id')
       .eq('user_id', userId)
       .gte('created_at', `${date}T00:00:00.000Z`)
-      .lt('created_at', `${date}T23:59:59.999Z`)
+      .lt('created_at', `${date}T23:59:59.999Z`);
 
-    let fileAttachments: any[] = []
+    let fileAttachments: any[] = [];
     if (conversationIds && conversationIds.length > 0) {
-      const conversationIdList = conversationIds.map(c => c.id)
-      
+      const conversationIdList = conversationIds.map(c => c.id);
+
       const { data: attachments } = await supabase
         .from('conversation_file_attachments')
-        .select(`
+        .select(
+          `
           user_uploads (
             file_name,
             file_type,
@@ -52,13 +53,14 @@ export async function generateDailyNarrative(userId: string, date: string) {
             extracted_content,
             mime_type
           )
-        `)
+        `
+        )
         .in('conversation_id', conversationIdList)
-        .order('attachment_order', { ascending: true })
-      
-      fileAttachments = attachments || []
+        .order('attachment_order', { ascending: true });
+
+      fileAttachments = attachments || [];
     }
-    
+
     // Also get any files uploaded today (fallback)
     const { data: todaysFiles } = await supabase
       .from('user_uploads')
@@ -66,18 +68,19 @@ export async function generateDailyNarrative(userId: string, date: string) {
       .eq('user_id', userId)
       .gte('created_at', `${date}T00:00:00.000Z`)
       .lt('created_at', `${date}T23:59:59.999Z`)
-      .order('created_at', { ascending: true })
-    
+      .order('created_at', { ascending: true });
+
     // Combine linked files and today's files
     const allFileAttachments = [
       ...fileAttachments.map(f => f.user_uploads).filter(Boolean),
-      ...(todaysFiles || [])
-    ]
+      ...(todaysFiles || []),
+    ];
 
     // Fetch any health metrics for the date
     const { data: healthMetrics } = await supabase
       .from('user_daily_metrics')
-      .select(`
+      .select(
+        `
         metric_value,
         text_value,
         standard_metrics (
@@ -85,37 +88,45 @@ export async function generateDailyNarrative(userId: string, date: string) {
           display_name,
           unit
         )
-      `)
+      `
+      )
       .eq('user_id', userId)
-      .eq('metric_date', date)
+      .eq('metric_date', date);
 
     // Generate rich narrative using AI
-    const narrative = await generateRichNarrative(insights, allFileAttachments || [], healthMetrics || [])
+    const narrative = await generateRichNarrative(
+      insights,
+      allFileAttachments || [],
+      healthMetrics || []
+    );
 
     // Store multiple journal entries (one per major topic/activity)
-    const journalEntries = await createJournalEntries(narrative, userId, date)
+    const journalEntries = await createJournalEntries(narrative, userId, date);
 
     // Check for existing entries to avoid duplicates while allowing accumulation
     const { data: existingEntries } = await supabase
       .from('daily_journal')
       .select('entry_type, category, content')
       .eq('user_id', userId)
-      .eq('journal_date', date)
-    
+      .eq('journal_date', date);
+
     // Filter out only exact duplicate content but allow accumulation
     const newEntries = journalEntries.filter(entry => {
       // Only exclude if EXACT same content exists
-      return !existingEntries?.some(existing => 
-        existing.entry_type === entry.type && 
-        existing.category === entry.category &&
-        existing.content?.trim() === entry.content.trim()
-      )
-    })
+      return !existingEntries?.some(
+        existing =>
+          existing.entry_type === entry.type &&
+          existing.category === entry.category &&
+          existing.content?.trim() === entry.content.trim()
+      );
+    });
 
-    console.log(`📊 Journal entry filtering: ${journalEntries.length} generated, ${newEntries.length} new, ${journalEntries.length - newEntries.length} filtered as duplicates`)
+    console.log(
+      `📊 Journal entry filtering: ${journalEntries.length} generated, ${newEntries.length} new, ${journalEntries.length - newEntries.length} filtered as duplicates`
+    );
 
     // Save all new entries to daily_journal table
-    const results = []
+    const results = [];
     for (const entry of newEntries) {
       try {
         const { data, error } = await supabase
@@ -128,48 +139,56 @@ export async function generateDailyNarrative(userId: string, date: string) {
             content: entry.content,
             source: 'conversation',
             confidence: entry.confidence,
-            updated_at: new Date().toISOString()
+            updated_at: new Date().toISOString(),
           })
           .select()
-          .single()
+          .single();
 
         if (error) {
-          console.error('Error saving journal entry:', error)
-          results.push({ error })
+          console.error('Error saving journal entry:', error);
+          results.push({ error });
         } else {
-          console.log('✅ Saved journal entry:', entry.type, entry.category, entry.content.substring(0, 50) + '...')
-          results.push({ data })
+          console.log(
+            '✅ Saved journal entry:',
+            entry.type,
+            entry.category,
+            entry.content.substring(0, 50) + '...'
+          );
+          results.push({ data });
         }
       } catch (err) {
-        console.error('Exception saving journal entry:', err)
-        results.push({ error: err })
+        console.error('Exception saving journal entry:', err);
+        results.push({ error: err });
       }
     }
 
-    const errors = results.filter(r => r.error)
+    const errors = results.filter(r => r.error);
     if (errors.length > 0) {
-      console.error('Some journal entries failed to save:', errors)
+      console.error('Some journal entries failed to save:', errors);
     }
 
-    console.log('✅ Created/updated daily journal entries:', newEntries.length)
-    return { 
-      success: true, 
+    console.log('✅ Created/updated daily journal entries:', newEntries.length);
+    return {
+      success: true,
       entriesCreated: newEntries.length,
       entriesFiltered: journalEntries.length - newEntries.length,
       insightsProcessed: insights.length,
-      fileAttachmentsProcessed: fileAttachments?.length || 0
-    }
-
+      fileAttachmentsProcessed: fileAttachments?.length || 0,
+    };
   } catch (error) {
-    console.error('Error generating narrative:', error)
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
-    }
+    console.error('Error generating narrative:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
   }
 }
 
-async function generateRichNarrative(insights: any[], fileAttachments: any[], healthMetrics: any[]) {
+async function generateRichNarrative(
+  insights: any[],
+  fileAttachments: any[],
+  healthMetrics: any[]
+) {
   try {
     // Prepare comprehensive context for AI
     const conversationContext = insights.map(insight => ({
@@ -177,8 +196,8 @@ async function generateRichNarrative(insights: any[], fileAttachments: any[], he
       insights: insight.insights,
       dataTypes: insight.data_types,
       followUpQuestions: insight.follow_up_questions,
-      timestamp: insight.created_at
-    }))
+      timestamp: insight.created_at,
+    }));
 
     // Prepare file context
     const fileContext = fileAttachments.map(attachment => ({
@@ -187,21 +206,31 @@ async function generateRichNarrative(insights: any[], fileAttachments: any[], he
       ocrText: attachment.ocr_text,
       extractedContent: attachment.extracted_content,
       processedData: attachment.processed_data,
-      mimeType: attachment.mime_type
-    }))
+      mimeType: attachment.mime_type,
+    }));
 
     // Prepare health context
     const healthContext = healthMetrics.map(metric => ({
       metric: metric.standard_metrics?.display_name,
       value: metric.metric_value || metric.text_value,
-      unit: metric.standard_metrics?.unit
-    }))
+      unit: metric.standard_metrics?.unit,
+    }));
 
     // Create AI prompt for rich narrative generation
     const prompt = `Create a rich, personal daily journal entry based on the user's conversations and data. Write in first person as if the user is writing their own diary entry. Be specific and contextual.
 
 CONVERSATION DATA:
-${conversationContext.map(c => `- Message: "${c.message}"\n  AI Insights: ${c.insights?.join(', ') || 'None'}\n  Data Types: ${Object.entries(c.dataTypes || {}).filter(([_, v]) => v).map(([k]) => k).join(', ') || 'None'}`).join('\n')}
+${conversationContext
+  .map(
+    c =>
+      `- Message: "${c.message}"\n  AI Insights: ${c.insights?.join(', ') || 'None'}\n  Data Types: ${
+        Object.entries(c.dataTypes || {})
+          .filter(([_, v]) => v)
+          .map(([k]) => k)
+          .join(', ') || 'None'
+      }`
+  )
+  .join('\n')}
 
 ${fileContext.length > 0 ? `UPLOADED FILES:\n${fileContext.map(f => `- ${f.fileName} (${f.fileType}):\n  OCR Text: ${f.ocrText?.substring(0, 300) || 'None'}\n  Extracted Content: ${f.extractedContent?.substring(0, 300) || 'None'}\n  Processed Data: ${JSON.stringify(f.processedData || {}).substring(0, 200)}...`).join('\n')}\n` : ''}
 
@@ -244,188 +273,239 @@ Format as JSON:
   "notes": ["Specific insight with context"],
   "health_context": "Health/wellness connection if relevant",
   "follow_up": "Thoughtful, specific follow-up question"
-}`
+}`;
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [{
-        role: "system",
-        content: prompt
-      }],
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content: prompt,
+        },
+      ],
       max_tokens: 600,
       temperature: 0.7,
-    })
+    });
 
-    const responseText = completion.choices[0]?.message?.content || '{}'
-    
+    const responseText = completion.choices[0]?.message?.content || '{}';
+
     try {
-      const parsed = JSON.parse(responseText)
+      const parsed = JSON.parse(responseText);
       return {
         activities: parsed.activities || [],
         narrative: parsed.narrative || 'Had meaningful conversations today.',
         notes: parsed.notes || [],
         healthContext: parsed.health_context || '',
-        followUp: parsed.follow_up || ''
-      }
+        followUp: parsed.follow_up || '',
+      };
     } catch (parseError) {
-      console.error('Error parsing AI narrative response:', parseError)
+      console.error('Error parsing AI narrative response:', parseError);
       // Fallback to basic narrative from insights
-      return buildBasicNarrativeFromInsights(insights, fileAttachments || [])
+      return buildBasicNarrativeFromInsights(insights, fileAttachments || []);
     }
-
   } catch (error) {
-    console.error('Error generating rich narrative:', error)
-    return buildBasicNarrativeFromInsights(insights, fileAttachments || [])
+    console.error('Error generating rich narrative:', error);
+    return buildBasicNarrativeFromInsights(insights, fileAttachments || []);
   }
 }
 
-function buildBasicNarrativeFromInsights(insights: any[], fileAttachments: any[]) {
-  const activities: string[] = []
-  const notes: string[] = []
-  let healthContext = ''
+function buildBasicNarrativeFromInsights(
+  insights: any[],
+  fileAttachments: any[]
+) {
+  const activities: string[] = [];
+  const notes: string[] = [];
+  let healthContext = '';
 
   insights.forEach(insight => {
-    const message = insight.message.toLowerCase()
-    
+    const message = insight.message.toLowerCase();
+
     // Extract specific activities from actual message content with rich context
     if (message.includes('open range grill')) {
-      activities.push('Dinner at Open Range Grill in uptown Sedona')
+      activities.push('Dinner at Open Range Grill in uptown Sedona');
     } else if (message.includes('dinner') && message.includes('sedona')) {
-      activities.push('Dinner in Sedona')
+      activities.push('Dinner in Sedona');
     } else if (message.includes('dinner') && message.includes('restaurant')) {
-      activities.push('Restaurant dinner')
+      activities.push('Restaurant dinner');
     } else if (message.includes('dinner')) {
-      activities.push('Dinner plans')
+      activities.push('Dinner plans');
     }
-    
+
     if (message.includes('uptown sedona')) {
-      activities.push('Exploring uptown Sedona')
+      activities.push('Exploring uptown Sedona');
     } else if (message.includes('sedona')) {
-      activities.push('Sedona exploration')
+      activities.push('Sedona exploration');
     }
-    
+
     // More specific activity detection
-    if (message.includes('golf')) activities.push('Golf outing')
-    if (message.includes('hike')) activities.push('Hiking adventure')
-    if (message.includes('workout')) activities.push('Workout session')
-    if (message.includes('resort')) activities.push('Resort relaxation')
-    if (message.includes('coffee')) activities.push('Coffee time')
-    
+    if (message.includes('golf')) activities.push('Golf outing');
+    if (message.includes('hike')) activities.push('Hiking adventure');
+    if (message.includes('workout')) activities.push('Workout session');
+    if (message.includes('resort')) activities.push('Resort relaxation');
+    if (message.includes('coffee')) activities.push('Coffee time');
+
     // Generate health-focused insights from activities and context
     if (insight.insights && Array.isArray(insight.insights)) {
       insight.insights.forEach((insightText: string) => {
         // Transform basic insights into health/wellness focused ones
-        const lowerInsight = insightText.toLowerCase()
-        
-        if (lowerInsight.includes('dinner') && lowerInsight.includes('restaurant')) {
-          notes.push('Social dining experiences support mental wellness and community connection')
-          notes.push('Mindful restaurant choices can align with nutrition goals')
-        } else if (lowerInsight.includes('outdoor') || lowerInsight.includes('walk') || lowerInsight.includes('hike')) {
-          notes.push('Outdoor activities boost vitamin D and improve cardiovascular health')
-          notes.push('Nature exposure reduces stress and enhances mental clarity')
-        } else if (lowerInsight.includes('workout') || lowerInsight.includes('exercise')) {
-          notes.push('Regular physical activity strengthens both body and mind')
-          notes.push('Exercise consistency builds long-term health resilience')
-        } else if (lowerInsight.includes('sleep') || lowerInsight.includes('rest')) {
-          notes.push('Quality sleep is foundational for recovery and cognitive function')
-          notes.push('Sleep patterns directly impact energy levels and mood regulation')
-        } else if (lowerInsight.includes('coffee') || lowerInsight.includes('energy')) {
-          notes.push('Mindful caffeine intake can optimize energy without disrupting sleep')
+        const lowerInsight = insightText.toLowerCase();
+
+        if (
+          lowerInsight.includes('dinner') &&
+          lowerInsight.includes('restaurant')
+        ) {
+          notes.push(
+            'Social dining experiences support mental wellness and community connection'
+          );
+          notes.push(
+            'Mindful restaurant choices can align with nutrition goals'
+          );
+        } else if (
+          lowerInsight.includes('outdoor') ||
+          lowerInsight.includes('walk') ||
+          lowerInsight.includes('hike')
+        ) {
+          notes.push(
+            'Outdoor activities boost vitamin D and improve cardiovascular health'
+          );
+          notes.push(
+            'Nature exposure reduces stress and enhances mental clarity'
+          );
+        } else if (
+          lowerInsight.includes('workout') ||
+          lowerInsight.includes('exercise')
+        ) {
+          notes.push(
+            'Regular physical activity strengthens both body and mind'
+          );
+          notes.push('Exercise consistency builds long-term health resilience');
+        } else if (
+          lowerInsight.includes('sleep') ||
+          lowerInsight.includes('rest')
+        ) {
+          notes.push(
+            'Quality sleep is foundational for recovery and cognitive function'
+          );
+          notes.push(
+            'Sleep patterns directly impact energy levels and mood regulation'
+          );
+        } else if (
+          lowerInsight.includes('coffee') ||
+          lowerInsight.includes('energy')
+        ) {
+          notes.push(
+            'Mindful caffeine intake can optimize energy without disrupting sleep'
+          );
         } else {
           // Generic wellness insight for any activity
-          notes.push('Engaging in meaningful activities contributes to overall life satisfaction')
+          notes.push(
+            'Engaging in meaningful activities contributes to overall life satisfaction'
+          );
         }
-      })
+      });
     }
-  })
+  });
 
   // Add rich file context to activities and health context
   fileAttachments.forEach(file => {
     if (file.file_type === 'image' && file.ocr_text) {
-      const ocrLower = file.ocr_text.toLowerCase()
-      
+      const ocrLower = file.ocr_text.toLowerCase();
+
       // Heart rate data
-      if (ocrLower.includes('heart rate') || ocrLower.includes('hr') || ocrLower.includes('bpm')) {
-        activities.push('Heart rate monitoring')
-        const hrMatch = file.ocr_text.match(/(\d+)\s*bpm/i)
+      if (
+        ocrLower.includes('heart rate') ||
+        ocrLower.includes('hr') ||
+        ocrLower.includes('bpm')
+      ) {
+        activities.push('Heart rate monitoring');
+        const hrMatch = file.ocr_text.match(/(\d+)\s*bpm/i);
         if (hrMatch) {
-          healthContext += `Heart rate: ${hrMatch[1]} bpm recorded. `
+          healthContext += `Heart rate: ${hrMatch[1]} bpm recorded. `;
         } else {
-          healthContext += `Heart rate data captured from uploaded image. `
+          healthContext += `Heart rate data captured from uploaded image. `;
         }
       }
-      
+
       // Workout data
-      if (ocrLower.includes('workout') || ocrLower.includes('exercise') || ocrLower.includes('calories')) {
-        activities.push('Workout session tracking')
-        healthContext += `Workout metrics analyzed from uploaded screenshot. `
+      if (
+        ocrLower.includes('workout') ||
+        ocrLower.includes('exercise') ||
+        ocrLower.includes('calories')
+      ) {
+        activities.push('Workout session tracking');
+        healthContext += `Workout metrics analyzed from uploaded screenshot. `;
       }
-      
+
       // Sleep data
       if (ocrLower.includes('sleep') || ocrLower.includes('hours slept')) {
-        activities.push('Sleep tracking')
-        healthContext += `Sleep data captured from uploaded image. `
+        activities.push('Sleep tracking');
+        healthContext += `Sleep data captured from uploaded image. `;
       }
-      
+
       // General health screenshot
       if (ocrLower.includes('health') || ocrLower.includes('vitals')) {
-        activities.push('Health monitoring')
-        healthContext += `Health metrics documented via screenshot. `
+        activities.push('Health monitoring');
+        healthContext += `Health metrics documented via screenshot. `;
       }
     }
-    
+
     // Document processing
     if (file.file_type === 'document') {
       if (file.mime_type?.includes('csv') || file.file_name?.endsWith('.csv')) {
-        activities.push('Data analysis')
-        healthContext += `CSV data uploaded and analyzed. `
-        
+        activities.push('Data analysis');
+        healthContext += `CSV data uploaded and analyzed. `;
+
         // Try to extract insights from processed data
         if (file.processed_data) {
           try {
-            const data = typeof file.processed_data === 'string' 
-              ? JSON.parse(file.processed_data) 
-              : file.processed_data
-            
+            const data =
+              typeof file.processed_data === 'string'
+                ? JSON.parse(file.processed_data)
+                : file.processed_data;
+
             if (data.type === 'workout' || data.type === 'fitness') {
-              activities.push('Workout data review')
-              healthContext += `Fitness data from ${file.file_name} analyzed. `
+              activities.push('Workout data review');
+              healthContext += `Fitness data from ${file.file_name} analyzed. `;
             }
           } catch (e) {
-            console.log('Could not parse processed data for', file.file_name)
+            console.log('Could not parse processed data for', file.file_name);
           }
         }
       }
-      
+
       if (file.extracted_content) {
-        const contentLower = file.extracted_content.toLowerCase()
-        if (contentLower.includes('nutrition') || contentLower.includes('calories')) {
-          activities.push('Nutrition tracking')
-          healthContext += `Nutrition data from ${file.file_name} reviewed. `
+        const contentLower = file.extracted_content.toLowerCase();
+        if (
+          contentLower.includes('nutrition') ||
+          contentLower.includes('calories')
+        ) {
+          activities.push('Nutrition tracking');
+          healthContext += `Nutrition data from ${file.file_name} reviewed. `;
         }
         if (contentLower.includes('weight') || contentLower.includes('body')) {
-          activities.push('Body metrics tracking')
-          healthContext += `Body metrics from ${file.file_name} recorded. `
+          activities.push('Body metrics tracking');
+          healthContext += `Body metrics from ${file.file_name} recorded. `;
         }
       }
     }
-    
+
     // Add file upload as an activity
     if (file.file_name) {
-      notes.push(`Uploaded ${file.file_name} for analysis`)
+      notes.push(`Uploaded ${file.file_name} for analysis`);
     }
-  })
+  });
 
   // Create rich narrative based on specific content
-  let narrative = ''
+  let narrative = '';
   if (activities.some(a => a.includes('Open Range Grill'))) {
-    narrative = `Planning an exciting dinner at Open Range Grill in uptown Sedona tonight. Looking forward to exploring the local cuisine and enjoying the beautiful Sedona atmosphere. It feels wonderful to have such a special evening planned in this stunning location.`
+    narrative = `Planning an exciting dinner at Open Range Grill in uptown Sedona tonight. Looking forward to exploring the local cuisine and enjoying the beautiful Sedona atmosphere. It feels wonderful to have such a special evening planned in this stunning location.`;
   } else if (activities.some(a => a.includes('Sedona'))) {
-    narrative = `Spending time in the beautiful Sedona area. ${activities.filter(a => !a.includes('Sedona')).join(' and ')} made for a wonderful day of exploration and enjoyment in this magical place.`
+    narrative = `Spending time in the beautiful Sedona area. ${activities.filter(a => !a.includes('Sedona')).join(' and ')} made for a wonderful day of exploration and enjoyment in this magical place.`;
   } else if (activities.length > 0) {
-    narrative = `Today was filled with meaningful activities: ${activities.join(', ')}. Each experience added something special to the day.`
+    narrative = `Today was filled with meaningful activities: ${activities.join(', ')}. Each experience added something special to the day.`;
   } else {
-    narrative = 'Had thoughtful conversations and meaningful exchanges today. Sometimes the best days come from genuine connection and sharing.'
+    narrative =
+      'Had thoughtful conversations and meaningful exchanges today. Sometimes the best days come from genuine connection and sharing.';
   }
 
   return {
@@ -433,28 +513,32 @@ function buildBasicNarrativeFromInsights(insights: any[], fileAttachments: any[]
     narrative,
     notes: Array.from(new Set(notes)),
     healthContext: healthContext.trim(),
-    followUp: activities.some(a => a.includes('dinner')) 
+    followUp: activities.some(a => a.includes('dinner'))
       ? 'How was the dining experience? What stood out most?'
       : activities.some(a => a.includes('heart rate') || a.includes('workout'))
-      ? 'How are you feeling physically after reviewing your health data?'
-      : 'What are you most looking forward to tomorrow?'
-  }
+        ? 'How are you feeling physically after reviewing your health data?'
+        : 'What are you most looking forward to tomorrow?',
+  };
 }
 
-async function createJournalEntries(narrative: any, userId: string, date: string) {
-  const entries = []
+async function createJournalEntries(
+  narrative: any,
+  userId: string,
+  date: string
+) {
+  const entries = [];
 
   // Add timestamp to make entries unique for accumulation
-  const timestamp = new Date().toISOString().split('.')[0]
+  const timestamp = new Date().toISOString().split('.')[0];
 
   // Main reflection entry - update existing or create new
   if (narrative.narrative) {
     entries.push({
       type: 'reflection',
-      category: 'lifestyle', 
+      category: 'lifestyle',
       content: `[${timestamp}] ${narrative.narrative}`,
-      confidence: 0.9
-    })
+      confidence: 0.9,
+    });
   }
 
   // Activity entries - always add new activities
@@ -463,8 +547,8 @@ async function createJournalEntries(narrative: any, userId: string, date: string
       type: 'note',
       category: 'fitness',
       content: `[${timestamp}] Activities: ${narrative.activities.join(', ')}`,
-      confidence: 0.95
-    })
+      confidence: 0.95,
+    });
   }
 
   // Health context entry
@@ -473,8 +557,8 @@ async function createJournalEntries(narrative: any, userId: string, date: string
       type: 'note',
       category: 'health',
       content: `[${timestamp}] ${narrative.healthContext}`,
-      confidence: 0.8
-    })
+      confidence: 0.8,
+    });
   }
 
   // Follow-up entry for tomorrow - update existing
@@ -483,23 +567,24 @@ async function createJournalEntries(narrative: any, userId: string, date: string
       type: 'goal',
       category: 'wellness',
       content: `Tomorrow's reflection: ${narrative.followUp}`,
-      confidence: 0.7
-    })
+      confidence: 0.7,
+    });
   }
 
   // Individual insight entries - timestamped for uniqueness
   narrative.notes?.forEach((note: string, index: number) => {
-    if (note && note.length > 10) { // Only meaningful notes
+    if (note && note.length > 10) {
+      // Only meaningful notes
       entries.push({
         type: 'note',
         category: 'lifestyle',
         content: `[${timestamp}] ${note}`,
-        confidence: 0.8
-      })
+        confidence: 0.8,
+      });
     }
-  })
+  });
 
-  return entries.slice(0, 8) // Limit to prevent spam
+  return entries.slice(0, 8); // Limit to prevent spam
 }
 
 // Legacy function - kept for compatibility but not used in new rich narrative generation
@@ -510,7 +595,7 @@ function getActivityDescription(activity: string): string {
     'Outdoor activity': 'Time spent in nature and fresh air',
     'Exercise session': 'Physical activity and movement',
     'Resort time': 'Enjoying the beautiful resort surroundings',
-    'Relaxation time': 'Taking time to unwind and enjoy'
-  }
-  return descriptions[activity] || 'Activity from natural conversation'
+    'Relaxation time': 'Taking time to unwind and enjoy',
+  };
+  return descriptions[activity] || 'Activity from natural conversation';
 }
