@@ -238,10 +238,16 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
     // Extract activities from activity entry
     const activities = activityEntry?.content?.replace('Activities: ', '').split(', ') || []
     
+    // Combine all health and lifestyle insights for Key Insights section
+    const allInsights = [
+      ...noteEntries.map(entry => entry.content),
+      ...(healthEntry?.content ? [healthEntry.content] : [])
+    ]
+    
     return {
       activities,
       narrative_text: reflectionEntry?.content || 'Journal entries available for this day.',
-      notes: noteEntries.map(entry => entry.content),
+      notes: allInsights, // Use the rich health insights from AI
       health_context: healthEntry?.content || '',
       follow_up: followUpEntry?.content?.replace('Tomorrow\'s reflection: ', '') || '',
       journal_entries: journalEntries
@@ -285,17 +291,17 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
       console.log('🔍 Found conversation insights:', conversationInsights?.length || 0)
       console.log('🔍 Found journal entries:', journalEntries?.length || 0)
 
-      if (conversationInsights && conversationInsights.length > 0) {
-        // Build narrative from natural conversation flow and existing journal entries
-        const narrativeData = buildNarrativeFromConversationsAndJournal(conversationInsights, journalEntries || [])
-        setNarrativeData(narrativeData)
-      } else if (journalEntries && journalEntries.length > 0) {
-        // Use existing journal entries if no conversation insights
+      if (journalEntries && journalEntries.length > 0) {
+        // Prioritize rich journal entries created by AI enhancement
         const narrativeData = buildNarrativeFromJournalEntries(journalEntries)
+        setNarrativeData(narrativeData)
+      } else if (conversationInsights && conversationInsights.length > 0) {
+        // Fallback to conversation insights if no enhanced journal entries exist
+        const narrativeData = buildNarrativeFromConversationsAndJournal(conversationInsights, [])
         setNarrativeData(narrativeData)
       } else {
         // No data found
-        console.log('🔍 No conversation insights or journal entries found for this date')
+        console.log('🔍 No journal entries or conversation insights found for this date')
         setNarrativeData(null)
       }
     } catch (error) {

@@ -816,7 +816,7 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
       e.preventDefault()
       handleSendMessage()
     }
-  }, [])
+  }, [handleSendMessage])
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || [])

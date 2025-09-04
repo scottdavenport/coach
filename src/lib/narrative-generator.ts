@@ -90,17 +90,37 @@ export async function generateDailyNarrative(userId: string, date: string) {
       .eq('metric_date', date)
 
     // Generate rich narrative using AI
-    const narrative = await generateRichNarrative(insights, fileAttachments || [], healthMetrics || [])
+    const narrative = await generateRichNarrative(insights, allFileAttachments || [], healthMetrics || [])
 
     // Store multiple journal entries (one per major topic/activity)
     const journalEntries = await createJournalEntries(narrative, userId, date)
 
-    // Save to daily_journal table
-    const results = await Promise.all(
-      journalEntries.map(entry => 
-        supabase
+    // Check for existing entries to avoid duplicates while allowing accumulation
+    const { data: existingEntries } = await supabase
+      .from('daily_journal')
+      .select('entry_type, category, content')
+      .eq('user_id', userId)
+      .eq('journal_date', date)
+    
+    // Filter out only exact duplicate content but allow accumulation
+    const newEntries = journalEntries.filter(entry => {
+      // Only exclude if EXACT same content exists
+      return !existingEntries?.some(existing => 
+        existing.entry_type === entry.type && 
+        existing.category === entry.category &&
+        existing.content?.trim() === entry.content.trim()
+      )
+    })
+
+    console.log(`📊 Journal entry filtering: ${journalEntries.length} generated, ${newEntries.length} new, ${journalEntries.length - newEntries.length} filtered as duplicates`)
+
+    // Save all new entries to daily_journal table
+    const results = []
+    for (const entry of newEntries) {
+      try {
+        const { data, error } = await supabase
           .from('daily_journal')
-          .upsert({
+          .insert({
             user_id: userId,
             journal_date: date,
             entry_type: entry.type,
@@ -109,21 +129,33 @@ export async function generateDailyNarrative(userId: string, date: string) {
             source: 'conversation',
             confidence: entry.confidence,
             updated_at: new Date().toISOString()
-          }, {
-            onConflict: 'user_id,journal_date,entry_type,category'
           })
-      )
-    )
+          .select()
+          .single()
+
+        if (error) {
+          console.error('Error saving journal entry:', error)
+          results.push({ error })
+        } else {
+          console.log('✅ Saved journal entry:', entry.type, entry.category, entry.content.substring(0, 50) + '...')
+          results.push({ data })
+        }
+      } catch (err) {
+        console.error('Exception saving journal entry:', err)
+        results.push({ error: err })
+      }
+    }
 
     const errors = results.filter(r => r.error)
     if (errors.length > 0) {
       console.error('Some journal entries failed to save:', errors)
     }
 
-    console.log('✅ Created/updated daily journal entries:', journalEntries.length)
+    console.log('✅ Created/updated daily journal entries:', newEntries.length)
     return { 
       success: true, 
-      entriesCreated: journalEntries.length,
+      entriesCreated: newEntries.length,
+      entriesFiltered: journalEntries.length - newEntries.length,
       insightsProcessed: insights.length,
       fileAttachmentsProcessed: fileAttachments?.length || 0
     }
@@ -149,7 +181,7 @@ async function generateRichNarrative(insights: any[], fileAttachments: any[], he
     }))
 
     // Prepare file context
-    const fileContext = allFileAttachments.map(attachment => ({
+    const fileContext = fileAttachments.map(attachment => ({
       fileName: attachment.file_name,
       fileType: attachment.file_type,
       ocrText: attachment.ocr_text,
@@ -182,6 +214,8 @@ IMPORTANT GUIDELINES:
 - Be emotionally engaging and contextual
 - Reference specific places, people, activities mentioned
 - Include time context (morning, evening, etc.)
+- Generate HEALTH/WELLNESS INSIGHTS that are actionable and meaningful
+- Focus insights on patterns, habits, and wellness connections
 
 EXAMPLES:
 
@@ -189,7 +223,7 @@ For "We are heading to Open Range Grill in uptown sedona for dinner tonight":
 {
   "activities": ["Dinner at Open Range Grill", "Exploring uptown Sedona"],
   "narrative": "Planning an exciting dinner at Open Range Grill in uptown Sedona tonight. Looking forward to exploring the local cuisine and enjoying the beautiful Sedona atmosphere. It feels great to have such a nice evening planned in this stunning location.",
-  "notes": ["Dinner reservation at Open Range Grill", "Evening plans in uptown Sedona", "Anticipating local cuisine experience"],
+  "notes": ["Social dining experience promotes mental wellness", "Evening activities in beautiful locations boost mood", "Mindful food choices support overall health goals"],
   "health_context": "Evening dining experience - mindful eating and social connection",
   "follow_up": "How was the dinner at Open Range Grill? What was your favorite dish?"
 }
@@ -198,7 +232,7 @@ For conversation with heart rate image upload:
 {
   "activities": ["Heart rate monitoring", "Health tracking"],
   "narrative": "Tracked my heart rate today using uploaded data. It's great to stay on top of my health metrics and understand how my body is responding to daily activities.",
-  "notes": ["Heart rate data: 72 bpm", "Health monitoring via image upload"],
+  "notes": ["Consistent heart rate monitoring builds health awareness", "Regular biometric tracking helps identify patterns", "Technology-assisted health monitoring supports wellness goals"],
   "health_context": "Heart rate: 72 bpm - within healthy range for resting heart rate",
   "follow_up": "How are you feeling physically today compared to yesterday?"
 }
@@ -236,12 +270,12 @@ Format as JSON:
     } catch (parseError) {
       console.error('Error parsing AI narrative response:', parseError)
       // Fallback to basic narrative from insights
-      return buildBasicNarrativeFromInsights(insights, allFileAttachments || [])
+      return buildBasicNarrativeFromInsights(insights, fileAttachments || [])
     }
 
   } catch (error) {
     console.error('Error generating rich narrative:', error)
-    return buildBasicNarrativeFromInsights(insights, allFileAttachments || [])
+    return buildBasicNarrativeFromInsights(insights, fileAttachments || [])
   }
 }
 
@@ -277,14 +311,30 @@ function buildBasicNarrativeFromInsights(insights: any[], fileAttachments: any[]
     if (message.includes('resort')) activities.push('Resort relaxation')
     if (message.includes('coffee')) activities.push('Coffee time')
     
-    // Add insights as notes with better formatting
+    // Generate health-focused insights from activities and context
     if (insight.insights && Array.isArray(insight.insights)) {
       insight.insights.forEach((insightText: string) => {
-        const cleanInsight = insightText
-          .replace(/^User\s+/i, '')
-          .replace(/^I\s+/i, '')
-          .charAt(0).toUpperCase() + insightText.slice(1)
-        notes.push(cleanInsight)
+        // Transform basic insights into health/wellness focused ones
+        const lowerInsight = insightText.toLowerCase()
+        
+        if (lowerInsight.includes('dinner') && lowerInsight.includes('restaurant')) {
+          notes.push('Social dining experiences support mental wellness and community connection')
+          notes.push('Mindful restaurant choices can align with nutrition goals')
+        } else if (lowerInsight.includes('outdoor') || lowerInsight.includes('walk') || lowerInsight.includes('hike')) {
+          notes.push('Outdoor activities boost vitamin D and improve cardiovascular health')
+          notes.push('Nature exposure reduces stress and enhances mental clarity')
+        } else if (lowerInsight.includes('workout') || lowerInsight.includes('exercise')) {
+          notes.push('Regular physical activity strengthens both body and mind')
+          notes.push('Exercise consistency builds long-term health resilience')
+        } else if (lowerInsight.includes('sleep') || lowerInsight.includes('rest')) {
+          notes.push('Quality sleep is foundational for recovery and cognitive function')
+          notes.push('Sleep patterns directly impact energy levels and mood regulation')
+        } else if (lowerInsight.includes('coffee') || lowerInsight.includes('energy')) {
+          notes.push('Mindful caffeine intake can optimize energy without disrupting sleep')
+        } else {
+          // Generic wellness insight for any activity
+          notes.push('Engaging in meaningful activities contributes to overall life satisfaction')
+        }
       })
     }
   })
@@ -394,20 +444,25 @@ function buildBasicNarrativeFromInsights(insights: any[], fileAttachments: any[]
 async function createJournalEntries(narrative: any, userId: string, date: string) {
   const entries = []
 
-  // Main reflection entry
-  entries.push({
-    type: 'reflection',
-    category: 'lifestyle',
-    content: narrative.narrative,
-    confidence: 0.9
-  })
+  // Add timestamp to make entries unique for accumulation
+  const timestamp = new Date().toISOString().split('.')[0]
 
-  // Activity entries
+  // Main reflection entry - update existing or create new
+  if (narrative.narrative) {
+    entries.push({
+      type: 'reflection',
+      category: 'lifestyle', 
+      content: `[${timestamp}] ${narrative.narrative}`,
+      confidence: 0.9
+    })
+  }
+
+  // Activity entries - always add new activities
   if (narrative.activities && narrative.activities.length > 0) {
     entries.push({
       type: 'note',
       category: 'fitness',
-      content: `Activities: ${narrative.activities.join(', ')}`,
+      content: `[${timestamp}] Activities: ${narrative.activities.join(', ')}`,
       confidence: 0.95
     })
   }
@@ -417,12 +472,12 @@ async function createJournalEntries(narrative: any, userId: string, date: string
     entries.push({
       type: 'note',
       category: 'health',
-      content: narrative.healthContext,
+      content: `[${timestamp}] ${narrative.healthContext}`,
       confidence: 0.8
     })
   }
 
-  // Follow-up entry for tomorrow
+  // Follow-up entry for tomorrow - update existing
   if (narrative.followUp) {
     entries.push({
       type: 'goal',
@@ -432,13 +487,13 @@ async function createJournalEntries(narrative: any, userId: string, date: string
     })
   }
 
-  // Individual insight entries
+  // Individual insight entries - timestamped for uniqueness
   narrative.notes?.forEach((note: string, index: number) => {
     if (note && note.length > 10) { // Only meaningful notes
       entries.push({
         type: 'note',
         category: 'lifestyle',
-        content: note,
+        content: `[${timestamp}] ${note}`,
         confidence: 0.8
       })
     }
