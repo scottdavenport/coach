@@ -12,8 +12,8 @@ let cachedTimezone: string | null = null
  */
 export function getUserTimezone(): string {
   if (typeof window === 'undefined') {
-    // Server-side fallback
-    return 'UTC'
+    // Server-side fallback - default to East Coast US
+    return 'America/New_York'
   }
   
   // Return cached timezone if available
@@ -25,8 +25,8 @@ export function getUserTimezone(): string {
     cachedTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone
     return cachedTimezone
   } catch (error) {
-    console.warn('Failed to detect timezone, falling back to UTC:', error)
-    cachedTimezone = 'UTC'
+    console.warn('Failed to detect timezone, falling back to East Coast US:', error)
+    cachedTimezone = 'America/New_York'
     return cachedTimezone
   }
 }
@@ -38,12 +38,12 @@ export function getUserTimezone(): string {
  * @returns The user's preferred timezone
  */
 export function getUserPreferredTimezone(userTimezone?: string): string {
-  // Use stored preference if available
+  // Use stored preference if available and not the default UTC
   if (userTimezone && userTimezone !== 'UTC') {
     return userTimezone
   }
   
-  // Fall back to browser detection
+  // Fall back to browser detection (which now defaults to East Coast US)
   return getUserTimezone()
 }
 
@@ -190,8 +190,11 @@ export function navigateDateInTimezone(
   direction: 'prev' | 'next',
   timezone?: string
 ): string {
-  const tz = timezone || getUserTimezone()
-  const date = parseDateInTimezone(currentDate, tz)
+  // Parse the date string directly without timezone conversion
+  const [year, month, day] = currentDate.split('-').map(Number)
+  
+  // Create a date object in the user's timezone
+  const date = new Date(year, month - 1, day) // month is 0-indexed
   
   if (direction === 'prev') {
     date.setDate(date.getDate() - 1)
@@ -199,7 +202,8 @@ export function navigateDateInTimezone(
     date.setDate(date.getDate() + 1)
   }
   
-  // Format back to YYYY-MM-DD
+  // Format back to YYYY-MM-DD using the same timezone
+  const tz = timezone || getUserTimezone()
   const formatter = new Intl.DateTimeFormat('en-CA', {
     timeZone: tz,
     year: 'numeric',
@@ -365,4 +369,158 @@ export function formatWeekRange(weekStart: string, timezone?: string): string {
   }).format(end)
   
   return `${startFormatted} - ${endFormatted}`
+}
+
+/**
+ * Get the first day of a month in the user's timezone
+ * @param year - Year (e.g., 2025)
+ * @param month - Month (1-12)
+ * @param timezone - Optional timezone override
+ * @returns Date string in YYYY-MM-DD format
+ */
+export function getMonthStartInTimezone(year: number, month: number, timezone?: string): string {
+  const tz = timezone || getUserTimezone()
+  const date = new Date(year, month - 1, 1) // month is 0-indexed
+  
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: tz,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  })
+  
+  return formatter.format(date)
+}
+
+/**
+ * Get the last day of a month in the user's timezone
+ * @param year - Year (e.g., 2025)
+ * @param month - Month (1-12)
+ * @param timezone - Optional timezone override
+ * @returns Date string in YYYY-MM-DD format
+ */
+export function getMonthEndInTimezone(year: number, month: number, timezone?: string): string {
+  const tz = timezone || getUserTimezone()
+  const date = new Date(year, month, 0) // month is 0-indexed, so month gives us last day of previous month
+  
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: tz,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  })
+  
+  return formatter.format(date)
+}
+
+/**
+ * Get all dates in a month in the user's timezone
+ * @param year - Year (e.g., 2025)
+ * @param month - Month (1-12)
+ * @param timezone - Optional timezone override
+ * @returns Array of date strings for the month
+ */
+export function getMonthDatesInTimezone(year: number, month: number, timezone?: string): string[] {
+  const dates: string[] = []
+  const startDate = getMonthStartInTimezone(year, month, timezone)
+  const endDate = getMonthEndInTimezone(year, month, timezone)
+  
+  let currentDate = startDate
+  while (currentDate <= endDate) {
+    dates.push(currentDate)
+    currentDate = navigateDateInTimezone(currentDate, 'next', timezone)
+  }
+  
+  return dates
+}
+
+/**
+ * Get the calendar grid for a month (including days from previous/next month to fill the grid)
+ * @param year - Year (e.g., 2025)
+ * @param month - Month (1-12)
+ * @param timezone - Optional timezone override
+ * @returns Array of date objects with date string and metadata
+ */
+export function getCalendarGridInTimezone(year: number, month: number, timezone?: string): Array<{
+  date: string
+  isCurrentMonth: boolean
+  isToday: boolean
+  dayOfWeek: number
+}> {
+  const tz = timezone || getUserTimezone()
+  const monthStart = getMonthStartInTimezone(year, month, tz)
+  const monthEnd = getMonthEndInTimezone(year, month, tz)
+  
+  // Parse month start to get the first day of the month
+  const [startYear, startMonth, startDay] = monthStart.split('-').map(Number)
+  const firstDayOfMonth = new Date(startYear, startMonth - 1, startDay)
+  const firstDayOfWeek = firstDayOfMonth.getDay() // 0 = Sunday, 1 = Monday, etc.
+  
+  // Parse month end to get the last day of the month
+  const [endYear, endMonth, endDay] = monthEnd.split('-').map(Number)
+  const lastDayOfMonth = new Date(endYear, endMonth - 1, endDay)
+  const lastDayOfWeek = lastDayOfMonth.getDay()
+  
+  const grid: Array<{
+    date: string
+    isCurrentMonth: boolean
+    isToday: boolean
+    dayOfWeek: number
+  }> = []
+  
+  // Add days from previous month to fill the first week
+  if (firstDayOfWeek > 0) {
+    const prevMonth = month === 1 ? 12 : month - 1
+    const prevYear = month === 1 ? year - 1 : year
+    const prevMonthEnd = getMonthEndInTimezone(prevYear, prevMonth, tz)
+    
+    for (let i = firstDayOfWeek - 1; i >= 0; i--) {
+      const date = navigateDateInTimezone(prevMonthEnd, 'prev', tz)
+      const dayOfWeek = i
+      const isToday = isTodayInTimezone(date, tz)
+      
+      grid.push({
+        date,
+        isCurrentMonth: false,
+        isToday,
+        dayOfWeek
+      })
+    }
+  }
+  
+  // Add all days of the current month
+  const monthDates = getMonthDatesInTimezone(year, month, tz)
+  monthDates.forEach(date => {
+    const [dateYear, dateMonth, dateDay] = date.split('-').map(Number)
+    const dateObj = new Date(dateYear, dateMonth - 1, dateDay)
+    const dayOfWeek = dateObj.getDay()
+    const isToday = isTodayInTimezone(date, tz)
+    
+    grid.push({
+      date,
+      isCurrentMonth: true,
+      isToday,
+      dayOfWeek
+    })
+  })
+  
+  // Add days from next month to fill the last week
+  const remainingDays = 42 - grid.length // 6 weeks * 7 days = 42
+  let nextDate = navigateDateInTimezone(monthEnd, 'next', tz)
+  
+  for (let i = 0; i < remainingDays; i++) {
+    const dayOfWeek = (grid.length + i) % 7
+    const isToday = isTodayInTimezone(nextDate, tz)
+    
+    grid.push({
+      date: nextDate,
+      isCurrentMonth: false,
+      isToday,
+      dayOfWeek
+    })
+    
+    nextDate = navigateDateInTimezone(nextDate, 'next', tz)
+  }
+  
+  return grid
 }
