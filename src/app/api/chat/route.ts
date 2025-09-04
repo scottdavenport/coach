@@ -295,19 +295,26 @@ Remember: You're not just responding to messages - you're building a comprehensi
         ? stateContext.substring(0, 1500) + '...'
         : stateContext;
 
-    // Handle OCR data with strict limits
-    const ocrSection = ocrData
-      ? `OCR DATA: ${JSON.stringify(ocrData).substring(0, 1000)}${JSON.stringify(ocrData).length > 1000 ? '...' : ''}`
-      : '';
-
     // Handle multi-file data with very strict limits
     let multiFileSection = '';
+    let extractedOcrData = null;
+
     if (multiFileData) {
+      // Extract OCR data from images
+      if (multiFileData.images?.length > 0) {
+        const imageWithOcr = multiFileData.images.find(
+          (img: any) => img.ocrData
+        );
+        if (imageWithOcr?.ocrData) {
+          extractedOcrData = imageWithOcr.ocrData;
+        }
+      }
+
       const imagesSummary =
         multiFileData.images
           ?.map(
             (img: any) =>
-              `${img.fileName}: ${img.error || 'OCR data available'}`
+              `${img.fileName}: ${img.error || (img.ocrData ? 'OCR data extracted' : 'No OCR data')}`
           )
           .join(', ') || '';
 
@@ -324,6 +331,12 @@ Remember: You're not just responding to messages - you're building a comprehensi
         multiFileSection = multiFileSection.substring(0, 1000) + '...';
       }
     }
+
+    // Handle OCR data with strict limits (from direct ocrData or extracted from multiFileData)
+    const finalOcrData = ocrData || extractedOcrData;
+    const ocrSection = finalOcrData
+      ? `OCR DATA: ${JSON.stringify(finalOcrData).substring(0, 1000)}${JSON.stringify(finalOcrData).length > 1000 ? '...' : ''}`
+      : '';
 
     const systemPrompt = [
       baseSystemPrompt,
@@ -409,11 +422,11 @@ Remember: You're not just responding to messages - you're building a comprehensi
           content: systemPrompt,
         },
         ...conversationContext,
-        ...(ocrData
+        ...(finalOcrData
           ? [
               {
                 role: 'user' as const,
-                content: `I've uploaded a screenshot with workout data. Here's what was extracted: ${JSON.stringify(ocrData)}`,
+                content: `I've uploaded a screenshot with health data. Here's what was extracted: ${JSON.stringify(finalOcrData)}`,
               },
             ]
           : []),
@@ -438,7 +451,11 @@ Remember: You're not just responding to messages - you're building a comprehensi
         parsedData.data_types?.mood ||
         parsedData.data_types?.nutrition ||
         parsedData.data_types?.sleep ||
-        parsedData.data_types?.workout)
+        parsedData.data_types?.workout ||
+        parsedData.data_types?.travel ||
+        parsedData.data_types?.lifestyle ||
+        parsedData.insights?.observations?.length > 0 ||
+        parsedData.insights?.patterns?.length > 0)
     ) {
       try {
         logger.info('Conversation insights detected for storage', {
@@ -479,9 +496,9 @@ Remember: You're not just responding to messages - you're building a comprehensi
           user_id: user.id,
           conversation_date: userDate, // Using user's timezone date for consistency
           message: message,
-          insights: Array.isArray(parsedData.insights)
-            ? parsedData.insights
-            : parsedData.insights?.observations || [],
+          insights: Array.isArray(parsedData.insights?.observations)
+            ? parsedData.insights.observations
+            : parsedData.insights?.patterns || [],
           data_types: {
             health: parsedData.data_types?.health,
             activity: parsedData.data_types?.activity,
@@ -490,12 +507,14 @@ Remember: You're not just responding to messages - you're building a comprehensi
             sleep: parsedData.data_types?.sleep,
             workout: parsedData.data_types?.workout,
             // Add flags for file data
-            has_ocr_data: !!ocrData,
+            has_ocr_data: !!finalOcrData,
             has_multifile_data: !!multiFileData,
           },
-          follow_up_questions: Array.isArray(parsedData.follow_up_questions)
-            ? parsedData.follow_up_questions
-            : parsedData.follow_up_questions?.immediate || [],
+          follow_up_questions: Array.isArray(
+            parsedData.follow_up_questions?.immediate
+          )
+            ? parsedData.follow_up_questions.immediate
+            : parsedData.follow_up_questions?.contextual || [],
           created_at: new Date().toISOString(),
         };
 
@@ -550,6 +569,16 @@ Remember: You're not just responding to messages - you're building a comprehensi
             insertedRecordId: insertedData?.[0]?.id,
             conversationDate: userDate,
           });
+
+          // Store health metrics from OCR data if available
+          if (finalOcrData && finalOcrData.rawOcrText) {
+            await storeHealthMetricsFromOcr(
+              finalOcrData,
+              user.id,
+              userDate,
+              supabase
+            );
+          }
 
           // Link any uploaded files to this conversation
           if (conversationData?.id && multiFileData) {
@@ -954,4 +983,86 @@ function createEnhancedFallback(): ParsedConversation {
     follow_up_questions: { immediate: [], contextual: [], data_driven: [] },
     conversation_themes: [],
   };
+}
+
+/**
+ * Store health metrics extracted from OCR data
+ */
+async function storeHealthMetricsFromOcr(
+  ocrData: any,
+  userId: string,
+  date: string,
+  supabase: any
+) {
+  try {
+    const metricsToStore = [];
+
+    // Map OCR data fields to standard metrics
+    const metricMappings = {
+      sleepScore: 'sleep_score',
+      totalSleep: 'sleep_duration',
+      timeInBed: 'time_in_bed',
+      sleepEfficiency: 'sleep_efficiency',
+      restingHeartRate: 'resting_heart_rate',
+      heartRateVariability: 'heart_rate_variability',
+      readiness_score: 'readiness',
+      bodyTemperature: 'body_temperature',
+      respiratoryRate: 'respiratory_rate',
+      oxygenSaturation: 'oxygen_saturation',
+      remSleep: 'rem_sleep',
+      deepSleep: 'deep_sleep',
+    };
+
+    // Get all standard metrics to find their IDs
+    const { data: standardMetrics } = await supabase
+      .from('standard_metrics')
+      .select('id, metric_key');
+
+    if (!standardMetrics) return;
+
+    const metricIdMap = standardMetrics.reduce((acc: any, metric: any) => {
+      acc[metric.metric_key] = metric.id;
+      return acc;
+    }, {});
+
+    // Process each metric from OCR data
+    for (const [ocrField, metricKey] of Object.entries(metricMappings)) {
+      const value = ocrData[ocrField];
+      if (value !== null && value !== undefined && value !== '') {
+        const metricId = metricIdMap[metricKey];
+        if (metricId) {
+          metricsToStore.push({
+            user_id: userId,
+            metric_id: metricId,
+            metric_date: date,
+            metric_value: typeof value === 'number' ? value : null,
+            text_value: typeof value === 'string' ? value : null,
+            source: 'ocr_extraction',
+            confidence: 0.8, // OCR confidence
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          });
+        }
+      }
+    }
+
+    // Store all metrics
+    if (metricsToStore.length > 0) {
+      const { error } = await supabase
+        .from('user_daily_metrics')
+        .upsert(metricsToStore, {
+          onConflict: 'user_id,metric_id,metric_date',
+        });
+
+      if (error) {
+        console.error('Error storing health metrics from OCR:', error);
+      } else {
+        console.log(
+          `✅ Stored ${metricsToStore.length} health metrics from OCR data`
+        );
+      }
+    }
+  } catch (error) {
+    console.error('Error in storeHealthMetricsFromOcr:', error);
+  }
 }

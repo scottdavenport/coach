@@ -1,5 +1,9 @@
 import { createClient } from '@/lib/supabase/server';
 import OpenAI from 'openai';
+import {
+  generateWorkoutRecommendations,
+  getWorkoutContextSummary,
+} from '@/lib/workout-recommendations';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -103,10 +107,14 @@ export async function generateDailyNarrative(userId: string, date: string) {
     // Build existing content string for AI prompt
     let existingContent = '';
     if (existingEntries && existingEntries.length > 0) {
-      const reflectionEntry = existingEntries.find(e => e.entry_type === 'reflection');
+      const reflectionEntry = existingEntries.find(
+        e => e.entry_type === 'reflection'
+      );
       const healthEntry = existingEntries.find(e => e.category === 'health');
-      const insightEntries = existingEntries.filter(e => e.entry_type === 'note' && e.category === 'lifestyle');
-      
+      const insightEntries = existingEntries.filter(
+        e => e.entry_type === 'note' && e.category === 'lifestyle'
+      );
+
       if (reflectionEntry) {
         existingContent += `Current narrative: ${reflectionEntry.content}\n`;
       }
@@ -118,12 +126,20 @@ export async function generateDailyNarrative(userId: string, date: string) {
       }
     }
 
+    // Generate workout recommendations based on health metrics
+    const workoutRecommendations = await generateWorkoutRecommendations(
+      userId,
+      date
+    );
+    const workoutContext = getWorkoutContextSummary(workoutRecommendations);
+
     // Generate rich narrative using AI with existing content for intelligent merging
     const narrative = await generateRichNarrative(
       insights,
       allFileAttachments || [],
       healthMetrics || [],
-      existingContent
+      existingContent,
+      workoutContext
     );
 
     // Store single comprehensive journal entry (replaces entire day's content)
@@ -140,7 +156,9 @@ export async function generateDailyNarrative(userId: string, date: string) {
       if (deleteError) {
         console.error('Error deleting existing journal entries:', deleteError);
       } else {
-        console.log(`🗑️ Deleted ${existingEntries.length} existing journal entries for date: ${date}`);
+        console.log(
+          `🗑️ Deleted ${existingEntries.length} existing journal entries for date: ${date}`
+        );
       }
     }
 
@@ -190,7 +208,10 @@ export async function generateDailyNarrative(userId: string, date: string) {
       console.error('Some journal entries failed to save:', errors);
     }
 
-    console.log('✅ Created/updated daily journal entries:', journalEntries.length);
+    console.log(
+      '✅ Created/updated daily journal entries:',
+      journalEntries.length
+    );
     return {
       success: true,
       entriesCreated: journalEntries.length,
@@ -211,7 +232,8 @@ async function generateRichNarrative(
   insights: any[],
   fileAttachments: any[],
   healthMetrics: any[],
-  existingContent?: string
+  existingContent?: string,
+  workoutContext?: string
 ) {
   try {
     // Prepare comprehensive context for AI
@@ -269,6 +291,8 @@ ${fileContext.length > 0 ? `UPLOADED FILES:\n${fileContext.map(f => `- ${f.fileN
 ${healthContext.length > 0 ? `HEALTH METRICS:\n${healthContext.map(h => `- ${h.metric}: ${h.value}${h.unit || ''}`).join('\n')}\n` : ''}
 
 ${existingContent ? `EXISTING JOURNAL CONTENT FOR TODAY:\n${existingContent}\n\nMERGE new information with existing content intelligently. Don't completely rewrite - enhance and build upon what's already there.\n` : ''}
+
+${workoutContext ? `WORKOUT RECOMMENDATIONS:\n${workoutContext}\n\nInclude this context in your health insights if relevant.\n` : ''}
 
 REQUIREMENTS:
 - Main narrative: 1-2 sentences with activities and brief context

@@ -39,6 +39,7 @@ export function ChatInterface({
   const [isRecording, setIsRecording] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
+  const uploadMenuRef = useRef<HTMLDivElement>(null);
   const [conversationState, setConversationState] = useState<
     'idle' | 'morning_checkin' | 'activity_planning' | 'data_clarification'
   >('idle');
@@ -94,6 +95,26 @@ export function ChatInterface({
       loadConversationHistory();
     }
   }, [userId, loadConversationHistory]);
+
+  // Close upload menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        uploadMenuRef.current &&
+        !uploadMenuRef.current.contains(event.target as Node)
+      ) {
+        setIsUploadMenuOpen(false);
+      }
+    };
+
+    if (isUploadMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isUploadMenuOpen]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -250,23 +271,29 @@ export function ChatInterface({
 
       const combinedMessage = `${fileSummary}\n\nContext: ${contextText}`;
 
+      // Store files before clearing them
+      const filesToProcess = [...fileManager.files];
+
       const userMessage = {
         id: Date.now(),
         content: combinedMessage,
         role: 'user',
         timestamp: new Date(),
         hasFiles: true,
-        fileAttachments: fileManager.files,
+        fileAttachments: filesToProcess,
       };
 
       setMessages(prev => [...prev, userMessage]);
       setInputValue('');
 
-      // Process files by type
-      const imageFiles = fileManager.files.filter(file =>
+      // Clear attached files immediately so they appear in the message
+      fileManager.clearFiles();
+
+      // Process files by type using stored files
+      const imageFiles = filesToProcess.filter(file =>
         file.fileType.startsWith('image/')
       );
-      const documentFiles = fileManager.files.filter(
+      const documentFiles = filesToProcess.filter(
         file => !file.fileType.startsWith('image/')
       );
 
@@ -384,9 +411,6 @@ export function ChatInterface({
         processedContent: allProcessedContent,
       };
       setMessages(prev => [...prev, aiMessage]);
-
-      // Clear attached files
-      fileManager.clearFiles();
     } catch (error) {
       console.error('Error processing files with context:', error);
       const aiErrorResponse = await sendErrorToAI('file processing issue');
@@ -1052,6 +1076,9 @@ export function ChatInterface({
 
   const handleFileSelectType = useCallback(
     (type: 'all' | 'images' | 'documents') => {
+      // Close the upload menu
+      setIsUploadMenuOpen(false);
+
       if (fileInputRef.current) {
         // Update accept attribute based on type
         switch (type) {
@@ -1319,7 +1346,7 @@ export function ChatInterface({
 
           <div className="flex items-center space-x-3">
             {/* Attachment Button */}
-            <div className="relative">
+            <div className="relative" ref={uploadMenuRef}>
               <Button
                 variant="ghost"
                 size="sm"

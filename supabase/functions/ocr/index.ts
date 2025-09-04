@@ -296,29 +296,6 @@ Deno.serve(async (req: Request) => {
           aiParsedData.needsAppConfirmation = true;
         }
 
-        // Readiness Score (from readiness screen)
-        const readinessScoreMatch = extractedText.match(
-          /readiness score\s*(\d+)\s*(good|fair|poor)?/i
-        );
-        if (readinessScoreMatch) {
-          aiParsedData.readiness_score = parseInt(readinessScoreMatch[1], 10);
-        } else {
-          // Fallback: look for "80 Good" pattern - but be more specific
-          const readinessFallback = extractedText.match(
-            /(\d+)\s*(good|fair|poor)/i
-          );
-          if (readinessFallback && !aiParsedData.sleepScore) {
-            // Only use this as readiness if we haven't already detected a sleep score
-            aiParsedData.readiness_score = parseInt(readinessFallback[1], 10);
-          }
-        }
-
-        // Readiness (from Oura-like data)
-        const readinessMatch = extractedText.match(/readiness\s*\n\s*(\d+)/i);
-        if (readinessMatch) {
-          aiParsedData.readiness_score = parseInt(readinessMatch[1], 10);
-        }
-
         // Sleep Score - only detect if explicitly labeled as "sleep score"
         const sleepScoreMatch = extractedText.match(
           /sleep score\s*(\d+)\s*(good|fair|poor)?/i
@@ -331,7 +308,22 @@ Deno.serve(async (req: Request) => {
               sleepScoreMatch[2];
           }
         }
-        // Removed fallback detection to avoid false positives
+
+        // Readiness Score (from readiness screen) - only if explicitly labeled
+        const readinessScoreMatch = extractedText.match(
+          /readiness score\s*(\d+)\s*(good|fair|poor)?/i
+        );
+        if (readinessScoreMatch) {
+          aiParsedData.readiness_score = parseInt(readinessScoreMatch[1], 10);
+        }
+
+        // Readiness (from Oura-like data) - only if explicitly labeled
+        const readinessMatch = extractedText.match(/readiness\s*\n\s*(\d+)/i);
+        if (readinessMatch) {
+          aiParsedData.readiness_score = parseInt(readinessMatch[1], 10);
+        }
+
+        // Removed problematic fallback that was causing false positives
 
         // Total Sleep - only detect if explicitly labeled
         const totalSleepMatch = extractedText.match(

@@ -41,6 +41,14 @@ export function ChatMessage({ message }: ChatMessageProps) {
     const context = lines[2]?.replace('Context: ', '') || 'No context provided';
     const fileUrl = message.fileUrl || lines[4]?.replace('File URL: ', '');
 
+    // Don't show context if it's just the user's input text - that's redundant
+    const shouldShowContext =
+      context &&
+      context !== 'No context provided' &&
+      !context.includes('Here is my') &&
+      !context.includes('Here are my') &&
+      context.length > 20; // Only show substantial context
+
     return (
       <div className="flex justify-end">
         <div className="max-w-[80%] rounded-2xl px-4 py-3 bg-primary text-black">
@@ -65,9 +73,11 @@ export function ChatMessage({ message }: ChatMessageProps) {
                 </div>
               )}
 
-            <div className="bg-black/10 p-2 rounded-lg text-base">
-              {context}
-            </div>
+            {shouldShowContext && (
+              <div className="bg-black/10 p-2 rounded-lg text-base">
+                {context}
+              </div>
+            )}
           </div>
           <p className="text-xs mt-2 text-black/60">
             {message.timestamp.toLocaleTimeString([], {
