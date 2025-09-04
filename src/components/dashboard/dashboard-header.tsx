@@ -27,7 +27,24 @@ export function DashboardHeader({ userId, selectedDate }: DashboardHeaderProps) 
   }
 
   const handleResetUserData = async () => {
-    if (!confirm('⚠️ This will permanently delete ALL your conversation history, patterns, and personal data. This action cannot be undone. Are you sure you want to continue?')) {
+    // Enhanced confirmation dialog requiring 'RESET' to be typed
+    const confirmationText = prompt(
+      '⚠️ DANGER: This will permanently delete ALL your data!\n\n' +
+      'This includes:\n' +
+      '• All conversation history\n' +
+      '• All health metrics and patterns\n' +
+      '• All journal entries and insights\n' +
+      '• All uploaded files and OCR data\n' +
+      '• All workout and activity data\n' +
+      '• All weekly summaries and trends\n\n' +
+      'This action CANNOT be undone!\n\n' +
+      'Type "RESET" (in all caps) to confirm:'
+    )
+
+    if (confirmationText !== 'RESET') {
+      if (confirmationText !== null) {
+        alert('❌ Reset cancelled. You must type "RESET" exactly to confirm.')
+      }
       return
     }
 
@@ -35,68 +52,137 @@ export function DashboardHeader({ userId, selectedDate }: DashboardHeaderProps) 
     try {
       const supabase = createClient()
       
-      console.log('🧹 Starting user data reset...')
-      
-      // Clear conversation history (main chat messages)
-      const { error: conversationsError } = await supabase
-        .from('conversations')
-        .delete()
-        .eq('user_id', userId)
-      
-      if (conversationsError) {
-        console.error('Error clearing conversations:', conversationsError)
-      } else {
-        console.log('✅ Cleared conversation history')
+      // Check if user is protected (scott@thinkcode.com)
+      const { data: userProfile, error: profileError } = await supabase
+        .from('users')
+        .select('email')
+        .eq('id', userId)
+        .single()
+
+      if (profileError) {
+        console.error('Error fetching user profile:', profileError)
+        alert('❌ Error verifying user account. Reset cancelled for safety.')
+        return
       }
 
-      // Clear conversation insights
-      const { error: insightsError } = await supabase
-        .from('conversation_insights')
-        .delete()
-        .eq('user_id', userId)
+      if (userProfile?.email === 'scott@thinkcode.com') {
+        alert('❌ Cannot reset data for scott@thinkcode.com user account. This account is protected.')
+        return
+      }
       
-      if (insightsError) {
-        console.error('Error clearing conversation insights:', insightsError)
-      } else {
-        console.log('✅ Cleared conversation insights')
+      console.log('🧹 Starting comprehensive user data reset...')
+      
+      // Clear ALL user-specific tables in order of dependencies
+      // Order matters due to foreign key constraints
+      const tablesToClear = [
+        'conversation_file_attachments', // Junction table - clear first
+        'conversation_insights', 
+        'conversations',
+        'user_daily_metrics',
+        'user_metric_preferences',
+        'daily_narratives',
+        'daily_journal',
+        'daily_goals',
+        'daily_activities',
+        'weekly_summaries',
+        'monthly_trends',
+        'events',
+        'user_uploads', // Clear after conversation_file_attachments
+        'oura_data',
+        'oura_integrations',
+        'ocr_feedback'
+      ]
+
+      let clearedCount = 0
+      let errorCount = 0
+
+      for (const table of tablesToClear) {
+        try {
+          let error;
+          
+          if (table === 'conversation_file_attachments') {
+            // Special handling for junction table - delete via conversation_id
+            // First get conversation IDs for this user
+            const { data: conversations, error: convError } = await supabase
+              .from('conversations')
+              .select('id')
+              .eq('user_id', userId)
+            
+            if (convError) {
+              error = convError;
+            } else if (conversations && conversations.length > 0) {
+              const conversationIds = conversations.map(c => c.id);
+              const { error: deleteError } = await supabase
+                .from(table)
+                .delete()
+                .in('conversation_id', conversationIds)
+              error = deleteError;
+            } else {
+              // No conversations to delete attachments for
+              error = null;
+            }
+          } else {
+            // Standard deletion for tables with user_id column
+            const { error: deleteError } = await supabase
+              .from(table)
+              .delete()
+              .eq('user_id', userId)
+            error = deleteError;
+          }
+          
+          if (error) {
+            console.error(`❌ Error clearing ${table}:`, error)
+            console.error(`Error details:`, {
+              code: error.code,
+              message: error.message,
+              details: error.details,
+              hint: error.hint
+            })
+            errorCount++
+          } else {
+            console.log(`✅ Cleared ${table}`)
+            clearedCount++
+          }
+        } catch (tableError) {
+          console.error(`Exception clearing ${table}:`, tableError)
+          errorCount++
+        }
       }
 
-      // Clear user uploads (files)
-      const { error: uploadsError } = await supabase
-        .from('user_uploads')
-        .delete()
-        .eq('user_id', userId)
-      
-      if (uploadsError) {
-        console.error('Error clearing uploads:', uploadsError)
-      } else {
-        console.log('✅ Cleared user uploads')
-      }
+      // Clear any remaining user profile data (except email for auth)
+      const { error: profileResetError } = await supabase
+        .from('users')
+        .update({ 
+          profile: {},
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId)
 
-      // Clear events (health data)
-      const { error: eventsError } = await supabase
-        .from('events')
-        .delete()
-        .eq('user_id', userId)
-      
-      if (eventsError) {
-        console.error('Error clearing events:', eventsError)
+      if (profileResetError) {
+        console.error('Error resetting user profile:', profileResetError)
+        errorCount++
       } else {
-        console.log('✅ Cleared events')
+        console.log('✅ Reset user profile data')
+        clearedCount++
       }
       
-      // Clear pattern recognition cache by refreshing the page
-      console.log('🔄 Refreshing page to clear all cached data...')
+      console.log(`🧹 Reset complete: ${clearedCount} tables cleared, ${errorCount} errors`)
       
-      // Show success message
-      alert('✅ User data reset complete! The page will refresh to clear all cached data.')
+      // Show comprehensive success message
+      if (errorCount === 0) {
+        alert('✅ Complete data reset successful!\n\nAll your data has been permanently deleted:\n• Conversations & insights\n• Health metrics & patterns\n• Journal entries\n• Files & uploads\n• Workout data\n• Weekly summaries\n\nThe page will refresh to return to a clean state.')
+      } else {
+        alert(`⚠️ Reset completed with ${errorCount} errors.\n\nMost data has been cleared, but some tables may have failed. Check the console for details. The page will refresh.`)
+      }
       
-      // Refresh the page to clear all cached data
-      window.location.reload()
+      // Refresh the page to clear all cached data and return to clean state
+      setTimeout(() => {
+        window.location.reload()
+      }, 2000)
       
     } catch (error) {
-      console.error('Error resetting user data:', error)
-      alert('❌ Error resetting user data. Please try again.')
+      console.error('Critical error during data reset:', error)
+      alert('❌ Critical error during data reset. Please check the console and try again.')
     } finally {
       setIsResetting(false)
     }

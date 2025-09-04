@@ -111,8 +111,8 @@ create table weekly_summaries (
   week_start date not null,
   summary text,
   trends jsonb,
-  created_at timestamp default now(),
-  updated_at timestamp default now()
+  created_at timestamp with time zone default now(),
+  updated_at timestamp with time zone default now()
 );
 
 -- Monthly Trends
@@ -125,8 +125,8 @@ create table monthly_trends (
   workout_history jsonb,
   nutrition_patterns jsonb,
   stress_patterns jsonb,
-  created_at timestamp default now(),
-  updated_at timestamp default now()
+  created_at timestamp with time zone default now(),
+  updated_at timestamp with time zone default now()
 );
 
 -- Daily Journal

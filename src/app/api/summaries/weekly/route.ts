@@ -18,8 +18,9 @@ export async function POST(request: NextRequest) {
     const { weekStart } = await request.json()
 
     // Get the week's structured metrics
-    const weekEnd = new Date(weekStart)
-    weekEnd.setDate(weekEnd.getDate() + 6)
+    const weekStartDate = new Date(weekStart + 'T00:00:00')
+    const weekEndDate = new Date(weekStartDate)
+    weekEndDate.setDate(weekEndDate.getDate() + 6)
     
     const { data: weeklyMetrics } = await supabase
       .from('user_daily_metrics')
@@ -41,7 +42,7 @@ export async function POST(request: NextRequest) {
       `)
       .eq('user_id', user.id)
       .gte('metric_date', weekStart)
-      .lte('metric_date', weekEnd.toISOString().split('T')[0])
+      .lte('metric_date', weekEndDate.toISOString().split('T')[0])
       .order('metric_date', { ascending: true })
 
     if (!weeklyMetrics || weeklyMetrics.length === 0) {
@@ -49,8 +50,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Get conversations for the week
-    const weekStartDate = new Date(weekStart)
-    const weekEndDate = new Date(weekEnd)
     
     const { data: weeklyConversations } = await supabase
       .from('conversations')
@@ -65,7 +64,7 @@ export async function POST(request: NextRequest) {
       daily_metrics: weeklyMetrics,
       conversations: weeklyConversations || [],
       week_start: weekStart,
-      week_end: weekEnd.toISOString().split('T')[0]
+      week_end: weekEndDate.toISOString().split('T')[0]
     }
 
     // Generate weekly summary using OpenAI

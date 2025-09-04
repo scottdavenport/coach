@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import OpenAI from 'openai'
 import { logger } from '@/lib/logger'
+import { getTodayInTimezone } from '@/lib/timezone-utils'
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -84,7 +85,8 @@ export async function POST(request: NextRequest) {
       .limit(6)
 
     // Fetch last 2 days of structured metrics for context (minimal)
-    const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
+    const twoDaysAgoString = twoDaysAgo.toISOString().split('T')[0]
     const { data: weeklyMetrics } = await supabase
       .from('user_daily_metrics')
       .select(`
@@ -97,7 +99,7 @@ export async function POST(request: NextRequest) {
         )
       `)
       .eq('user_id', user.id)
-      .gte('metric_date', twoDaysAgo)
+      .gte('metric_date', twoDaysAgoString)
       .order('metric_date', { ascending: false })
       .limit(10)
 
@@ -315,9 +317,27 @@ export async function POST(request: NextRequest) {
         })
 
         // Store the conversation insights with enhanced context
+        // Get user's timezone preference for proper date handling
+        const { data: userData } = await supabase
+          .from('users')
+          .select('timezone')
+          .eq('id', user.id)
+          .single()
+        
+        const userTimezone = userData?.timezone || 'UTC'
+        
+        // Convert current UTC time to user's timezone for date storage
+        const now = new Date()
+        const userDate = new Intl.DateTimeFormat('en-CA', {
+          timeZone: userTimezone,
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit'
+        }).format(now)
+        
         const enhancedInsights = {
           user_id: user.id,
-          conversation_date: new Date().toISOString().split('T')[0],
+          conversation_date: userDate, // Using user's timezone date for consistency
           message: message,
           insights: parsedData.insights,
           data_types: {
@@ -410,7 +430,7 @@ export async function POST(request: NextRequest) {
           }
           
           // Trigger daily narrative generation (non-blocking)
-          const today = new Date().toISOString().split('T')[0]
+          const today = new Date().toISOString().split('T')[0] // Note: Using UTC date for database consistency
           
           // Call narrative generation directly - this should work now
           try {

@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Calendar, TrendingUp, RefreshCw, FileText } from 'lucide-react'
 import { useWeeklySummary } from '@/hooks/use-weekly-summary'
+import { formatWeekRange } from '@/lib/timezone-utils'
 
 interface WeeklySummaryCardProps {
   weekStart: string
@@ -12,19 +13,8 @@ interface WeeklySummaryCardProps {
 export function WeeklySummaryCard({ weekStart, onClose }: WeeklySummaryCardProps) {
   const { summary, loading, error, generateWeeklySummary } = useWeeklySummary(weekStart)
 
-  const formatWeekRange = (startDate: string) => {
-    const start = new Date(startDate)
-    const end = new Date(start)
-    end.setDate(end.getDate() + 6)
-    
-    return `${start.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric' 
-    })} - ${end.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric',
-      year: 'numeric'
-    })}`
+  const formatWeekRangeDisplay = (startDate: string) => {
+    return formatWeekRange(startDate)
   }
 
   const renderTrends = (trends: Record<string, any>) => {
@@ -135,7 +125,7 @@ export function WeeklySummaryCard({ weekStart, onClose }: WeeklySummaryCardProps
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Calendar className="w-5 h-5" />
-            Weekly Summary - {formatWeekRange(weekStart)}
+            Weekly Summary - {formatWeekRangeDisplay(weekStart)}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -161,7 +151,7 @@ export function WeeklySummaryCard({ weekStart, onClose }: WeeklySummaryCardProps
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <Calendar className="w-5 h-5" />
-            Weekly Summary - {formatWeekRange(weekStart)}
+            Weekly Summary - {formatWeekRangeDisplay(weekStart)}
           </CardTitle>
           {onClose && (
             <Button variant="ghost" size="sm" onClick={onClose}>
