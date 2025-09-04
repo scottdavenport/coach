@@ -12,7 +12,6 @@ import {
 import { Calendar } from '@/components/ui/calendar';
 import {
   Sun,
-  RefreshCw,
   Loader2,
   Brain,
   TrendingUp,
@@ -69,27 +68,17 @@ export function DailyJournal({
   // Get journal entry dates for calendar indicators
   const { journalEntryDates } = useJournalEntries({ userId });
 
-  // Pattern recognition hook - TEMPORARILY DISABLED for performance debugging
-  // const {
-  //   patterns,
-  //   isLoading: patternsLoading,
-  //   error: patternsError,
-  //   refreshPatterns,
-  //   getTopTopics,
-  //   getTopActivities,
-  //   getTopMoods,
-  //   getSleepInsights
-  // } = usePatternRecognition(userId)
-
-  // Temporary mock data while pattern recognition is disabled
-  const patterns = null;
-  const patternsLoading = false;
-  const patternsError = null;
-  const refreshPatterns = async () => {};
-  const getTopTopics = (limit?: number) => [];
-  const getTopActivities = (limit?: number) => [];
-  const getTopMoods = (limit?: number) => [];
-  const getSleepInsights = () => [];
+  // Pattern recognition hook
+  const {
+    patterns,
+    isLoading: patternsLoading,
+    error: patternsError,
+    refreshPatterns,
+    getTopTopics,
+    getTopActivities,
+    getTopMoods,
+    getSleepInsights
+  } = usePatternRecognition(userId);
 
   // Update currentDate when selectedDate prop changes or initialize with today
   useEffect(() => {
@@ -405,15 +394,11 @@ export function DailyJournal({
     };
   }, [isOpen, userId, currentDate]); // Removed loadNarrativeData dependency to prevent infinite loops
 
-  // Refresh current narrative
-  const handleRefresh = () => {
-    generateNarrative(currentDate);
-  };
 
   // Toggle pattern insights
   const togglePatterns = () => {
     setShowPatterns(!showPatterns);
-    if (!showPatterns && patterns) {
+    if (!showPatterns && !patterns) {
       refreshPatterns();
     }
   };
@@ -439,32 +424,10 @@ export function DailyJournal({
           </div>
         )}
 
-        {/* Pattern Recognition Toggle */}
-        <div className="flex justify-center mb-4">
-          <Button
-            onClick={togglePatterns}
-            variant={showPatterns ? 'default' : 'outline'}
-            size="sm"
-            className="flex items-center gap-2"
-          >
-            {showPatterns ? (
-              <>
-                <Brain className="h-4 w-4" />
-                Hide AI Insights
-              </>
-            ) : (
-              <>
-                <Lightbulb className="h-4 w-4" />
-                Show AI Insights
-              </>
-            )}
-          </Button>
-        </div>
-
         {/* AI Pattern Insights */}
         {showPatterns && (
-          <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
-            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-blue-700">
+          <div className="mb-6 p-4 bg-card-2 rounded-lg border border-line">
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-text">
               <Brain className="h-5 w-5" />
               AI Discovered Patterns
             </h3>
@@ -482,16 +445,16 @@ export function DailyJournal({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Top Topics */}
                 {getTopTopics(3).length > 0 && (
-                  <div className="bg-white p-3 rounded-lg border">
-                    <h4 className="font-medium text-blue-600 mb-2 flex items-center gap-2">
+                  <div className="bg-card p-3 rounded-lg border border-line">
+                    <h4 className="font-medium text-primary mb-2 flex items-center gap-2">
                       <TrendingUp className="h-4 w-4" />
                       Topics You Love
                     </h4>
                     <div className="space-y-1">
                       {getTopTopics(3).map((topic, index) => (
                         <div key={index} className="text-sm">
-                          <span className="font-medium">{topic.topic}</span>
-                          <span className="text-gray-500 ml-2">
+                          <span className="font-medium text-text">{topic.topic}</span>
+                          <span className="text-muted ml-2">
                             ({topic.frequency} mentions)
                           </span>
                         </div>
@@ -502,18 +465,18 @@ export function DailyJournal({
 
                 {/* Top Activities */}
                 {getTopActivities(3).length > 0 && (
-                  <div className="bg-white p-3 rounded-lg border">
-                    <h4 className="font-medium text-green-600 mb-2 flex items-center gap-2">
+                  <div className="bg-card p-3 rounded-lg border border-line">
+                    <h4 className="font-medium text-green-400 mb-2 flex items-center gap-2">
                       <TrendingUp className="h-4 w-4" />
                       Your Favorite Activities
                     </h4>
                     <div className="space-y-1">
                       {getTopActivities(3).map((activity, index) => (
                         <div key={index} className="text-sm">
-                          <span className="font-medium">
+                          <span className="font-medium text-text">
                             {activity.activity}
                           </span>
-                          <span className="text-gray-500 ml-2">
+                          <span className="text-muted ml-2">
                             ({activity.frequency} times)
                           </span>
                         </div>
@@ -524,16 +487,16 @@ export function DailyJournal({
 
                 {/* Mood Patterns */}
                 {getTopMoods(3).length > 0 && (
-                  <div className="bg-white p-3 rounded-lg border">
-                    <h4 className="font-medium text-purple-600 mb-2 flex items-center gap-2">
+                  <div className="bg-card p-3 rounded-lg border border-line">
+                    <h4 className="font-medium text-purple-400 mb-2 flex items-center gap-2">
                       <TrendingUp className="h-4 w-4" />
                       Mood Patterns
                     </h4>
                     <div className="space-y-1">
                       {getTopMoods(3).map((mood, index) => (
                         <div key={index} className="text-sm">
-                          <span className="font-medium">{mood.mood}</span>
-                          <span className="text-gray-500 ml-2">
+                          <span className="font-medium text-text">{mood.mood}</span>
+                          <span className="text-muted ml-2">
                             ({mood.frequency} times)
                           </span>
                         </div>
@@ -544,8 +507,8 @@ export function DailyJournal({
 
                 {/* Sleep Insights */}
                 {getSleepInsights().length > 0 && (
-                  <div className="bg-white p-3 rounded-lg border">
-                    <h4 className="font-medium text-indigo-600 mb-2 flex items-center gap-2">
+                  <div className="bg-card p-3 rounded-lg border border-line">
+                    <h4 className="font-medium text-indigo-400 mb-2 flex items-center gap-2">
                       <TrendingUp className="h-4 w-4" />
                       Sleep Patterns
                     </h4>
@@ -554,10 +517,10 @@ export function DailyJournal({
                         .slice(0, 2)
                         .map((sleep, index) => (
                           <div key={index} className="text-sm">
-                            <span className="font-medium">
+                            <span className="font-medium text-text">
                               Quality: {sleep.sleepQuality}/10
                             </span>
-                            <span className="text-gray-500 ml-2">
+                            <span className="text-muted ml-2">
                               ({sleep.sleepDuration}h)
                             </span>
                           </div>
@@ -567,8 +530,8 @@ export function DailyJournal({
                 )}
               </div>
             ) : (
-              <div className="text-center py-4 text-gray-600">
-                <Lightbulb className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+              <div className="text-center py-4 text-muted">
+                <Lightbulb className="h-8 w-8 mx-auto mb-2 text-muted" />
                 <p>Start more conversations to discover your patterns!</p>
                 <p className="text-sm">
                   AI will analyze your chat history to find insights.
@@ -693,17 +656,30 @@ export function DailyJournal({
           </div>
         )}
 
-        {/* Action Buttons */}
-        <div className="flex justify-end gap-2 pt-4 border-t border-line">
+        {/* AI Insights Toggle */}
+        <div className="flex justify-center mb-4">
           <Button
-            variant="outline"
-            onClick={handleRefresh}
-            disabled={isGenerating}
+            onClick={togglePatterns}
+            variant={showPatterns ? 'default' : 'outline'}
+            size="sm"
             className="flex items-center gap-2"
           >
-            <RefreshCw className="h-4 w-4" />
-            Refresh Narrative
+            {showPatterns ? (
+              <>
+                <Brain className="h-4 w-4" />
+                Hide AI Insights
+              </>
+            ) : (
+              <>
+                <Lightbulb className="h-4 w-4" />
+                Show AI Insights
+              </>
+            )}
           </Button>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex justify-end gap-2 pt-4 border-t border-line">
           <Button onClick={onClose}>Close</Button>
         </div>
       </DialogContent>
