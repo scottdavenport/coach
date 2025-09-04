@@ -73,8 +73,9 @@ export function DashboardHeader({ userId, selectedDate }: DashboardHeaderProps) 
       console.log('🧹 Starting comprehensive user data reset...')
       
       // Clear ALL user-specific tables in order of dependencies
+      // Order matters due to foreign key constraints
       const tablesToClear = [
-        'conversation_file_attachments',
+        'conversation_file_attachments', // Junction table - clear first
         'conversation_insights', 
         'conversations',
         'user_daily_metrics',
@@ -86,7 +87,7 @@ export function DashboardHeader({ userId, selectedDate }: DashboardHeaderProps) 
         'weekly_summaries',
         'monthly_trends',
         'events',
-        'user_uploads',
+        'user_uploads', // Clear after conversation_file_attachments
         'oura_data',
         'oura_integrations',
         'ocr_feedback'
@@ -97,13 +98,46 @@ export function DashboardHeader({ userId, selectedDate }: DashboardHeaderProps) 
 
       for (const table of tablesToClear) {
         try {
-          const { error } = await supabase
-            .from(table)
-            .delete()
-            .eq('user_id', userId)
+          let error;
+          
+          if (table === 'conversation_file_attachments') {
+            // Special handling for junction table - delete via conversation_id
+            // First get conversation IDs for this user
+            const { data: conversations, error: convError } = await supabase
+              .from('conversations')
+              .select('id')
+              .eq('user_id', userId)
+            
+            if (convError) {
+              error = convError;
+            } else if (conversations && conversations.length > 0) {
+              const conversationIds = conversations.map(c => c.id);
+              const { error: deleteError } = await supabase
+                .from(table)
+                .delete()
+                .in('conversation_id', conversationIds)
+              error = deleteError;
+            } else {
+              // No conversations to delete attachments for
+              error = null;
+            }
+          } else {
+            // Standard deletion for tables with user_id column
+            const { error: deleteError } = await supabase
+              .from(table)
+              .delete()
+              .eq('user_id', userId)
+            error = deleteError;
+          }
           
           if (error) {
-            console.error(`Error clearing ${table}:`, error)
+            console.error(`❌ Error clearing ${table}:`, error)
+            console.error(`Error details:`, {
+              code: error.code,
+              message: error.message,
+              details: error.details,
+              hint: error.hint
+            })
             errorCount++
           } else {
             console.log(`✅ Cleared ${table}`)
