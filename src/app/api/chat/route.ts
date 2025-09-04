@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import OpenAI from 'openai'
 import { logger } from '@/lib/logger'
+import { getTodayInTimezone } from '@/lib/timezone-utils'
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -316,9 +317,10 @@ export async function POST(request: NextRequest) {
         })
 
         // Store the conversation insights with enhanced context
+        // Note: We'll use UTC date for storage but need to ensure frontend queries match
         const enhancedInsights = {
           user_id: user.id,
-          conversation_date: new Date().toISOString().split('T')[0], // Note: Using UTC date for database consistency
+          conversation_date: new Date().toISOString().split('T')[0], // Using UTC date for database consistency
           message: message,
           insights: parsedData.insights,
           data_types: {

@@ -42,10 +42,11 @@ export function useCardModal({ userId }: UseCardModalProps) {
         console.log('Setting initial selectedDate to:', dates[0])
         setSelectedDate(dates[0])
       } else if (dates.length === 0 && !selectedDate) {
-        // If no data exists, set to today's date
-        const today = getTodayInTimezone()
-        console.log('No data exists, setting selectedDate to today:', today)
-        setSelectedDate(today)
+        // If no data exists, set to today's date using UTC to match server storage
+        const today = new Date()
+        const todayString = today.toISOString().split('T')[0]
+        console.log('No data exists, setting selectedDate to today:', todayString)
+        setSelectedDate(todayString)
       }
     } catch (error) {
       console.error('Error fetching available dates:', error)

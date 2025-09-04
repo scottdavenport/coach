@@ -37,10 +37,10 @@ interface NarrativeData {
 }
 
 export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJournalProps) {
-  // Initialize with today's date using timezone utilities
+  // Initialize with today's date using UTC to match server storage
   const [currentDate, setCurrentDate] = useState(() => {
-    const todayString = getTodayInTimezone()
-    return new Date(todayString + 'T00:00:00')
+    const today = new Date()
+    return new Date(today.getFullYear(), today.getMonth(), today.getDate())
   })
   const [narrativeData, setNarrativeData] = useState<NarrativeData | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -79,10 +79,10 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
   // Ensure we start with current date if no date is selected
   useEffect(() => {
     if (!selectedDate) {
-      const todayString = getTodayInTimezone()
-      const today = new Date(todayString + 'T00:00:00')
-      console.log('🔍 Setting current date to today:', todayString)
-      setCurrentDate(today)
+      const today = new Date()
+      const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+      console.log('🔍 Setting current date to today:', todayDate.toISOString().split('T')[0])
+      setCurrentDate(todayDate)
     }
   }, [selectedDate])
 

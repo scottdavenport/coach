@@ -51,10 +51,10 @@ export const DailyWorkoutModal = forwardRef<DailyWorkoutModalRef, DailyWorkoutMo
       getCompletedActivities
     } = useDailyActivities({ userId })
 
-    // Initialize with today's date in user's timezone
+    // Initialize with today's date using UTC to match server storage
     useEffect(() => {
       if (!selectedDate) {
-        const today = getTodayInTimezone()
+        const today = new Date().toISOString().split('T')[0]
         setSelectedDate(today)
         setHookDate(today)
       }
@@ -63,7 +63,7 @@ export const DailyWorkoutModal = forwardRef<DailyWorkoutModalRef, DailyWorkoutMo
     // Expose methods to parent component
     useImperativeHandle(ref, () => ({
       openModal: (date?: string) => {
-        const targetDate = date || getTodayInTimezone()
+        const targetDate = date || new Date().toISOString().split('T')[0]
         setSelectedDate(targetDate)
         setHookDate(targetDate)
         setIsOpen(true)
@@ -162,7 +162,7 @@ export const DailyWorkoutModal = forwardRef<DailyWorkoutModalRef, DailyWorkoutMo
                   variant="ghost" 
                   size="sm" 
                   onClick={() => {
-                    const today = getTodayInTimezone()
+                    const today = new Date().toISOString().split('T')[0]
                     navigateToDate(today)
                   }}
                   className="text-xs"
