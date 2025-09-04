@@ -107,13 +107,13 @@ async function extractXlsxContent(arrayBuffer: ArrayBuffer): Promise<string> {
   // Only process first sheet to save tokens
   const firstSheet = workbook.worksheets[0]
   if (firstSheet) {
-    const jsonData: any[] = []
+    const jsonData: (string | number | boolean | Date | null)[][] = []
     
     // Convert worksheet to JSON format similar to XLSX
     firstSheet.eachRow((row) => {
-      const rowData: any[] = []
+      const rowData: (string | number | boolean | Date | null)[] = []
       row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
-        rowData[colNumber - 1] = cell.value
+        rowData[colNumber - 1] = cell.value as any
       })
       jsonData.push(rowData)
     })
@@ -123,7 +123,7 @@ async function extractXlsxContent(arrayBuffer: ArrayBuffer): Promise<string> {
     // Show only first 2 rows
     const preview = jsonData.slice(0, 2)
     preview.forEach((row, rowIndex) => {
-      const filteredRow = row.filter(cell => cell !== null && cell !== undefined)
+      const filteredRow = row.filter((cell: string | number | boolean | Date | null) => cell !== null && cell !== undefined)
       const rowStr = filteredRow.slice(0, 3).join(' | ') + (filteredRow.length > 3 ? '...' : '')
       content += `${rowIndex + 1}: ${rowStr}\n`
     })

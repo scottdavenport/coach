@@ -10,7 +10,7 @@ import { OptimizedInput } from './optimized-input'
 import { IsolatedFileManager } from './isolated-file-manager'
 
 import { createClient } from '@/lib/supabase/client'
-import { FileAttachment, SupportedFileType } from '@/types'
+import { FileAttachment, SupportedFileType, ConversationMessage } from '@/types'
 import { FileProcessor } from '@/lib/file-processing'
 import { processFileContentClient } from '@/lib/file-processing/client'
 import { useFileManager } from '@/hooks/use-file-manager'
@@ -24,7 +24,7 @@ interface ChatInterfaceProps {
 
 export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, onDataStored }: ChatInterfaceProps) {
   
-  const [messages, setMessages] = useState<ConversationMessage[]>([])
+  const [messages, setMessages] = useState<any[]>([])
   const [inputValue, setInputValue] = useState('')
 
   const [isUploadMenuOpen, setIsUploadMenuOpen] = useState(false)
@@ -358,7 +358,7 @@ export function ChatInterface({ userId, pendingQuestions = [], onQuestionAsked, 
   }, [fileManager.files, inputValue, userId])
 
   // Detect if user is correcting OCR data
-  const detectOcrCorrection = (message: string, messageHistory: ConversationMessage[]) => {
+  const detectOcrCorrection = (message: string, messageHistory: any[]) => {
     const lowerMessage = message.toLowerCase()
     
     // Look for more specific correction patterns
