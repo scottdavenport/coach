@@ -318,7 +318,7 @@ export async function POST(request: NextRequest) {
         // Store the conversation insights with enhanced context
         const enhancedInsights = {
           user_id: user.id,
-          conversation_date: new Date().toISOString().split('T')[0],
+          conversation_date: new Date().toISOString().split('T')[0], // Note: Using UTC date for database consistency
           message: message,
           insights: parsedData.insights,
           data_types: {
@@ -411,7 +411,7 @@ export async function POST(request: NextRequest) {
           }
           
           // Trigger daily narrative generation (non-blocking)
-          const today = new Date().toISOString().split('T')[0]
+          const today = new Date().toISOString().split('T')[0] // Note: Using UTC date for database consistency
           
           // Call narrative generation directly - this should work now
           try {

@@ -3,6 +3,9 @@
  * Handles timezone detection, date formatting, and timezone-aware date operations
  */
 
+// Cache timezone detection for performance
+let cachedTimezone: string | null = null
+
 /**
  * Get the user's timezone from the browser
  * @returns The user's timezone (e.g., 'America/New_York', 'Europe/London')
@@ -13,11 +16,18 @@ export function getUserTimezone(): string {
     return 'UTC'
   }
   
+  // Return cached timezone if available
+  if (cachedTimezone) {
+    return cachedTimezone
+  }
+  
   try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone
+    cachedTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone
+    return cachedTimezone
   } catch (error) {
     console.warn('Failed to detect timezone, falling back to UTC:', error)
-    return 'UTC'
+    cachedTimezone = 'UTC'
+    return cachedTimezone
   }
 }
 
@@ -48,11 +58,29 @@ export function getTodayInTimezone(timezone?: string): string {
  * @returns Date object representing the start of the day in the user's timezone
  */
 export function parseDateInTimezone(dateString: string, timezone?: string): Date {
+  // Validate date string format
+  if (!dateString || !dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    throw new Error(`Invalid date string format: ${dateString}. Expected YYYY-MM-DD format.`)
+  }
+  
   // Parse the date string and create a date in the user's timezone
   const [year, month, day] = dateString.split('-').map(Number)
   
+  // Validate parsed values
+  if (isNaN(year) || isNaN(month) || isNaN(day) || 
+      month < 1 || month > 12 || 
+      day < 1 || day > 31 ||
+      year < 1900 || year > 2100) {
+    throw new Error(`Invalid date values: year=${year}, month=${month}, day=${day}`)
+  }
+  
   // Create date in user's timezone by using a date string that includes timezone info
   const dateInTz = new Date(`${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}T00:00:00`)
+  
+  // Validate the created date
+  if (isNaN(dateInTz.getTime())) {
+    throw new Error(`Failed to create valid date from: ${dateString}`)
+  }
   
   // Adjust for timezone offset
   const utcDate = new Date(dateInTz.getTime() - (dateInTz.getTimezoneOffset() * 60000))
@@ -225,7 +253,21 @@ export function getWeekStartInTimezone(dateString: string, timezone?: string): s
  */
 export function getWeekEndInTimezone(dateString: string, timezone?: string): string {
   const weekStart = getWeekStartInTimezone(dateString, timezone)
-  return navigateDateInTimezone(weekStart, 'next', timezone)
+  const tz = timezone || getUserTimezone()
+  const date = parseDateInTimezone(weekStart, tz)
+  
+  // Add 6 days to get to Sunday (end of week)
+  date.setDate(date.getDate() + 6)
+  
+  // Format back to YYYY-MM-DD
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: tz,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  })
+  
+  return formatter.format(date)
 }
 
 /**
@@ -290,7 +332,8 @@ export function getWeekDatesInTimezone(weekStart: string, timezone?: string): st
 export function formatWeekRange(weekStart: string, timezone?: string): string {
   const tz = timezone || getUserTimezone()
   const start = parseDateInTimezone(weekStart, tz)
-  const end = parseDateInTimezone(navigateDateInTimezone(weekStart, 'next', tz), tz)
+  const weekEnd = getWeekEndInTimezone(weekStart, tz)
+  const end = parseDateInTimezone(weekEnd, tz)
   
   const startFormatted = new Intl.DateTimeFormat('en-US', {
     timeZone: tz,

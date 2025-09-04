@@ -37,10 +37,10 @@ interface NarrativeData {
 }
 
 export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJournalProps) {
-  // Initialize with today's date in local timezone to avoid timezone issues
+  // Initialize with today's date using timezone utilities
   const [currentDate, setCurrentDate] = useState(() => {
-    const now = new Date()
-    return new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    const todayString = getTodayInTimezone()
+    return new Date(todayString + 'T00:00:00')
   })
   const [narrativeData, setNarrativeData] = useState<NarrativeData | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -79,10 +79,9 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
   // Ensure we start with current date if no date is selected
   useEffect(() => {
     if (!selectedDate) {
-      const now = new Date()
-      // Force to today's date in local timezone
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-      console.log('🔍 Setting current date to today:', today.toISOString().split('T')[0])
+      const todayString = getTodayInTimezone()
+      const today = new Date(todayString + 'T00:00:00')
+      console.log('🔍 Setting current date to today:', todayString)
       setCurrentDate(today)
     }
   }, [selectedDate])
@@ -92,47 +91,38 @@ export function DailyJournal({ userId, isOpen, onClose, selectedDate }: DailyJou
     return formatDateLong(date)
   }
 
-  // Navigate to previous/next day
+  // Navigate to previous/next day using timezone utilities
   const goToPreviousDay = () => {
-    setCurrentDate(prev => {
-      const newDate = new Date(prev)
-      newDate.setDate(prev.getDate() - 1)
-      return newDate
-    })
+    const currentDateString = currentDate.toISOString().split('T')[0]
+    const prevDateString = navigateDateInTimezone(currentDateString, 'prev')
+    setCurrentDate(new Date(prevDateString + 'T00:00:00'))
   }
 
   const goToNextDay = () => {
-    // Don't allow navigation to future dates
-    const tomorrow = new Date()
-    tomorrow.setDate(tomorrow.getDate() + 1)
-    tomorrow.setHours(0, 0, 0, 0)
+    const currentDateString = currentDate.toISOString().split('T')[0]
     
-    if (currentDate < tomorrow) {
-      setCurrentDate(prev => {
-        const newDate = new Date(prev)
-        newDate.setDate(prev.getDate() + 1)
-        return newDate
-      })
+    // Don't allow navigation to future dates
+    if (!isFutureDateInTimezone(currentDateString)) {
+      const nextDateString = navigateDateInTimezone(currentDateString, 'next')
+      setCurrentDate(new Date(nextDateString + 'T00:00:00'))
     }
   }
 
   const goToToday = () => {
-    setCurrentDate(new Date())
+    const todayString = getTodayInTimezone()
+    setCurrentDate(new Date(todayString + 'T00:00:00'))
   }
 
-  // Check if current date is today
+  // Check if current date is today using timezone utilities
   const isToday = () => {
-    const today = new Date()
-    return currentDate.toDateString() === today.toDateString()
+    const currentDateString = currentDate.toISOString().split('T')[0]
+    return isTodayInTimezone(currentDateString)
   }
 
-  // Check if current date is in the future
+  // Check if current date is in the future using timezone utilities
   const isFutureDate = () => {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const currentDateStart = new Date(currentDate)
-    currentDateStart.setHours(0, 0, 0, 0)
-    return currentDateStart > today
+    const currentDateString = currentDate.toISOString().split('T')[0]
+    return isFutureDateInTimezone(currentDateString)
   }
 
   // Check if we can navigate to next day
