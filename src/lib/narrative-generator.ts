@@ -93,41 +93,64 @@ export async function generateDailyNarrative(userId: string, date: string) {
       .eq('user_id', userId)
       .eq('metric_date', date);
 
-    // Generate rich narrative using AI
-    const narrative = await generateRichNarrative(
-      insights,
-      allFileAttachments || [],
-      healthMetrics || []
-    );
-
-    // Store multiple journal entries (one per major topic/activity)
-    const journalEntries = await createJournalEntries(narrative, userId, date);
-
-    // Check for existing entries to avoid duplicates while allowing accumulation
+    // Fetch existing journal content for intelligent merging
     const { data: existingEntries } = await supabase
       .from('daily_journal')
       .select('entry_type, category, content')
       .eq('user_id', userId)
       .eq('journal_date', date);
 
-    // Filter out only exact duplicate content but allow accumulation
-    const newEntries = journalEntries.filter(entry => {
-      // Only exclude if EXACT same content exists
-      return !existingEntries?.some(
-        existing =>
-          existing.entry_type === entry.type &&
-          existing.category === entry.category &&
-          existing.content?.trim() === entry.content.trim()
-      );
-    });
+    // Build existing content string for AI prompt
+    let existingContent = '';
+    if (existingEntries && existingEntries.length > 0) {
+      const reflectionEntry = existingEntries.find(e => e.entry_type === 'reflection');
+      const healthEntry = existingEntries.find(e => e.category === 'health');
+      const insightEntries = existingEntries.filter(e => e.entry_type === 'note' && e.category === 'lifestyle');
+      
+      if (reflectionEntry) {
+        existingContent += `Current narrative: ${reflectionEntry.content}\n`;
+      }
+      if (healthEntry) {
+        existingContent += `Current health context: ${healthEntry.content}\n`;
+      }
+      if (insightEntries.length > 0) {
+        existingContent += `Current insights: ${insightEntries.map(e => e.content).join(', ')}\n`;
+      }
+    }
+
+    // Generate rich narrative using AI with existing content for intelligent merging
+    const narrative = await generateRichNarrative(
+      insights,
+      allFileAttachments || [],
+      healthMetrics || [],
+      existingContent
+    );
+
+    // Store single comprehensive journal entry (replaces entire day's content)
+    const journalEntries = await createJournalEntries(narrative, userId, date);
+
+    // Delete existing entries for this date to replace with new comprehensive entry
+    if (existingEntries && existingEntries.length > 0) {
+      const { error: deleteError } = await supabase
+        .from('daily_journal')
+        .delete()
+        .eq('user_id', userId)
+        .eq('journal_date', date);
+
+      if (deleteError) {
+        console.error('Error deleting existing journal entries:', deleteError);
+      } else {
+        console.log(`🗑️ Deleted ${existingEntries.length} existing journal entries for date: ${date}`);
+      }
+    }
 
     console.log(
-      `📊 Journal entry filtering: ${journalEntries.length} generated, ${newEntries.length} new, ${journalEntries.length - newEntries.length} filtered as duplicates`
+      `📊 Journal entry regeneration: ${journalEntries.length} new entries replacing previous content`
     );
 
     // Save all new entries to daily_journal table
     const results = [];
-    for (const entry of newEntries) {
+    for (const entry of journalEntries) {
       try {
         const { data, error } = await supabase
           .from('daily_journal')
@@ -167,11 +190,11 @@ export async function generateDailyNarrative(userId: string, date: string) {
       console.error('Some journal entries failed to save:', errors);
     }
 
-    console.log('✅ Created/updated daily journal entries:', newEntries.length);
+    console.log('✅ Created/updated daily journal entries:', journalEntries.length);
     return {
       success: true,
-      entriesCreated: newEntries.length,
-      entriesFiltered: journalEntries.length - newEntries.length,
+      entriesCreated: journalEntries.length,
+      entriesFiltered: 0, // No filtering in new system - entries are replaced
       insightsProcessed: insights.length,
       fileAttachmentsProcessed: fileAttachments?.length || 0,
     };
@@ -187,7 +210,8 @@ export async function generateDailyNarrative(userId: string, date: string) {
 async function generateRichNarrative(
   insights: any[],
   fileAttachments: any[],
-  healthMetrics: any[]
+  healthMetrics: any[],
+  existingContent?: string
 ) {
   try {
     // Prepare comprehensive context for AI
@@ -217,7 +241,15 @@ async function generateRichNarrative(
     }));
 
     // Create AI prompt for rich narrative generation
-    const prompt = `Create a rich, personal daily journal entry based on the user's conversations and data. Write in first person as if the user is writing their own diary entry. Be specific and contextual.
+    const prompt = `Create a concise, coherent daily journal entry that intelligently merges new information with existing content. Write in first person with specific, concrete details. Follow these writing guidelines:
+
+WRITING STYLE RULES:
+- Be specific and concrete - avoid vague terms like "experiences," "great," "amazing"
+- Use active voice and contractions for warmth
+- Avoid corporate jargon and marketing fluff
+- Be direct and confident - no softening phrases
+- Personal but not flowery - reduce emotional language significantly
+- Focus on concrete activities rather than abstract concepts
 
 CONVERSATION DATA:
 ${conversationContext
@@ -236,43 +268,37 @@ ${fileContext.length > 0 ? `UPLOADED FILES:\n${fileContext.map(f => `- ${f.fileN
 
 ${healthContext.length > 0 ? `HEALTH METRICS:\n${healthContext.map(h => `- ${h.metric}: ${h.value}${h.unit || ''}`).join('\n')}\n` : ''}
 
-IMPORTANT GUIDELINES:
-- Use SPECIFIC details from conversations (restaurant names, locations, etc.)
-- Include file upload context (heart rate data, workout analysis, etc.)
-- Write as a personal diary entry in first person
-- Be emotionally engaging and contextual
-- Reference specific places, people, activities mentioned
-- Include time context (morning, evening, etc.)
-- Generate HEALTH/WELLNESS INSIGHTS that are actionable and meaningful
-- Focus insights on patterns, habits, and wellness connections
+${existingContent ? `EXISTING JOURNAL CONTENT FOR TODAY:\n${existingContent}\n\nMERGE new information with existing content intelligently. Don't completely rewrite - enhance and build upon what's already there.\n` : ''}
+
+REQUIREMENTS:
+- Main narrative: 1-2 sentences with activities and brief context
+- Use specific details from conversations (restaurant names, locations, etc.)
+- Include file upload context when relevant
+- Generate max 5 health insights that are actionable and specific
+- Focus on concrete activities and patterns
+- Avoid emotional language and vague superlatives
 
 EXAMPLES:
 
 For "We are heading to Open Range Grill in uptown sedona for dinner tonight":
 {
-  "activities": ["Dinner at Open Range Grill", "Exploring uptown Sedona"],
-  "narrative": "Planning an exciting dinner at Open Range Grill in uptown Sedona tonight. Looking forward to exploring the local cuisine and enjoying the beautiful Sedona atmosphere. It feels great to have such a nice evening planned in this stunning location.",
-  "notes": ["Social dining experience promotes mental wellness", "Evening activities in beautiful locations boost mood", "Mindful food choices support overall health goals"],
-  "health_context": "Evening dining experience - mindful eating and social connection",
-  "follow_up": "How was the dinner at Open Range Grill? What was your favorite dish?"
+  "narrative": "Planning dinner at Open Range Grill in uptown Sedona tonight. Looking forward to exploring the local dining scene in this beautiful area.",
+  "health_context": "Evening dining - mindful eating and social connection",
+  "insights": ["Social dining promotes mental wellness", "Exploring new restaurants supports cultural engagement", "Evening activities in beautiful locations boost mood"]
 }
 
 For conversation with heart rate image upload:
 {
-  "activities": ["Heart rate monitoring", "Health tracking"],
-  "narrative": "Tracked my heart rate today using uploaded data. It's great to stay on top of my health metrics and understand how my body is responding to daily activities.",
-  "notes": ["Consistent heart rate monitoring builds health awareness", "Regular biometric tracking helps identify patterns", "Technology-assisted health monitoring supports wellness goals"],
+  "narrative": "Tracked heart rate data today. Monitoring biometrics helps me understand how my body responds to daily activities.",
   "health_context": "Heart rate: 72 bpm - within healthy range for resting heart rate",
-  "follow_up": "How are you feeling physically today compared to yesterday?"
+  "insights": ["Consistent heart rate monitoring builds health awareness", "Regular biometric tracking helps identify patterns", "Technology-assisted health monitoring supports wellness goals"]
 }
 
 Format as JSON:
 {
-  "activities": ["Specific activity with details"],
-  "narrative": "Rich personal narrative in first person with specific details...",
-  "notes": ["Specific insight with context"],
+  "narrative": "Concise 1-2 sentence narrative with specific details...",
   "health_context": "Health/wellness connection if relevant",
-  "follow_up": "Thoughtful, specific follow-up question"
+  "insights": ["Specific insight with context", "Max 5 insights total"]
 }`;
 
     const completion = await openai.chat.completions.create({
@@ -528,63 +554,48 @@ async function createJournalEntries(
 ) {
   const entries = [];
 
-  // Add timestamp to make entries unique for accumulation
+  // Add timestamp to make entries unique for accumulation (kept internally for deduplication)
   const timestamp = new Date().toISOString().split('.')[0];
 
-  // Main reflection entry - update existing or create new
+  // Single comprehensive reflection entry - replaces entire day's content
   if (narrative.narrative) {
     entries.push({
       type: 'reflection',
       category: 'lifestyle',
-      content: `[${timestamp}] ${narrative.narrative}`,
+      content: narrative.narrative, // No timestamp prefix in displayed content
       confidence: 0.9,
+      internal_timestamp: timestamp, // Keep timestamp internally for deduplication
     });
   }
 
-  // Activity entries - always add new activities
-  if (narrative.activities && narrative.activities.length > 0) {
-    entries.push({
-      type: 'note',
-      category: 'fitness',
-      content: `[${timestamp}] Activities: ${narrative.activities.join(', ')}`,
-      confidence: 0.95,
-    });
-  }
-
-  // Health context entry
-  if (narrative.healthContext) {
+  // Health context entry (if present)
+  if (narrative.health_context) {
     entries.push({
       type: 'note',
       category: 'health',
-      content: `[${timestamp}] ${narrative.healthContext}`,
+      content: narrative.health_context, // No timestamp prefix in displayed content
       confidence: 0.8,
+      internal_timestamp: timestamp,
     });
   }
 
-  // Follow-up entry for tomorrow - update existing
-  if (narrative.followUp) {
-    entries.push({
-      type: 'goal',
-      category: 'wellness',
-      content: `Tomorrow's reflection: ${narrative.followUp}`,
-      confidence: 0.7,
+  // Key insights entries (max 5) - consolidated from notes
+  if (narrative.insights && narrative.insights.length > 0) {
+    const limitedInsights = narrative.insights.slice(0, 5); // Max 5 insights
+    limitedInsights.forEach((insight: string, index: number) => {
+      if (insight && insight.length > 10) {
+        entries.push({
+          type: 'note',
+          category: 'lifestyle',
+          content: insight, // No timestamp prefix in displayed content
+          confidence: 0.8,
+          internal_timestamp: timestamp,
+        });
+      }
     });
   }
 
-  // Individual insight entries - timestamped for uniqueness
-  narrative.notes?.forEach((note: string, index: number) => {
-    if (note && note.length > 10) {
-      // Only meaningful notes
-      entries.push({
-        type: 'note',
-        category: 'lifestyle',
-        content: `[${timestamp}] ${note}`,
-        confidence: 0.8,
-      });
-    }
-  });
-
-  return entries.slice(0, 8); // Limit to prevent spam
+  return entries;
 }
 
 // Legacy function - kept for compatibility but not used in new rich narrative generation

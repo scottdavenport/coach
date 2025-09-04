@@ -139,38 +139,9 @@ export function DailyJournal({
   // Build narrative from conversation insights and journal entries
   const buildNarrativeFromConversationsAndJournal = useCallback(
     (insights: any[], journalEntries: any[]) => {
-      // Extract activities from insights with more specific detection
-      const activities: string[] = [];
       const notes: string[] = [];
 
       insights.forEach(insight => {
-        const message = insight.message.toLowerCase();
-
-        // Extract specific activities from actual message content
-        if (message.includes('open range grill')) {
-          activities.push('Dinner at Open Range Grill');
-        } else if (
-          message.includes('dinner') &&
-          message.includes('restaurant')
-        ) {
-          activities.push('Restaurant dinner');
-        } else if (message.includes('dinner')) {
-          activities.push('Dinner plans');
-        }
-
-        if (message.includes('uptown sedona')) {
-          activities.push('Exploring uptown Sedona');
-        } else if (message.includes('sedona')) {
-          activities.push('Sedona exploration');
-        }
-
-        // More specific activity detection
-        if (message.includes('golf')) activities.push('Golf');
-        if (message.includes('hike')) activities.push('Hiking');
-        if (message.includes('workout')) activities.push('Workout');
-        if (message.includes('coffee')) activities.push('Coffee time');
-        if (message.includes('pool')) activities.push('Pool time');
-
         // Add insights as notes with cleaning
         if (insight.insights && Array.isArray(insight.insights)) {
           insight.insights.forEach((insightText: string) => {
@@ -186,9 +157,6 @@ export function DailyJournal({
       const reflectionEntry = journalEntries.find(
         entry => entry.entry_type === 'reflection'
       );
-      const activityEntry = journalEntries.find(
-        entry => entry.entry_type === 'note' && entry.category === 'fitness'
-      );
       const healthEntry = journalEntries.find(
         entry => entry.category === 'health'
       );
@@ -199,26 +167,25 @@ export function DailyJournal({
       // Use AI-generated narrative if available, otherwise build from insights
       let narrativeText = reflectionEntry?.content || '';
 
-      if (!narrativeText && activities.length > 0) {
-        // Build rich narrative from activities
-        if (activities.some(a => a.includes('Open Range Grill'))) {
-          narrativeText = `Planning an evening at Open Range Grill in Sedona tonight. Looking forward to exploring the local dining scene and enjoying a relaxing dinner in this beautiful area.`;
-        } else if (activities.some(a => a.includes('Sedona'))) {
-          narrativeText = `Spending time exploring the beautiful Sedona area. ${activities.join(' and ')} made for a wonderful day of discovery and enjoyment.`;
+      if (!narrativeText && insights.length > 0) {
+        // Build concise narrative from conversation insights
+        const firstInsight = insights[0];
+        if (firstInsight.message.toLowerCase().includes('open range grill')) {
+          narrativeText = `Planning dinner at Open Range Grill in uptown Sedona tonight. Looking forward to exploring the local dining scene in this beautiful area.`;
+        } else if (firstInsight.message.toLowerCase().includes('sedona')) {
+          narrativeText = `Spending time in Sedona today. Exploring the beautiful area and enjoying the local atmosphere.`;
         } else {
-          narrativeText = `Today included ${activities.join(' and ')}. It's been a great day filled with meaningful activities and experiences.`;
+          narrativeText = `Had conversations about ${firstInsight.message.substring(0, 50)}... It's been a day of connection and sharing.`;
         }
-      } else if (!narrativeText && notes.length > 0) {
-        narrativeText = `${notes.join('. ')}. It's been a meaningful day with good conversations and connections.`;
       } else if (!narrativeText) {
         narrativeText =
           "Today was a day of natural conversation and connection. Sometimes the best moments come from simply sharing what's on your mind.";
       }
 
       return {
-        activities: Array.from(new Set(activities)),
+        activities: [], // No longer used - activities merged into narrative
         narrative_text: narrativeText,
-        notes: Array.from(new Set(notes)),
+        notes: Array.from(new Set(notes)).slice(0, 5), // Max 5 insights
         health_context: healthEntry?.content || '',
         follow_up:
           followUpEntry?.content?.replace("Tomorrow's reflection: ", '') || '',
@@ -234,9 +201,6 @@ export function DailyJournal({
       const reflectionEntry = journalEntries.find(
         entry => entry.entry_type === 'reflection'
       );
-      const activityEntry = journalEntries.find(
-        entry => entry.entry_type === 'note' && entry.category === 'fitness'
-      );
       const healthEntry = journalEntries.find(
         entry => entry.category === 'health'
       );
@@ -247,21 +211,16 @@ export function DailyJournal({
         entry => entry.entry_type === 'note' && entry.category === 'lifestyle'
       );
 
-      // Extract activities from activity entry
-      const activities =
-        activityEntry?.content?.replace('Activities: ', '').split(', ') || [];
-
-      // Combine all health and lifestyle insights for Key Insights section
-      const allInsights = [
-        ...noteEntries.map(entry => entry.content),
-        ...(healthEntry?.content ? [healthEntry.content] : []),
-      ];
+      // Extract insights from note entries (max 5)
+      const insights = noteEntries
+        .map(entry => entry.content)
+        .slice(0, 5);
 
       return {
-        activities,
+        activities: [], // No longer used - activities merged into narrative
         narrative_text:
           reflectionEntry?.content || 'Journal entries available for this day.',
-        notes: allInsights, // Use the rich health insights from AI
+        notes: insights, // Use the insights from AI
         health_context: healthEntry?.content || '',
         follow_up:
           followUpEntry?.content?.replace("Tomorrow's reflection: ", '') || '',
@@ -657,7 +616,7 @@ export function DailyJournal({
                 {narrativeData.narrative_text ? (
                   <div className="prose prose-sm max-w-none">
                     <p className="text-muted-foreground leading-relaxed">
-                      {narrativeData.narrative_text}
+                      {narrativeData.narrative_text.replace(/^\[.*?\]\s*/, '')}
                     </p>
                   </div>
                 ) : (
@@ -671,27 +630,6 @@ export function DailyJournal({
                   </div>
                 )}
 
-                {/* Key Activities - Clean Bullets */}
-                {narrativeData.activities?.length > 0 && (
-                  <div className="border-l-4 border-blue-400 pl-4">
-                    <h4 className="font-medium text-blue-400 mb-3">
-                      🎯 Key Activities Today
-                    </h4>
-                    <div className="space-y-2">
-                      {narrativeData.activities.map(
-                        (activity: string, index: number) => (
-                          <div
-                            key={index}
-                            className="flex items-center gap-2 text-sm"
-                          >
-                            <span className="text-green-500">•</span>
-                            <span>{activity}</span>
-                          </div>
-                        )
-                      )}
-                    </div>
-                  </div>
-                )}
 
                 {/* Health Context - From AI analysis */}
                 {narrativeData.health_context && (
@@ -700,7 +638,7 @@ export function DailyJournal({
                       💚 Health Context
                     </h4>
                     <div className="text-sm">
-                      <p>{narrativeData.health_context}</p>
+                      <p>{narrativeData.health_context.replace(/^\[.*?\]\s*/, '')}</p>
                     </div>
                   </div>
                 )}
@@ -716,7 +654,7 @@ export function DailyJournal({
                         (note: string, index: number) => (
                           <div key={index} className="flex items-center gap-2">
                             <span>💡</span>
-                            <span>{note}</span>
+                            <span>{note.replace(/^\[.*?\]\s*/, '')}</span>
                           </div>
                         )
                       )}
