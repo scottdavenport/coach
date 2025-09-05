@@ -5,9 +5,633 @@ import {
   getWorkoutContextSummary,
 } from '@/lib/workout-recommendations';
 
+// Sleep and Readiness Context Interfaces
+export interface SleepReadinessContext {
+  sleepQuality: string;
+  sleepInsights: string[];
+  readinessInsights: string[];
+  trendAnalysis: string[];
+  recommendations: string[];
+  healthSummary: string;
+}
+
+export interface HealthMetric {
+  metric_key: string;
+  display_name: string;
+  metric_value?: number;
+  text_value?: string;
+  boolean_value?: boolean;
+  unit?: string;
+  source?: string;
+  confidence?: number;
+}
+
+export interface HistoricalHealthData {
+  date: string;
+  sleep_score?: number;
+  sleep_duration?: number;
+  time_in_bed?: number;
+  sleep_efficiency?: number;
+  rem_sleep?: number;
+  deep_sleep?: number;
+  readiness?: number;
+  resting_heart_rate?: number;
+  heart_rate_variability?: number;
+  body_temperature?: number;
+  respiratory_rate?: number;
+  oxygen_saturation?: number;
+  breathing_regularity?: number;
+}
+
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
+
+// Helper function to fetch historical health data for trend analysis
+async function fetchHistoricalHealthData(
+  userId: string,
+  date: string,
+  days: number = 7
+): Promise<HistoricalHealthData[]> {
+  try {
+    const supabase = await createClient();
+    
+    // Calculate start date for historical data
+    const startDate = new Date(date);
+    startDate.setDate(startDate.getDate() - days);
+    const startDateString = startDate.toISOString().split('T')[0];
+    
+    console.log(`📊 Fetching ${days} days of health data from ${startDateString} to ${date}`);
+    
+    // Fetch health metrics for the specified date range
+    const { data: healthMetrics, error } = await supabase
+      .from('user_daily_metrics')
+      .select(
+        `
+        metric_date,
+        metric_value,
+        text_value,
+        boolean_value,
+        standard_metrics (
+          metric_key,
+          display_name,
+          unit
+        )
+      `
+      )
+      .eq('user_id', userId)
+      .gte('metric_date', startDateString)
+      .lte('metric_date', date)
+      .in('standard_metrics.metric_key', [
+        'sleep_score',
+        'sleep_duration',
+        'time_in_bed',
+        'sleep_efficiency',
+        'rem_sleep',
+        'deep_sleep',
+        'readiness',
+        'resting_heart_rate',
+        'heart_rate_variability',
+        'body_temperature',
+        'respiratory_rate',
+        'oxygen_saturation',
+        'breathing_regularity'
+      ])
+      .order('metric_date', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching historical health data:', error);
+      return [];
+    }
+
+    // Group metrics by date and convert to HistoricalHealthData format
+    const dateMap = new Map<string, HistoricalHealthData>();
+    
+    healthMetrics?.forEach(metric => {
+      const metricKey = metric.standard_metrics?.metric_key;
+      const date = metric.metric_date;
+      const value = metric.metric_value || metric.text_value || metric.boolean_value;
+      
+      if (!dateMap.has(date)) {
+        dateMap.set(date, { date });
+      }
+      
+      const dayData = dateMap.get(date)!;
+      
+      // Map metric keys to HistoricalHealthData properties
+      switch (metricKey) {
+        case 'sleep_score':
+          dayData.sleep_score = typeof value === 'number' ? value : undefined;
+          break;
+        case 'sleep_duration':
+          dayData.sleep_duration = typeof value === 'number' ? value : undefined;
+          break;
+        case 'time_in_bed':
+          dayData.time_in_bed = typeof value === 'number' ? value : undefined;
+          break;
+        case 'sleep_efficiency':
+          dayData.sleep_efficiency = typeof value === 'number' ? value : undefined;
+          break;
+        case 'rem_sleep':
+          dayData.rem_sleep = typeof value === 'number' ? value : undefined;
+          break;
+        case 'deep_sleep':
+          dayData.deep_sleep = typeof value === 'number' ? value : undefined;
+          break;
+        case 'readiness':
+          dayData.readiness = typeof value === 'number' ? value : undefined;
+          break;
+        case 'resting_heart_rate':
+          dayData.resting_heart_rate = typeof value === 'number' ? value : undefined;
+          break;
+        case 'heart_rate_variability':
+          dayData.heart_rate_variability = typeof value === 'number' ? value : undefined;
+          break;
+        case 'body_temperature':
+          dayData.body_temperature = typeof value === 'number' ? value : undefined;
+          break;
+        case 'respiratory_rate':
+          dayData.respiratory_rate = typeof value === 'number' ? value : undefined;
+          break;
+        case 'oxygen_saturation':
+          dayData.oxygen_saturation = typeof value === 'number' ? value : undefined;
+          break;
+        case 'breathing_regularity':
+          dayData.breathing_regularity = typeof value === 'number' ? value : undefined;
+          break;
+      }
+    });
+    
+    const historicalData = Array.from(dateMap.values()).sort((a, b) => 
+      new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+    
+    console.log(`📈 Retrieved ${historicalData.length} days of historical health data`);
+    return historicalData;
+    
+  } catch (error) {
+    console.error('Error in fetchHistoricalHealthData:', error);
+    return [];
+  }
+}
+
+// Main function to generate sleep and readiness context with analysis
+export async function generateSleepReadinessContext(
+  healthMetrics: any[],
+  userId: string,
+  date: string
+): Promise<SleepReadinessContext> {
+  try {
+    console.log(`🛌 Generating sleep and readiness context for ${date}`);
+    
+    // Fetch historical data for trend analysis
+    const historicalData = await fetchHistoricalHealthData(userId, date, 7);
+    
+    // Extract current day metrics
+    const currentMetrics = extractCurrentDayMetrics(healthMetrics);
+    
+    // Analyze sleep quality
+    const sleepQuality = analyzeSleepQuality(currentMetrics);
+    const sleepInsights = generateSleepInsights(currentMetrics);
+    
+    // Analyze readiness
+    const readinessInsights = generateReadinessInsights(currentMetrics);
+    
+    // Generate trend analysis
+    const trendAnalysis = generateTrendAnalysis(currentMetrics, historicalData);
+    
+    // Generate recommendations
+    const recommendations = generateRecommendations(currentMetrics, historicalData);
+    
+    // Create health summary
+    const healthSummary = generateHealthSummary(currentMetrics, sleepQuality);
+    
+    const context: SleepReadinessContext = {
+      sleepQuality,
+      sleepInsights,
+      readinessInsights,
+      trendAnalysis,
+      recommendations,
+      healthSummary
+    };
+    
+    console.log('✅ Generated sleep and readiness context:', {
+      sleepQuality,
+      insightsCount: sleepInsights.length + readinessInsights.length,
+      trendsCount: trendAnalysis.length,
+      recommendationsCount: recommendations.length
+    });
+    
+    return context;
+    
+  } catch (error) {
+    console.error('Error generating sleep readiness context:', error);
+    return {
+      sleepQuality: 'Unknown',
+      sleepInsights: ['Unable to analyze sleep data'],
+      readinessInsights: ['Unable to analyze readiness data'],
+      trendAnalysis: ['Historical data unavailable'],
+      recommendations: ['Focus on maintaining healthy sleep and recovery habits'],
+      healthSummary: 'Health metrics analysis unavailable'
+    };
+  }
+}
+
+// Helper function to extract current day metrics from health metrics array
+function extractCurrentDayMetrics(healthMetrics: any[]): HistoricalHealthData {
+  const currentMetrics: HistoricalHealthData = { date: new Date().toISOString().split('T')[0] };
+  
+  healthMetrics?.forEach(metric => {
+    const metricKey = metric.standard_metrics?.metric_key;
+    const value = metric.metric_value || metric.text_value || metric.boolean_value;
+    
+    if (typeof value === 'number') {
+      switch (metricKey) {
+        case 'sleep_score':
+          currentMetrics.sleep_score = value;
+          break;
+        case 'sleep_duration':
+          currentMetrics.sleep_duration = value;
+          break;
+        case 'time_in_bed':
+          currentMetrics.time_in_bed = value;
+          break;
+        case 'sleep_efficiency':
+          currentMetrics.sleep_efficiency = value;
+          break;
+        case 'rem_sleep':
+          currentMetrics.rem_sleep = value;
+          break;
+        case 'deep_sleep':
+          currentMetrics.deep_sleep = value;
+          break;
+        case 'readiness':
+          currentMetrics.readiness = value;
+          break;
+        case 'resting_heart_rate':
+          currentMetrics.resting_heart_rate = value;
+          break;
+        case 'heart_rate_variability':
+          currentMetrics.heart_rate_variability = value;
+          break;
+        case 'body_temperature':
+          currentMetrics.body_temperature = value;
+          break;
+        case 'respiratory_rate':
+          currentMetrics.respiratory_rate = value;
+          break;
+        case 'oxygen_saturation':
+          currentMetrics.oxygen_saturation = value;
+          break;
+        case 'breathing_regularity':
+          currentMetrics.breathing_regularity = value;
+          break;
+      }
+    }
+  });
+  
+  return currentMetrics;
+}
+
+// Analyze sleep quality based on score, efficiency, and duration
+function analyzeSleepQuality(metrics: HistoricalHealthData): string {
+  const { sleep_score, sleep_efficiency, sleep_duration } = metrics;
+  
+  if (!sleep_score && !sleep_efficiency && !sleep_duration) {
+    return 'No sleep data available';
+  }
+  
+  let qualityScore = 0;
+  let factors = 0;
+  
+  // Sleep score (0-100)
+  if (sleep_score !== undefined) {
+    qualityScore += sleep_score;
+    factors++;
+  }
+  
+  // Sleep efficiency (0-100%)
+  if (sleep_efficiency !== undefined) {
+    qualityScore += sleep_efficiency;
+    factors++;
+  }
+  
+  // Sleep duration (hours) - target 8 hours
+  if (sleep_duration !== undefined) {
+    const durationScore = Math.min(100, (sleep_duration / 8) * 100);
+    qualityScore += durationScore;
+    factors++;
+  }
+  
+  if (factors === 0) return 'No sleep data available';
+  
+  const averageScore = qualityScore / factors;
+  
+  if (averageScore >= 80) return 'Good';
+  if (averageScore >= 60) return 'Fair';
+  return 'Poor';
+}
+
+// Generate sleep insights based on current metrics
+function generateSleepInsights(metrics: HistoricalHealthData): string[] {
+  const insights: string[] = [];
+  const { sleep_score, sleep_efficiency, sleep_duration, rem_sleep, deep_sleep } = metrics;
+  
+  if (sleep_score !== undefined) {
+    if (sleep_score >= 85) {
+      insights.push(`Excellent sleep score of ${sleep_score} - well-rested and recovered`);
+    } else if (sleep_score >= 70) {
+      insights.push(`Good sleep score of ${sleep_score} - adequate rest for the day`);
+    } else if (sleep_score >= 50) {
+      insights.push(`Sleep score of ${sleep_score} indicates room for improvement in sleep quality`);
+    } else {
+      insights.push(`Low sleep score of ${sleep_score} - consider focusing on sleep recovery`);
+    }
+  }
+  
+  if (sleep_efficiency !== undefined) {
+    if (sleep_efficiency >= 85) {
+      insights.push(`High sleep efficiency of ${sleep_efficiency}% - time in bed was well-utilized`);
+    } else if (sleep_efficiency < 80) {
+      insights.push(`Sleep efficiency of ${sleep_efficiency}% suggests opportunities to improve sleep quality`);
+    }
+  }
+  
+  if (sleep_duration !== undefined) {
+    if (sleep_duration >= 8) {
+      insights.push(`Adequate sleep duration of ${sleep_duration.toFixed(1)} hours`);
+    } else if (sleep_duration < 7) {
+      insights.push(`Sleep duration of ${sleep_duration.toFixed(1)} hours is below the 8-hour target`);
+    } else {
+      insights.push(`Sleep duration of ${sleep_duration.toFixed(1)} hours is close to optimal`);
+    }
+  }
+  
+  if (rem_sleep !== undefined && deep_sleep !== undefined) {
+    const totalSleep = rem_sleep + deep_sleep;
+    if (totalSleep > 0) {
+      const remPercentage = (rem_sleep / totalSleep) * 100;
+      const deepPercentage = (deep_sleep / totalSleep) * 100;
+      
+      if (remPercentage >= 20 && remPercentage <= 25) {
+        insights.push(`Healthy REM sleep proportion of ${remPercentage.toFixed(1)}%`);
+      }
+      
+      if (deepPercentage >= 15 && deepPercentage <= 20) {
+        insights.push(`Good deep sleep proportion of ${deepPercentage.toFixed(1)}%`);
+      }
+    }
+  }
+  
+  return insights;
+}
+
+// Generate readiness insights based on current metrics
+function generateReadinessInsights(metrics: HistoricalHealthData): string[] {
+  const insights: string[] = [];
+  const { readiness, resting_heart_rate, heart_rate_variability, body_temperature } = metrics;
+  
+  if (readiness !== undefined) {
+    if (readiness >= 85) {
+      insights.push(`Excellent readiness score of ${readiness} - well-recovered and ready for high-intensity activity`);
+    } else if (readiness >= 70) {
+      insights.push(`Good readiness score of ${readiness} - suitable for moderate activity`);
+    } else if (readiness >= 50) {
+      insights.push(`Readiness score of ${readiness} suggests taking it easy today - focus on recovery`);
+    } else {
+      insights.push(`Low readiness score of ${readiness} - prioritize rest and recovery activities`);
+    }
+  }
+  
+  if (resting_heart_rate !== undefined) {
+    if (resting_heart_rate >= 60 && resting_heart_rate <= 100) {
+      insights.push(`Resting heart rate of ${resting_heart_rate} bpm is within healthy range`);
+    } else if (resting_heart_rate < 60) {
+      insights.push(`Low resting heart rate of ${resting_heart_rate} bpm indicates good cardiovascular fitness`);
+    } else {
+      insights.push(`Elevated resting heart rate of ${resting_heart_rate} bpm - monitor for stress or fatigue`);
+    }
+  }
+  
+  if (heart_rate_variability !== undefined) {
+    if (heart_rate_variability >= 40) {
+      insights.push(`HRV of ${heart_rate_variability}ms indicates good recovery and autonomic balance`);
+    } else if (heart_rate_variability < 30) {
+      insights.push(`Low HRV of ${heart_rate_variability}ms suggests high stress or poor recovery`);
+    } else {
+      insights.push(`HRV of ${heart_rate_variability}ms shows moderate recovery status`);
+    }
+  }
+  
+  if (body_temperature !== undefined) {
+    if (body_temperature >= 97.5 && body_temperature <= 99.5) {
+      insights.push(`Body temperature of ${body_temperature}°F is within normal range`);
+    } else if (body_temperature > 99.5) {
+      insights.push(`Elevated body temperature of ${body_temperature}°F - monitor for signs of illness`);
+    }
+  }
+  
+  return insights;
+}
+
+// Generate trend analysis comparing current day to historical data
+function generateTrendAnalysis(currentMetrics: HistoricalHealthData, historicalData: HistoricalHealthData[]): string[] {
+  const trends: string[] = [];
+  
+  if (historicalData.length < 2) {
+    trends.push('Insufficient historical data for trend analysis');
+    return trends;
+  }
+  
+  // Calculate averages for the last 3-7 days (excluding current day)
+  const recentData = historicalData.slice(0, -1).slice(-7); // Last 7 days excluding current
+  
+  const averages = calculateAverages(recentData);
+  
+  // Sleep score trend
+  if (currentMetrics.sleep_score !== undefined && averages.sleep_score !== undefined) {
+    const change = currentMetrics.sleep_score - averages.sleep_score;
+    const percentChange = (change / averages.sleep_score) * 100;
+    
+    if (Math.abs(percentChange) >= 15) {
+      if (change > 0) {
+        trends.push(`Sleep score improved ${Math.abs(percentChange).toFixed(1)}% from recent average`);
+      } else {
+        trends.push(`Sleep score declined ${Math.abs(percentChange).toFixed(1)}% from recent average`);
+      }
+    }
+  }
+  
+  // Sleep efficiency trend
+  if (currentMetrics.sleep_efficiency !== undefined && averages.sleep_efficiency !== undefined) {
+    const change = currentMetrics.sleep_efficiency - averages.sleep_efficiency;
+    const percentChange = (change / averages.sleep_efficiency) * 100;
+    
+    if (Math.abs(percentChange) >= 15) {
+      if (change > 0) {
+        trends.push(`Sleep efficiency improved ${Math.abs(percentChange).toFixed(1)}% from recent average`);
+      } else {
+        trends.push(`Sleep efficiency declined ${Math.abs(percentChange).toFixed(1)}% from recent average`);
+      }
+    }
+  }
+  
+  // Readiness trend
+  if (currentMetrics.readiness !== undefined && averages.readiness !== undefined) {
+    const change = currentMetrics.readiness - averages.readiness;
+    const percentChange = (change / averages.readiness) * 100;
+    
+    if (Math.abs(percentChange) >= 15) {
+      if (change > 0) {
+        trends.push(`Readiness score improved ${Math.abs(percentChange).toFixed(1)}% from recent average`);
+      } else {
+        trends.push(`Readiness score declined ${Math.abs(percentChange).toFixed(1)}% from recent average`);
+      }
+    }
+  }
+  
+  // Sleep duration trend
+  if (currentMetrics.sleep_duration !== undefined && averages.sleep_duration !== undefined) {
+    const change = currentMetrics.sleep_duration - averages.sleep_duration;
+    
+    if (Math.abs(change) >= 0.5) { // 30 minutes or more
+      if (change > 0) {
+        trends.push(`Sleep duration increased ${change.toFixed(1)} hours from recent average`);
+      } else {
+        trends.push(`Sleep duration decreased ${Math.abs(change).toFixed(1)} hours from recent average`);
+      }
+    }
+  }
+  
+  if (trends.length === 0) {
+    trends.push('Sleep and readiness metrics are consistent with recent patterns');
+  }
+  
+  return trends;
+}
+
+// Calculate averages for historical data
+function calculateAverages(data: HistoricalHealthData[]): Partial<HistoricalHealthData> {
+  const averages: Partial<HistoricalHealthData> = {};
+  const counts: { [key: string]: number } = {};
+  
+  data.forEach(day => {
+    Object.entries(day).forEach(([key, value]) => {
+      if (key !== 'date' && typeof value === 'number') {
+        if (!averages[key as keyof HistoricalHealthData]) {
+          averages[key as keyof HistoricalHealthData] = 0;
+          counts[key] = 0;
+        }
+        (averages[key as keyof HistoricalHealthData] as number) += value;
+        counts[key]++;
+      }
+    });
+  });
+  
+  // Calculate actual averages
+  Object.keys(averages).forEach(key => {
+    if (key !== 'date' && counts[key] > 0) {
+      (averages[key as keyof HistoricalHealthData] as number) /= counts[key];
+    }
+  });
+  
+  return averages;
+}
+
+// Generate actionable recommendations based on current and historical data
+function generateRecommendations(currentMetrics: HistoricalHealthData, historicalData: HistoricalHealthData[]): string[] {
+  const recommendations: string[] = [];
+  
+  // Sleep duration recommendations
+  if (currentMetrics.sleep_duration !== undefined) {
+    if (currentMetrics.sleep_duration < 7) {
+      recommendations.push('Consider going to bed 30-60 minutes earlier to reach 8-hour sleep target');
+    } else if (currentMetrics.sleep_duration > 9) {
+      recommendations.push('Monitor if extended sleep duration affects energy levels during the day');
+    }
+  }
+  
+  // Sleep efficiency recommendations
+  if (currentMetrics.sleep_efficiency !== undefined && currentMetrics.sleep_efficiency < 80) {
+    recommendations.push('Review evening routine for better sleep quality - avoid screens 1 hour before bed');
+  }
+  
+  // Readiness-based workout recommendations
+  if (currentMetrics.readiness !== undefined) {
+    if (currentMetrics.readiness >= 80) {
+      recommendations.push('High readiness score - suitable for higher intensity workout or challenging activities');
+    } else if (currentMetrics.readiness < 60) {
+      recommendations.push('Lower readiness score - focus on light activity, stretching, or recovery work');
+    }
+  }
+  
+  // HRV-based recommendations
+  if (currentMetrics.heart_rate_variability !== undefined) {
+    if (currentMetrics.heart_rate_variability >= 45) {
+      recommendations.push('Good HRV indicates strong recovery - suitable for higher intensity training');
+    } else if (currentMetrics.heart_rate_variability < 30) {
+      recommendations.push('Low HRV suggests high stress - prioritize stress management and recovery');
+    }
+  }
+  
+  // Temperature-based recommendations
+  if (currentMetrics.body_temperature !== undefined && currentMetrics.body_temperature > 99.5) {
+    recommendations.push('Elevated body temperature - consider lighter activity and monitor for illness');
+  }
+  
+  // Historical trend-based recommendations
+  if (historicalData.length >= 3) {
+    const recentAverages = calculateAverages(historicalData.slice(0, -1).slice(-3));
+    
+    if (currentMetrics.sleep_score !== undefined && recentAverages.sleep_score !== undefined) {
+      const sleepTrend = currentMetrics.sleep_score - recentAverages.sleep_score;
+      if (sleepTrend < -10) {
+        recommendations.push('Sleep quality declining - review sleep hygiene and stress management');
+      }
+    }
+    
+    if (currentMetrics.readiness !== undefined && recentAverages.readiness !== undefined) {
+      const readinessTrend = currentMetrics.readiness - recentAverages.readiness;
+      if (readinessTrend < -10) {
+        recommendations.push('Readiness declining - consider taking a recovery day or reducing training load');
+      }
+    }
+  }
+  
+  // Default recommendation if no specific ones generated
+  if (recommendations.length === 0) {
+    recommendations.push('Continue monitoring sleep and readiness patterns for optimal health and performance');
+  }
+  
+  return recommendations.slice(0, 3); // Limit to 3 recommendations
+}
+
+// Generate concise health summary
+function generateHealthSummary(metrics: HistoricalHealthData, sleepQuality: string): string {
+  const parts: string[] = [];
+  
+  if (sleepQuality !== 'No sleep data available') {
+    parts.push(`Sleep quality: ${sleepQuality}`);
+  }
+  
+  if (metrics.readiness !== undefined) {
+    parts.push(`Readiness: ${metrics.readiness}`);
+  }
+  
+  if (metrics.sleep_duration !== undefined) {
+    parts.push(`Sleep: ${metrics.sleep_duration.toFixed(1)}h`);
+  }
+  
+  if (metrics.resting_heart_rate !== undefined) {
+    parts.push(`RHR: ${metrics.resting_heart_rate} bpm`);
+  }
+  
+  if (parts.length === 0) {
+    return 'Health metrics analysis unavailable';
+  }
+  
+  return parts.join(' | ');
+}
 
 export async function generateDailyNarrative(userId: string, date: string) {
   try {
@@ -133,13 +757,21 @@ export async function generateDailyNarrative(userId: string, date: string) {
     );
     const workoutContext = getWorkoutContextSummary(workoutRecommendations);
 
+    // Generate sleep and readiness context for enhanced narrative
+    const sleepReadinessContext = await generateSleepReadinessContext(
+      healthMetrics || [],
+      userId,
+      date
+    );
+
     // Generate rich narrative using AI with existing content for intelligent merging
     const narrative = await generateRichNarrative(
       insights,
       allFileAttachments || [],
       healthMetrics || [],
       existingContent,
-      workoutContext
+      workoutContext,
+      sleepReadinessContext
     );
 
     // Store single comprehensive journal entry (replaces entire day's content)
@@ -233,7 +865,8 @@ async function generateRichNarrative(
   fileAttachments: any[],
   healthMetrics: any[],
   existingContent?: string,
-  workoutContext?: string
+  workoutContext?: string,
+  sleepReadinessContext?: SleepReadinessContext
 ) {
   try {
     // Prepare comprehensive context for AI
@@ -293,6 +926,23 @@ ${healthContext.length > 0 ? `HEALTH METRICS:\n${healthContext.map(h => `- ${h.m
 ${existingContent ? `EXISTING JOURNAL CONTENT FOR TODAY:\n${existingContent}\n\nMERGE new information with existing content intelligently. Don't completely rewrite - enhance and build upon what's already there.\n` : ''}
 
 ${workoutContext ? `WORKOUT RECOMMENDATIONS:\n${workoutContext}\n\nInclude this context in your health insights if relevant.\n` : ''}
+
+${sleepReadinessContext ? `SLEEP & READINESS ANALYSIS:
+${sleepReadinessContext.healthSummary}
+
+Sleep Quality: ${sleepReadinessContext.sleepQuality}
+${sleepReadinessContext.sleepInsights.map(insight => `- ${insight}`).join('\n')}
+
+Readiness Assessment:
+${sleepReadinessContext.readinessInsights.map(insight => `- ${insight}`).join('\n')}
+
+Trend Analysis:
+${sleepReadinessContext.trendAnalysis.map(trend => `- ${trend}`).join('\n')}
+
+Recommendations:
+${sleepReadinessContext.recommendations.map(rec => `- ${rec}`).join('\n')}
+
+Use this health context to inform your narrative and insights. Include specific sleep/readiness observations in the health_context field and generate relevant insights.\n` : ''}
 
 REQUIREMENTS:
 - Main narrative: 1-2 sentences with activities and brief context
