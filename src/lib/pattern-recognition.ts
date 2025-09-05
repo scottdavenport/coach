@@ -487,7 +487,18 @@ export class PatternRecognitionService {
       }
     });
 
-    return sleepPatterns.slice(0, 5);
+    // Deduplicate sleep patterns based on quality and duration
+    const uniqueSleepPatterns = sleepPatterns.filter(
+      (pattern, index, self) =>
+        index ===
+        self.findIndex(
+          p =>
+            p.sleepQuality === pattern.sleepQuality &&
+            p.sleepDuration === pattern.sleepDuration
+        )
+    );
+
+    return uniqueSleepPatterns.slice(0, 5);
   }
 
   /**

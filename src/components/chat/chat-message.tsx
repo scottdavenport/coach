@@ -53,9 +53,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
       <div className="flex justify-end">
         <div className="max-w-[80%] rounded-2xl px-4 py-3 bg-primary text-black">
           <div className="text-base leading-7">
-            <div className="mb-2 font-medium">📎 {fileName}</div>
-
-            {/* Display image if it's an image file */}
+            {/* Display image thumbnail if it's an image file */}
             {fileUrl &&
               (fileName.toLowerCase().includes('.jpg') ||
                 fileName.toLowerCase().includes('.jpeg') ||
@@ -65,11 +63,23 @@ export function ChatMessage({ message }: ChatMessageProps) {
                 <div className="mb-3">
                   <Image
                     src={fileUrl}
-                    alt={fileName}
+                    alt="Uploaded image"
                     width={500}
                     height={384}
                     className="max-w-full max-h-96 rounded-lg border border-black/20 object-contain"
                   />
+                </div>
+              )}
+
+            {/* Display file icon for non-image files */}
+            {fileUrl &&
+              !(fileName.toLowerCase().includes('.jpg') ||
+                fileName.toLowerCase().includes('.jpeg') ||
+                fileName.toLowerCase().includes('.png') ||
+                fileName.toLowerCase().includes('.gif') ||
+                fileName.toLowerCase().includes('.webp')) && (
+                <div className="mb-3 flex items-center justify-center p-4 bg-black/10 rounded-lg">
+                  <span className="text-4xl">📄</span>
                 </div>
               )}
 
