@@ -18,6 +18,7 @@ import {
   RotateCcw,
   BarChart3,
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { DashboardModal } from './dashboard-modal';
 
 interface DashboardHeaderProps {
@@ -35,6 +36,7 @@ export function DashboardHeader({
   const [isDashboardOpen, setIsDashboardOpen] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const workoutModalRef = useRef<DailyWorkoutModalRef>(null);
+  const router = useRouter();
 
   const handleSignOut = async () => {
     const supabase = createClient();
@@ -218,7 +220,11 @@ export function DashboardHeader({
         className="flex items-center justify-between p-4 border-b border-line"
         style={{ backgroundColor: 'hsl(var(--bg))' }}
       >
-        <div>
+        <div
+          className="cursor-pointer hover:opacity-80 transition-opacity"
+          onClick={() => router.push('/chat')}
+          title="Back to Chat"
+        >
           <h1 className="text-xl font-semibold text-text">Coach</h1>
           <p className="text-sm text-muted">
             Your AI Health & Fitness Companion
@@ -259,9 +265,9 @@ export function DashboardHeader({
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => workoutModalRef.current?.openModal()}
+            onClick={() => router.push('/workout')}
             className="h-8 w-8"
-            title="Daily Workout"
+            title="Workout Companion"
           >
             <Dumbbell className="h-4 w-4" />
           </Button>

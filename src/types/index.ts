@@ -391,3 +391,222 @@ export interface StructuredCardData {
   }>;
   date: string;
 }
+
+// ===== WORKOUT COMPANION TYPES =====
+
+export interface Exercise {
+  id: string;
+  name: string;
+  description?: string;
+  category: 'strength' | 'cardio' | 'flexibility' | 'sports_specific';
+  muscle_groups: string[];
+  equipment_needed: string[];
+  difficulty_level: number; // 1-5
+  instructions: string[];
+  tips: string[];
+  variations: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WorkoutTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  category: 'strength' | 'cardio' | 'flexibility' | 'mixed';
+  difficulty_level: number; // 1-5
+  estimated_duration: number; // minutes
+  equipment_required: string[];
+  target_audience: 'beginner' | 'intermediate' | 'advanced' | 'recovery';
+  exercises: TemplateExercise[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TemplateExercise {
+  id: string;
+  template_id: string;
+  exercise_id: string;
+  exercise: Exercise;
+  order_index: number;
+  sets?: number;
+  reps?: number;
+  duration_seconds?: number;
+  weight_kg?: number;
+  rest_seconds?: number;
+  notes?: string;
+  created_at: string;
+}
+
+export interface UserWorkout {
+  id: string;
+  user_id: string;
+  template_id?: string;
+  template?: WorkoutTemplate;
+  workout_date: string;
+  workout_name: string;
+  category: string;
+  total_duration?: number; // minutes
+  notes?: string;
+  mood_before?: number; // 1-10
+  mood_after?: number; // 1-10
+  energy_before?: number; // 1-10
+  energy_after?: number; // 1-10
+  perceived_exertion?: number; // 1-10 (RPE)
+  completion_status: 'completed' | 'partial' | 'skipped';
+  exercises: WorkoutExercise[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WorkoutExercise {
+  id: string;
+  workout_id: string;
+  exercise_id: string;
+  exercise: Exercise;
+  order_index: number;
+  sets_completed?: number;
+  reps_completed?: number;
+  duration_completed?: number; // seconds
+  weight_used?: number;
+  rest_taken?: number; // seconds
+  notes?: string;
+  difficulty_rating?: number; // 1-5
+  created_at: string;
+}
+
+export interface UserWorkoutPreferences {
+  id: string;
+  user_id: string;
+  fitness_level: 'beginner' | 'intermediate' | 'advanced';
+  primary_goals: string[];
+  available_equipment: string[];
+  preferred_workout_duration?: number; // minutes
+  preferred_workout_times: string[];
+  workout_frequency?: number; // days per week
+  injury_limitations: string[];
+  exercise_preferences: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WorkoutProgress {
+  id: string;
+  user_id: string;
+  exercise_id: string;
+  exercise: Exercise;
+  metric_type: 'max_weight' | 'max_reps' | 'max_duration' | 'personal_record';
+  metric_value: number;
+  metric_unit?: string;
+  achieved_date: string;
+  workout_id?: string;
+  notes?: string;
+  created_at: string;
+}
+
+export interface WorkoutRecommendation {
+  id: string;
+  user_id: string;
+  recommendation_date: string;
+  recommendation_type: 'daily' | 'weekly' | 'adaptive';
+  recommended_template_id?: string;
+  recommended_template?: WorkoutTemplate;
+  reasoning: string;
+  health_context: Record<string, any>;
+  priority_score: number; // 1-10
+  is_completed: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// Workout generation and analysis types
+export interface WorkoutGenerationRequest {
+  user_id: string;
+  date: string;
+  preferences?: Partial<UserWorkoutPreferences>;
+  health_context?: HealthContext;
+  workout_type?: 'strength' | 'cardio' | 'flexibility' | 'mixed';
+  duration?: number; // minutes
+  equipment_available?: string[];
+  intensity_preference?: 'low' | 'moderate' | 'high';
+}
+
+export interface WorkoutGenerationResponse {
+  success: boolean;
+  workout?: WorkoutTemplate;
+  reasoning: string;
+  alternatives?: WorkoutTemplate[];
+  health_considerations: string[];
+  error?: string;
+}
+
+export interface WorkoutAnalysis {
+  workout_id: string;
+  user_id: string;
+  analysis_date: string;
+  performance_metrics: {
+    total_volume?: number; // total weight lifted
+    average_intensity?: number; // average RPE
+    completion_rate?: number; // percentage of exercises completed
+    time_efficiency?: number; // actual vs planned duration
+  };
+  progress_indicators: {
+    strength_gains?: Array<{
+      exercise_id: string;
+      exercise_name: string;
+      improvement: number; // percentage improvement
+      time_period: string;
+    }>;
+    endurance_improvements?: Array<{
+      exercise_id: string;
+      exercise_name: string;
+      improvement: number;
+      time_period: string;
+    }>;
+  };
+  recommendations: string[];
+  patterns: string[];
+  created_at: string;
+}
+
+// Workout conversation integration types
+export interface WorkoutConversationContext {
+  current_workout?: UserWorkout;
+  recent_workouts: UserWorkout[];
+  workout_preferences: UserWorkoutPreferences;
+  health_metrics: HealthContext;
+  workout_recommendations: WorkoutRecommendation[];
+  progress_summary: {
+    total_workouts: number;
+    average_frequency: number; // workouts per week
+    favorite_categories: string[];
+    improvement_areas: string[];
+  };
+}
+
+// OCR and document processing for workouts
+export interface WorkoutOcrData {
+  workout_name?: string;
+  exercises: Array<{
+    name: string;
+    sets?: number;
+    reps?: number;
+    weight?: number;
+    duration?: number;
+    notes?: string;
+  }>;
+  total_duration?: number;
+  date?: string;
+  notes?: string;
+}
+
+export interface WorkoutDocumentData {
+  file_type: 'workout_log' | 'training_plan' | 'exercise_guide';
+  extracted_workouts: UserWorkout[];
+  extracted_exercises: Exercise[];
+  metadata: {
+    source: string;
+    confidence: number;
+    processing_notes: string[];
+  };
+}
