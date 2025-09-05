@@ -1,9 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { FileProcessor } from '@/lib/file-processing';
+import {
+  createRateLimit,
+  RATE_LIMITS,
+  getClientIdentifier,
+} from '@/lib/rate-limiter';
+import { validateFiles } from '@/lib/input-validation';
 
 export async function POST(request: NextRequest) {
   try {
+    // Add rate limiting
+    const rateLimit = createRateLimit(RATE_LIMITS.fileUpload);
+    const clientId = getClientIdentifier(request);
+    rateLimit(clientId, 'file-upload');
+
     const supabase = await createClient();
     const {
       data: { user },
@@ -20,9 +31,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No files provided' }, { status: 400 });
     }
 
-    // Validate files
-    const validationResult = FileProcessor.validateFileList(files);
-    if (!validationResult.isValid) {
+    // Enhanced file validation using input validation framework
+    const validationResult = validateFiles(files);
+    if (!validationResult.valid) {
       return NextResponse.json(
         { error: validationResult.error },
         { status: 400 }
@@ -126,7 +137,26 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ results });
-  } catch (error) {
+  } catch (error: any) {
+    // Handle rate limit errors
+    if (error.statusCode === 429) {
+      return NextResponse.json(
+        { 
+          error: error.message,
+          remaining: error.remaining,
+          resetTime: error.resetTime,
+        },
+        { 
+          status: 429,
+          headers: {
+            'X-RateLimit-Remaining': error.remaining?.toString() || '0',
+            'X-RateLimit-Reset': error.resetTime?.toString() || '0',
+            'Retry-After': error.resetTime ? Math.ceil((error.resetTime - Date.now()) / 1000).toString() : '300',
+          },
+        }
+      );
+    }
+
     console.error('File processing API error:', error);
     return NextResponse.json(
       {

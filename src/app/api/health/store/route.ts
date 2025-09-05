@@ -1,9 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { mapToStructuredMetrics } from '@/lib/metric-mapping';
+import {
+  createRateLimit,
+  RATE_LIMITS,
+  getClientIdentifier,
+} from '@/lib/rate-limiter';
+import { validateRequestBody, healthSchemas } from '@/lib/input-validation';
 
 export async function POST(request: NextRequest) {
   try {
+    // Add rate limiting
+    const rateLimit = createRateLimit(RATE_LIMITS.general);
+    const clientId = getClientIdentifier(request);
+    rateLimit(clientId, 'health-store');
+
     const supabase = await createClient();
     const {
       data: { user },
@@ -13,7 +24,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { events, contextData, dailySummary } = await request.json();
+    // Add input validation
+    const body = await request.json();
+    const validation = validateRequestBody(body, healthSchemas.eventData);
+
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: 'Invalid input', details: validation.details },
+        { status: 400 }
+      );
+    }
+
+    const { events, contextData, dailySummary } = validation.data;
 
     console.log('💾 **STORING RICH CONTEXT DATA:**');
     console.log('User ID:', user.id);
@@ -247,7 +269,26 @@ export async function POST(request: NextRequest) {
         activities: storedActivities,
       },
     });
-  } catch (error) {
+  } catch (error: any) {
+    // Handle rate limit errors
+    if (error.statusCode === 429) {
+      return NextResponse.json(
+        { 
+          error: error.message,
+          remaining: error.remaining,
+          resetTime: error.resetTime,
+        },
+        { 
+          status: 429,
+          headers: {
+            'X-RateLimit-Remaining': error.remaining?.toString() || '0',
+            'X-RateLimit-Reset': error.resetTime?.toString() || '0',
+            'Retry-After': error.resetTime ? Math.ceil((error.resetTime - Date.now()) / 1000).toString() : '60',
+          },
+        }
+      );
+    }
+
     console.error('Health store error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
