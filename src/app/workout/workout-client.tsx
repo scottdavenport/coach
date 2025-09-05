@@ -217,11 +217,31 @@ export default function WorkoutClient({ userId }: WorkoutClientProps) {
             onValueChange={setActiveTab}
             className="w-full"
           >
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="generate">Generate</TabsTrigger>
-              <TabsTrigger value="workout">Workout</TabsTrigger>
-              <TabsTrigger value="preferences">Preferences</TabsTrigger>
-              <TabsTrigger value="progress">Progress</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-4 bg-card border border-line">
+              <TabsTrigger 
+                value="generate"
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-semibold data-[state=active]:shadow-md transition-all duration-200"
+              >
+                Generate
+              </TabsTrigger>
+              <TabsTrigger 
+                value="workout"
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-semibold data-[state=active]:shadow-md transition-all duration-200"
+              >
+                Workout
+              </TabsTrigger>
+              <TabsTrigger 
+                value="preferences"
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-semibold data-[state=active]:shadow-md transition-all duration-200"
+              >
+                Preferences
+              </TabsTrigger>
+              <TabsTrigger 
+                value="progress"
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-semibold data-[state=active]:shadow-md transition-all duration-200"
+              >
+                Progress
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="generate" className="mt-6">

@@ -363,11 +363,31 @@ export default function SummaryClient({ userId }: SummaryClientProps) {
                 onValueChange={setActiveTab}
                 className="w-full"
               >
-                <TabsList className="grid w-full grid-cols-4">
-                  <TabsTrigger value="overview">Overview</TabsTrigger>
-                  <TabsTrigger value="progress">Progress</TabsTrigger>
-                  <TabsTrigger value="insights">Insights</TabsTrigger>
-                  <TabsTrigger value="planning">Planning</TabsTrigger>
+                <TabsList className="grid w-full grid-cols-4 bg-card border border-line">
+                  <TabsTrigger 
+                    value="overview"
+                    className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-semibold data-[state=active]:shadow-md transition-all duration-200"
+                  >
+                    Overview
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="progress"
+                    className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-semibold data-[state=active]:shadow-md transition-all duration-200"
+                  >
+                    Progress
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="insights"
+                    className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-semibold data-[state=active]:shadow-md transition-all duration-200"
+                  >
+                    Insights
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="planning"
+                    className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-semibold data-[state=active]:shadow-md transition-all duration-200"
+                  >
+                    Planning
+                  </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="overview" className="mt-6">
