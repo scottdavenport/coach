@@ -195,7 +195,8 @@ export function DateSelector({ userId, className = '' }: DateSelectorProps) {
         {isOpen && (
           <div
             ref={dropdownRef}
-            className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 bg-background border border-line rounded-lg shadow-xl z-[100] p-4 min-w-[320px] max-w-[320px]"
+            className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 bg-background border border-line rounded-lg shadow-xl z-[100] p-4 min-w-[320px] max-w-[320px] backdrop-blur-sm"
+            style={{ backgroundColor: 'hsl(var(--background))' }}
           >
             {/* Calendar Header */}
             <div className="flex items-center justify-between mb-4">
