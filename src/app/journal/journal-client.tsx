@@ -6,9 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
+import { Calendar } from '@/components/ui/calendar';
 import {
   BookOpen,
-  Calendar,
+  Calendar as CalendarIcon,
   Search,
   Plus,
   Edit3,
@@ -25,6 +26,7 @@ import {
   Download,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { useJournalEntries } from '@/hooks/use-journal-entries';
 
 interface JournalClientProps {
   userId: string;
@@ -61,6 +63,9 @@ export default function JournalClient({ userId }: JournalClientProps) {
   const [selectedMood, setSelectedMood] = useState('');
   const [energyLevel, setEnergyLevel] = useState(5);
   const [moodNotes, setMoodNotes] = useState('');
+
+  // Get journal entry dates for calendar indicators
+  const { journalEntryDates } = useJournalEntries({ userId });
 
   const moods = [
     {
@@ -259,17 +264,18 @@ export default function JournalClient({ userId }: JournalClientProps) {
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-lg flex items-center gap-2">
-                      <Calendar className="h-5 w-5" />
+                      <CalendarIcon className="h-5 w-5" />
                       Select Date
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <input
-                      type="date"
-                      value={selectedDate}
-                      onChange={e => setSelectedDate(e.target.value)}
-                      className="w-full p-2 border border-line rounded-md bg-background"
-                    />
+                    <div className="flex justify-center">
+                      <Calendar
+                        selectedDate={selectedDate}
+                        onDateSelect={setSelectedDate}
+                        journalEntryDates={journalEntryDates}
+                      />
+                    </div>
                   </CardContent>
                 </Card>
 
@@ -337,6 +343,7 @@ export default function JournalClient({ userId }: JournalClientProps) {
 
             {/* Main Content Area */}
             <div className="lg:col-span-3">
+
               <Tabs
                 value={activeTab}
                 onValueChange={setActiveTab}
@@ -348,7 +355,6 @@ export default function JournalClient({ userId }: JournalClientProps) {
                   <TabsTrigger value="insights">Insights</TabsTrigger>
                   <TabsTrigger value="search">Search</TabsTrigger>
                 </TabsList>
-
                 <TabsContent value="timeline" className="mt-6">
                   <div className="space-y-6">
                     {/* Writing Interface */}
