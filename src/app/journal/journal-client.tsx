@@ -270,7 +270,6 @@ export default function JournalClient({ userId }: JournalClientProps) {
             {/* Left Sidebar - Date Navigation & Quick Actions */}
             <div className="lg:col-span-1">
               <div className="space-y-6">
-
                 {/* New Entry */}
                 <Card>
                   <CardHeader>

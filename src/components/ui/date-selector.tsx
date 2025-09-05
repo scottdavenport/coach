@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Calendar, ChevronLeft, ChevronRight, CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { useDate } from '@/components/providers/date-provider';
 import { useJournalEntries } from '@/hooks/use-journal-entries';
 
@@ -68,8 +68,8 @@ export function DateSelector({ userId, className = '' }: DateSelectorProps) {
       </div>
 
       {/* Date Display & Calendar */}
-      <Popover open={isOpen} onOpenChange={setIsOpen}>
-        <PopoverTrigger asChild>
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogTrigger asChild>
           <Button
             variant="outline"
             className="h-8 px-3 text-sm font-medium"
@@ -81,8 +81,8 @@ export function DateSelector({ userId, className = '' }: DateSelectorProps) {
               <span className="ml-2 text-xs text-primary">Today</span>
             )}
           </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
+        </DialogTrigger>
+        <DialogContent className="w-auto p-0 max-w-sm">
           <div className="p-3">
             <div className="flex justify-center mb-3">
               <Calendar
@@ -102,8 +102,8 @@ export function DateSelector({ userId, className = '' }: DateSelectorProps) {
               </Button>
             </div>
           </div>
-        </PopoverContent>
-      </Popover>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
