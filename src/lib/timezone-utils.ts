@@ -600,3 +600,69 @@ export function getCalendarGridInTimezone(
 
   return grid;
 }
+
+/**
+ * Get date in specified timezone
+ * @param date - Date string in YYYY-MM-DD format
+ * @param timezone - Timezone string
+ * @returns Date string in YYYY-MM-DD format in the specified timezone
+ */
+export function getDateInTimezone(date: string, timezone: string): string {
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+
+  const [year, month, day] = date.split('-').map(Number);
+  const dateObj = new Date(year, month - 1, day);
+  return formatter.format(dateObj);
+}
+
+/**
+ * Format date in short format (M/D/YYYY)
+ * @param date - Date string in YYYY-MM-DD format
+ * @param timezone - Timezone string
+ * @returns Formatted date string in M/D/YYYY format
+ */
+export function formatDateShort(date: string, timezone: string): string {
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+  });
+
+  const [year, month, day] = date.split('-').map(Number);
+  const dateObj = new Date(year, month - 1, day);
+  return formatter.format(dateObj);
+}
+
+/**
+ * Get timezone offset in minutes
+ * @param timezone - Timezone string
+ * @returns Timezone offset in minutes from UTC
+ */
+export function getTimezoneOffset(timezone: string): number {
+  const now = new Date();
+  const utc = new Date(now.getTime() + now.getTimezoneOffset() * 60000);
+  const targetTime = new Date(
+    utc.toLocaleString('en-US', { timeZone: timezone })
+  );
+  return (targetTime.getTime() - utc.getTime()) / 60000;
+}
+
+/**
+ * Validate if timezone string is valid
+ * @param timezone - Timezone string to validate
+ * @returns True if timezone is valid, false otherwise
+ */
+export function isValidTimezone(timezone: string): boolean {
+  try {
+    Intl.DateTimeFormat(undefined, { timeZone: timezone });
+    return true;
+  } catch (error) {
+    return false;
+  }
+}

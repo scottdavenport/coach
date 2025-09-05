@@ -4,6 +4,12 @@ import OpenAI from 'openai';
 import { logger } from '@/lib/logger';
 import { getTodayInTimezone } from '@/lib/timezone-utils';
 import { ParsedConversation } from '@/types';
+import {
+  createRateLimit,
+  RATE_LIMITS,
+  getClientIdentifier,
+} from '@/lib/rate-limiter';
+import { validateRequestBody, chatSchemas } from '@/lib/input-validation';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -14,6 +20,11 @@ const openai = new OpenAI({
 export async function POST(request: NextRequest) {
   try {
     logger.apiRequest('POST', '/api/chat');
+
+    // Add rate limiting
+    const rateLimit = createRateLimit(RATE_LIMITS.chat);
+    const clientId = getClientIdentifier(request);
+    rateLimit(clientId, 'chat');
 
     const supabase = await createClient();
     const {
@@ -27,14 +38,28 @@ export async function POST(request: NextRequest) {
 
     logger.info('User authenticated', { userId: user.id });
 
+    // Add input validation
     const body = await request.json();
+    const validation = validateRequestBody(body, chatSchemas.message);
+
+    if (!validation.success) {
+      logger.error('Input validation failed', {
+        error: validation.error,
+        details: validation.details,
+      });
+      return NextResponse.json(
+        { error: 'Invalid input', details: (validation as any).details },
+        { status: 400 }
+      );
+    }
+
     const {
       message,
       conversationId,
       conversationState,
       ocrData,
       multiFileData,
-    } = body;
+    } = validation.data;
 
     logger.info('Message received', {
       messageLength: message?.length || 0,
@@ -711,7 +736,32 @@ Remember: You're not just responding to messages - you're building a comprehensi
       conversationId: conversationData?.id,
       parsedData: parsedData, // Return parsed data for frontend display
     });
-  } catch (error) {
+  } catch (error: any) {
+    // Handle rate limit errors
+    if (error.statusCode === 429) {
+      logger.warn('Rate limit exceeded', {
+        clientId: getClientIdentifier(request),
+        error: error.message,
+      });
+      return NextResponse.json(
+        {
+          error: error.message,
+          remaining: error.remaining,
+          resetTime: error.resetTime,
+        },
+        {
+          status: 429,
+          headers: {
+            'X-RateLimit-Remaining': error.remaining?.toString() || '0',
+            'X-RateLimit-Reset': error.resetTime?.toString() || '0',
+            'Retry-After': error.resetTime
+              ? Math.ceil((error.resetTime - Date.now()) / 1000).toString()
+              : '60',
+          },
+        }
+      );
+    }
+
     logger.error(
       'Chat API error',
       error instanceof Error ? error : new Error('Unknown error'),
