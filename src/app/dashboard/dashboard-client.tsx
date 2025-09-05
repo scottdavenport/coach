@@ -118,20 +118,26 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
 
                 <TabsContent value="overview" className="mt-6">
                   <div className="space-y-6">
-                    {/* Key Metrics Overview */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <Card>
-                        <CardContent className="p-6">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="text-sm font-medium text-muted-foreground">Sleep Score</p>
-                              <p className="text-2xl font-bold">85</p>
-                              <p className="text-xs text-green-500">+2 from yesterday</p>
-                            </div>
-                            <Moon className="h-8 w-8 text-blue-500" />
+                    {/* Today's Focus - Hero Section */}
+                    <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+                      <CardContent className="p-6">
+                        <div className="flex items-start justify-between">
+                          <div className="space-y-2">
+                            <h3 className="text-lg font-semibold text-blue-900">Today's Focus</h3>
+                            <p className="text-blue-700">Maintain your 8-hour sleep routine</p>
+                            <p className="text-sm text-blue-600">You're on a 5-day sleep improvement streak!</p>
                           </div>
-                        </CardContent>
-                      </Card>
+                          <div className="text-right">
+                            <p className="text-2xl font-bold text-blue-900">85</p>
+                            <p className="text-sm text-blue-600">Sleep Score</p>
+                            <p className="text-xs text-green-600">+2 from yesterday</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Key Metrics - Simplified */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <Card>
                         <CardContent className="p-6">
                           <div className="flex items-center justify-between">
@@ -158,10 +164,49 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
                       </Card>
                     </div>
 
-                    {/* Enhanced Dashboard Component */}
+                    {/* Quick Actions */}
                     <Card>
                       <CardHeader>
-                        <CardTitle>Health Overview</CardTitle>
+                        <CardTitle className="text-lg">Quick Actions</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                          <Button 
+                            variant="outline" 
+                            className="h-12 justify-start"
+                            onClick={() => handleChatMessage("Help me plan my day based on my current health metrics")}
+                          >
+                            <BarChart3 className="h-4 w-4 mr-2" />
+                            Plan My Day
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            className="h-12 justify-start"
+                            onClick={() => handleChatMessage("What should I focus on to improve my health today?")}
+                          >
+                            <TrendingUp className="h-4 w-4 mr-2" />
+                            Get Insights
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            className="h-12 justify-start"
+                            onClick={() => handleChatMessage("Review my weekly progress and set goals")}
+                          >
+                            <Calendar className="h-4 w-4 mr-2" />
+                            Weekly Review
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="trends" className="mt-6">
+                  <div className="space-y-6">
+                    {/* Detailed Health Overview */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Detailed Health Overview</CardTitle>
                       </CardHeader>
                       <CardContent>
                         <MinimalDashboard
@@ -173,53 +218,87 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
                   </div>
                 </TabsContent>
 
-                <TabsContent value="trends" className="mt-6">
-                  <div className="space-y-6">
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <TrendingUp className="h-5 w-5" />
-                          Weekly Trends
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="h-64 flex items-center justify-center text-muted-foreground">
-                          <div className="text-center">
-                            <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                            <p>Trend charts will be displayed here</p>
-                            <p className="text-sm">Interactive visualizations coming soon</p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                </TabsContent>
-
                 <TabsContent value="insights" className="mt-6">
                   <div className="space-y-6">
+                    {/* Key Insights */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-lg">Sleep Insights</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-3">
+                            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                              <h4 className="font-semibold text-blue-900 text-sm">Sleep Optimization</h4>
+                              <p className="text-blue-800 text-xs">
+                                Your sleep quality has improved 15% this week. Keep your current bedtime routine.
+                              </p>
+                            </div>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="w-full"
+                              onClick={() => handleChatMessage("Tell me more about my sleep patterns and how to optimize them")}
+                            >
+                              Learn More
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-lg">Activity Insights</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-3">
+                            <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                              <h4 className="font-semibold text-green-900 text-sm">Activity Goal</h4>
+                              <p className="text-green-800 text-xs">
+                                You're on track to exceed your weekly activity goal. Great consistency!
+                              </p>
+                            </div>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="w-full"
+                              onClick={() => handleChatMessage("Help me optimize my activity routine and set better goals")}
+                            >
+                              Optimize Routine
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    {/* Recovery Focus */}
                     <Card>
                       <CardHeader>
-                        <CardTitle>AI Insights & Recommendations</CardTitle>
+                        <CardTitle className="text-lg">Recovery & Wellness</CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <div className="space-y-4">
-                          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                            <h4 className="font-semibold text-blue-900 mb-2">Sleep Optimization</h4>
-                            <p className="text-blue-800 text-sm">
-                              Your sleep quality has improved 15% this week. Consider maintaining your current bedtime routine.
-                            </p>
-                          </div>
-                          <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                            <h4 className="font-semibold text-green-900 mb-2">Activity Goal</h4>
-                            <p className="text-green-800 text-sm">
-                              You're on track to exceed your weekly activity goal. Great job staying consistent!
-                            </p>
-                          </div>
+                        <div className="space-y-3">
                           <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
                             <h4 className="font-semibold text-orange-900 mb-2">Recovery Focus</h4>
                             <p className="text-orange-800 text-sm">
                               Consider adding 10 minutes of meditation to improve your recovery scores.
                             </p>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => handleChatMessage("Help me create a meditation routine for better recovery")}
+                            >
+                              Start Meditation
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => handleChatMessage("What other recovery techniques should I try?")}
+                            >
+                              More Options
+                            </Button>
                           </div>
                         </div>
                       </CardContent>

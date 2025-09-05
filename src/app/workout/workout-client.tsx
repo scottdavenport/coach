@@ -137,14 +137,18 @@ export default function WorkoutClient({ userId }: WorkoutClientProps) {
         <div className="max-w-6xl mx-auto">
           {/* Page Header */}
           <div className="mb-8">
-            <div className="flex items-center gap-3 mb-2">
-              <Dumbbell className="h-8 w-8 text-primary" />
-              <h1 className="text-3xl font-bold">Workout Companion</h1>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <Dumbbell className="h-8 w-8 text-primary" />
+                <div>
+                  <h1 className="text-3xl font-bold">Workout Companion</h1>
+                  <p className="text-muted-foreground">
+                    AI-powered personalized workouts based on your health data
+                    and preferences
+                  </p>
+                </div>
+              </div>
             </div>
-            <p className="text-muted-foreground">
-              AI-powered personalized workouts based on your health data and
-              preferences
-            </p>
           </div>
 
           {/* Quick Actions */}
