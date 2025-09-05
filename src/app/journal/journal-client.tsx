@@ -313,12 +313,12 @@ export default function JournalClient({ userId }: JournalClientProps) {
                   </CardContent>
                 </Card>
 
-                {/* Quick Actions */}
+                {/* New Entry */}
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-lg">Quick Actions</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-2">
+                  <CardContent>
                     <Button
                       onClick={() => setIsWriting(true)}
                       className="w-full justify-start"
@@ -326,22 +326,6 @@ export default function JournalClient({ userId }: JournalClientProps) {
                     >
                       <Plus className="h-4 w-4 mr-2" />
                       New Entry
-                    </Button>
-                    <Button
-                      onClick={() => setActiveTab('mood')}
-                      className="w-full justify-start"
-                      variant="outline"
-                    >
-                      <Heart className="h-4 w-4 mr-2" />
-                      Track Mood
-                    </Button>
-                    <Button
-                      onClick={() => setActiveTab('insights')}
-                      className="w-full justify-start"
-                      variant="outline"
-                    >
-                      <TrendingUp className="h-4 w-4 mr-2" />
-                      AI Insights
                     </Button>
                   </CardContent>
                 </Card>
@@ -383,25 +367,25 @@ export default function JournalClient({ userId }: JournalClientProps) {
                 className="w-full"
               >
                 <TabsList className="grid w-full grid-cols-4 bg-card border border-line">
-                  <TabsTrigger 
+                  <TabsTrigger
                     value="timeline"
                     className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-semibold data-[state=active]:shadow-md transition-all duration-200"
                   >
                     Timeline
                   </TabsTrigger>
-                  <TabsTrigger 
+                  <TabsTrigger
                     value="mood"
                     className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-semibold data-[state=active]:shadow-md transition-all duration-200"
                   >
                     Mood
                   </TabsTrigger>
-                  <TabsTrigger 
+                  <TabsTrigger
                     value="insights"
                     className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-semibold data-[state=active]:shadow-md transition-all duration-200"
                   >
                     Insights
                   </TabsTrigger>
-                  <TabsTrigger 
+                  <TabsTrigger
                     value="search"
                     className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-semibold data-[state=active]:shadow-md transition-all duration-200"
                   >
