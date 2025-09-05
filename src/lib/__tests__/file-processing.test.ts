@@ -30,9 +30,13 @@ describe('FileProcessor', () => {
 
     it('should include office document types', () => {
       const types = FileProcessor.getSupportedFileTypes();
-      expect(types).toContain('application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+      expect(types).toContain(
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      );
       expect(types).toContain('application/msword');
-      expect(types).toContain('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      expect(types).toContain(
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      );
     });
   });
 
@@ -45,20 +49,36 @@ describe('FileProcessor', () => {
     });
 
     it('should categorize document files correctly', () => {
-      expect(FileProcessor.getFileTypeCategory('application/pdf')).toBe('document');
+      expect(FileProcessor.getFileTypeCategory('application/pdf')).toBe(
+        'document'
+      );
       expect(FileProcessor.getFileTypeCategory('text/plain')).toBe('document');
-      expect(FileProcessor.getFileTypeCategory('text/markdown')).toBe('document');
+      expect(FileProcessor.getFileTypeCategory('text/markdown')).toBe(
+        'document'
+      );
       expect(FileProcessor.getFileTypeCategory('text/csv')).toBe('document');
     });
 
     it('should categorize office documents correctly', () => {
-      expect(FileProcessor.getFileTypeCategory('application/vnd.openxmlformats-officedocument.wordprocessingml.document')).toBe('document');
-      expect(FileProcessor.getFileTypeCategory('application/msword')).toBe('document');
-      expect(FileProcessor.getFileTypeCategory('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')).toBe('document');
+      expect(
+        FileProcessor.getFileTypeCategory(
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        )
+      ).toBe('document');
+      expect(FileProcessor.getFileTypeCategory('application/msword')).toBe(
+        'document'
+      );
+      expect(
+        FileProcessor.getFileTypeCategory(
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+      ).toBe('document');
     });
 
     it('should return unknown for unsupported types', () => {
-      expect(FileProcessor.getFileTypeCategory('application/x-executable')).toBe('unknown');
+      expect(
+        FileProcessor.getFileTypeCategory('application/x-executable')
+      ).toBe('unknown');
       expect(FileProcessor.getFileTypeCategory('video/mp4')).toBe('unknown');
       expect(FileProcessor.getFileTypeCategory('audio/mp3')).toBe('unknown');
     });
@@ -102,7 +122,11 @@ describe('FileProcessor', () => {
     });
 
     it('should reject file that is too large', () => {
-      const file = createMockFile('test.pdf', 11 * 1024 * 1024, 'application/pdf'); // 11MB
+      const file = createMockFile(
+        'test.pdf',
+        11 * 1024 * 1024,
+        'application/pdf'
+      ); // 11MB
       const result = FileProcessor.validateFile(file);
       expect(result.isValid).toBe(false);
       expect(result.error).toContain('too large');
@@ -120,11 +144,15 @@ describe('FileProcessor', () => {
       const file = createMockFile('test.pdf', 0, 'application/pdf');
       const result = FileProcessor.validateFile(file);
       expect(result.isValid).toBe(false);
-      expect(result.error).toContain('too large');
+      expect(result.error).toContain('File size must be positive');
     });
 
     it('should handle very large file', () => {
-      const file = createMockFile('test.pdf', 100 * 1024 * 1024, 'application/pdf'); // 100MB
+      const file = createMockFile(
+        'test.pdf',
+        100 * 1024 * 1024,
+        'application/pdf'
+      ); // 100MB
       const result = FileProcessor.validateFile(file);
       expect(result.isValid).toBe(false);
       expect(result.error).toContain('too large');
@@ -155,9 +183,17 @@ describe('FileProcessor', () => {
     });
 
     it('should validate office documents', () => {
-      const docxFile = createMockFile('test.docx', 1024, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+      const docxFile = createMockFile(
+        'test.docx',
+        1024,
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      );
       const docFile = createMockFile('test.doc', 1024, 'application/msword');
-      const xlsxFile = createMockFile('test.xlsx', 1024, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      const xlsxFile = createMockFile(
+        'test.xlsx',
+        1024,
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      );
 
       expect(FileProcessor.validateFile(docxFile).isValid).toBe(true);
       expect(FileProcessor.validateFile(docFile).isValid).toBe(true);
@@ -183,7 +219,7 @@ describe('FileProcessor', () => {
     });
 
     it('should reject too many files', () => {
-      const files = Array.from({ length: 11 }, (_, i) => 
+      const files = Array.from({ length: 11 }, (_, i) =>
         createMockFile(`test${i}.pdf`, 1024, 'application/pdf')
       );
       const result = FileProcessor.validateFileList(files);
@@ -195,7 +231,7 @@ describe('FileProcessor', () => {
     it('should reject empty file list', () => {
       const result = FileProcessor.validateFileList([]);
       expect(result.isValid).toBe(false);
-      expect(result.error).toContain('Too many files');
+      expect(result.error).toContain('At least one file is required');
     });
 
     it('should reject if any file is invalid', () => {
@@ -219,7 +255,7 @@ describe('FileProcessor', () => {
     });
 
     it('should handle maximum allowed files', () => {
-      const files = Array.from({ length: 10 }, (_, i) => 
+      const files = Array.from({ length: 10 }, (_, i) =>
         createMockFile(`test${i}.pdf`, 1024, 'application/pdf')
       );
       const result = FileProcessor.validateFileList(files);
@@ -298,7 +334,9 @@ describe('FileProcessor', () => {
     });
 
     it('should handle negative file size', () => {
-      const file = new File(['content'], 'test.pdf', { type: 'application/pdf' });
+      const file = new File(['content'], 'test.pdf', {
+        type: 'application/pdf',
+      });
       Object.defineProperty(file, 'size', { value: -1 });
       const result = FileProcessor.validateFile(file);
       expect(result.isValid).toBe(false);
@@ -314,7 +352,9 @@ describe('FileProcessor', () => {
 
     it('should handle special characters in file names', () => {
       const specialName = 'test file with spaces & symbols!.pdf';
-      const file = new File(['content'], specialName, { type: 'application/pdf' });
+      const file = new File(['content'], specialName, {
+        type: 'application/pdf',
+      });
       Object.defineProperty(file, 'size', { value: 1024 });
       const result = FileProcessor.validateFile(file);
       expect(result.isValid).toBe(true);
@@ -324,7 +364,9 @@ describe('FileProcessor', () => {
   describe('Performance', () => {
     it('should handle large file lists efficiently', () => {
       const files = Array.from({ length: 1000 }, (_, i) => {
-        const file = new File(['content'], `test${i}.pdf`, { type: 'application/pdf' });
+        const file = new File(['content'], `test${i}.pdf`, {
+          type: 'application/pdf',
+        });
         Object.defineProperty(file, 'size', { value: 1024 });
         return file;
       });
@@ -338,7 +380,9 @@ describe('FileProcessor', () => {
     });
 
     it('should handle repeated validations efficiently', () => {
-      const file = new File(['content'], 'test.pdf', { type: 'application/pdf' });
+      const file = new File(['content'], 'test.pdf', {
+        type: 'application/pdf',
+      });
       Object.defineProperty(file, 'size', { value: 1024 });
 
       const start = Date.now();
