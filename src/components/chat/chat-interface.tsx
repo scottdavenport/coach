@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Mic, Send, Plus, Upload } from 'lucide-react';
+import { Mic, Send, Plus, Upload, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ChatMessage } from './chat-message';
 import { FileUploadMenu } from './file-upload-menu';
@@ -24,6 +24,9 @@ interface ChatInterfaceProps {
   pendingQuestions?: string[];
   onQuestionAsked?: (question: string) => void;
   onDataStored?: () => void;
+  isCollapsed?: boolean;
+  onToggleCollapse?: () => void;
+  initialMessage?: string;
 }
 
 export function ChatInterface({
@@ -31,6 +34,9 @@ export function ChatInterface({
   pendingQuestions = [],
   onQuestionAsked,
   onDataStored,
+  isCollapsed = false,
+  onToggleCollapse,
+  initialMessage,
 }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<any[]>([]);
   const [inputValue, setInputValue] = useState('');
@@ -142,6 +148,13 @@ export function ChatInterface({
       }
     }
   }, [pendingQuestions, isLoading, onQuestionAsked]);
+
+  // Handle initial message from dashboard tiles
+  useEffect(() => {
+    if (initialMessage && !isLoading) {
+      setInputValue(initialMessage);
+    }
+  }, [initialMessage, isLoading]);
 
   const handleSendMessage = useCallback(async () => {
     if ((!inputValue.trim() && fileManager.files.length === 0) || isLoading)
@@ -1259,19 +1272,39 @@ export function ChatInterface({
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      {/* Drag overlay */}
-      {isDragging && (
-        <div className="absolute inset-0 bg-primary/10 border-2 border-dashed border-primary z-50 flex items-center justify-center">
-          <div className="text-center">
-            <Upload className="h-12 w-12 text-primary mx-auto mb-2" />
-            <p className="text-lg font-medium text-primary">Drop files here</p>
-            <p className="text-sm text-muted">Upload images and documents</p>
-          </div>
+      {/* Collapse/Expand Header */}
+      {onToggleCollapse && (
+        <div className="flex items-center justify-between p-3 border-b border-line bg-background">
+          <h3 className="text-sm font-medium text-text">Chat with Coach</h3>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onToggleCollapse}
+            className="h-6 w-6 p-0 text-muted hover:text-text"
+          >
+            {isCollapsed ? (
+              <ChevronUp className="h-4 w-4" />
+            ) : (
+              <ChevronDown className="h-4 w-4" />
+            )}
+          </Button>
         </div>
       )}
+      {/* Collapsible Content */}
+      <div className={`transition-all duration-300 ease-in-out ${isCollapsed ? 'max-h-0 overflow-hidden' : 'flex-1 flex flex-col'}`}>
+        {/* Drag overlay */}
+        {isDragging && (
+          <div className="absolute inset-0 bg-primary/10 border-2 border-dashed border-primary z-50 flex items-center justify-center">
+            <div className="text-center">
+              <Upload className="h-12 w-12 text-primary mx-auto mb-2" />
+              <p className="text-lg font-medium text-primary">Drop files here</p>
+              <p className="text-sm text-muted">Upload images and documents</p>
+            </div>
+          </div>
+        )}
 
-      {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4">
+        {/* Messages Area */}
+        <div className="flex-1 overflow-y-auto p-4">
         <div className="max-w-4xl mx-auto space-y-4">
           {isLoadingHistory ? (
             <div className="flex items-center justify-center h-full min-h-[400px]">
@@ -1417,15 +1450,16 @@ export function ChatInterface({
         </div>
       </div>
 
-      {/* Hidden file input */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        onChange={handleFileUpload}
-        accept={FileProcessor.getAcceptString()}
-        multiple
-        className="hidden"
-      />
+        {/* Hidden file input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          onChange={handleFileUpload}
+          accept={FileProcessor.getAcceptString()}
+          multiple
+          className="hidden"
+        />
+      </div>
     </div>
   );
 }
