@@ -9,6 +9,7 @@ import {
   WeeklyInsights,
   SmartNotification,
 } from '@/lib/coaching/types';
+import { getMockCoachingData } from '@/hooks/use-mock-data';
 
 interface UseCoachingInsightsProps {
   userId: string;
@@ -32,7 +33,6 @@ export function useCoachingInsights({
     try {
       // For now, use mock data directly to avoid dependency issues
       // In production, this would use real userData, patterns, and historicalData
-      const { getMockCoachingData } = require('@/hooks/use-mock-data');
       const mockCoachingData = getMockCoachingData();
 
       setCoachingData(mockCoachingData);
