@@ -1,7 +1,8 @@
 'use client';
 
 // Easy toggle system for mock data
-export const USE_MOCK_DATA = process.env.NODE_ENV === 'development' && process.env.USE_MOCK_DASHBOARD === 'true';
+// For now, let's enable mock data by default in development
+export const USE_MOCK_DATA = process.env.NODE_ENV === 'development';
 
 export interface MockWeeklyData {
   current: number;
@@ -28,13 +29,15 @@ function generateMockData(): MockDashboardData {
   const readinessWeeklyData = [73, 75, 74, 76, 75, 75, 75];
   const readinessCurrent = readinessWeeklyData[readinessWeeklyData.length - 1];
   const readinessPrevious = readinessWeeklyData[0];
-  const readinessChange = ((readinessCurrent - readinessPrevious) / readinessPrevious) * 100;
+  const readinessChange =
+    ((readinessCurrent - readinessPrevious) / readinessPrevious) * 100;
 
   // Weight: 150-200 range with realistic weekly variation (in lbs)
   const weightWeeklyData = [166.1, 165.8, 165.5, 165.3, 165.4, 165.2, 165.2];
   const weightCurrent = weightWeeklyData[weightWeeklyData.length - 1];
   const weightPrevious = weightWeeklyData[0];
-  const weightChange = ((weightCurrent - weightPrevious) / weightPrevious) * 100;
+  const weightChange =
+    ((weightCurrent - weightPrevious) / weightPrevious) * 100;
 
   return {
     sleep: {
@@ -45,13 +48,15 @@ function generateMockData(): MockDashboardData {
     },
     readiness: {
       current: readinessCurrent,
-      trend: readinessChange > 1 ? 'up' : readinessChange < -1 ? 'down' : 'stable',
+      trend:
+        readinessChange > 1 ? 'up' : readinessChange < -1 ? 'down' : 'stable',
       weeklyData: readinessWeeklyData,
       change: readinessChange,
     },
     weight: {
       current: weightCurrent,
-      trend: weightChange > 0.5 ? 'up' : weightChange < -0.5 ? 'down' : 'stable',
+      trend:
+        weightChange > 0.5 ? 'up' : weightChange < -0.5 ? 'down' : 'stable',
       weeklyData: weightWeeklyData,
       change: weightChange,
     },
@@ -70,13 +75,15 @@ function generateAlternativeMockData(): MockDashboardData {
   const readinessWeeklyData = [65, 68, 70, 72, 75, 78, 80];
   const readinessCurrent = readinessWeeklyData[readinessWeeklyData.length - 1];
   const readinessPrevious = readinessWeeklyData[0];
-  const readinessChange = ((readinessCurrent - readinessPrevious) / readinessPrevious) * 100;
+  const readinessChange =
+    ((readinessCurrent - readinessPrevious) / readinessPrevious) * 100;
 
   // Stable weight
   const weightWeeklyData = [165.0, 165.1, 165.0, 164.9, 165.0, 165.1, 165.0];
   const weightCurrent = weightWeeklyData[weightWeeklyData.length - 1];
   const weightPrevious = weightWeeklyData[0];
-  const weightChange = ((weightCurrent - weightPrevious) / weightPrevious) * 100;
+  const weightChange =
+    ((weightCurrent - weightPrevious) / weightPrevious) * 100;
 
   return {
     sleep: {
@@ -87,13 +94,15 @@ function generateAlternativeMockData(): MockDashboardData {
     },
     readiness: {
       current: readinessCurrent,
-      trend: readinessChange > 1 ? 'up' : readinessChange < -1 ? 'down' : 'stable',
+      trend:
+        readinessChange > 1 ? 'up' : readinessChange < -1 ? 'down' : 'stable',
       weeklyData: readinessWeeklyData,
       change: readinessChange,
     },
     weight: {
       current: weightCurrent,
-      trend: weightChange > 0.5 ? 'up' : weightChange < -0.5 ? 'down' : 'stable',
+      trend:
+        weightChange > 0.5 ? 'up' : weightChange < -0.5 ? 'down' : 'stable',
       weeklyData: weightWeeklyData,
       change: weightChange,
     },
@@ -108,8 +117,14 @@ export function getMockDashboardData(): MockDashboardData {
 }
 
 // Helper function to get trend direction and color
-export function getTrendInfo(trend: 'up' | 'down' | 'stable', metric: 'sleep' | 'readiness' | 'weight') {
-  const isGoodTrend = (trend: 'up' | 'down' | 'stable', metric: 'sleep' | 'readiness' | 'weight') => {
+export function getTrendInfo(
+  trend: 'up' | 'down' | 'stable',
+  metric: 'sleep' | 'readiness' | 'weight'
+) {
+  const isGoodTrend = (
+    trend: 'up' | 'down' | 'stable',
+    metric: 'sleep' | 'readiness' | 'weight'
+  ) => {
     if (metric === 'weight') {
       return trend === 'down'; // Weight loss is generally good
     }
@@ -117,11 +132,15 @@ export function getTrendInfo(trend: 'up' | 'down' | 'stable', metric: 'sleep' | 
   };
 
   const isGood = isGoodTrend(trend, metric);
-  
+
   return {
     direction: trend,
     isGood,
-    color: isGood ? 'text-success' : trend === 'stable' ? 'text-muted' : 'text-warning',
+    color: isGood
+      ? 'text-success'
+      : trend === 'stable'
+        ? 'text-muted'
+        : 'text-warning',
     icon: trend === 'up' ? '↗' : trend === 'down' ? '↘' : '→',
   };
 }
@@ -136,12 +155,12 @@ export function formatChange(change: number): string {
 export function getWeekLabels(): string[] {
   const labels = [];
   const today = new Date();
-  
+
   for (let i = 6; i >= 0; i--) {
     const date = new Date(today);
     date.setDate(date.getDate() - i);
     labels.push(date.toLocaleDateString('en-US', { weekday: 'short' }));
   }
-  
+
   return labels;
 }
