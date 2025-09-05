@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { ChatInterface } from '@/components/chat/chat-interface';
-
 import { DashboardHeader } from '@/components/dashboard/dashboard-header';
 
 interface DashboardClientProps {
@@ -21,7 +20,7 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
       <DashboardHeader userId={userId} />
 
       {/* Chat Interface */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1">
         <ChatInterface userId={userId} onDataStored={handleDataStored} />
       </div>
     </div>
