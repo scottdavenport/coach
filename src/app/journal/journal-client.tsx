@@ -19,8 +19,6 @@ import {
   Frown,
   Meh,
   TrendingUp,
-  Lightbulb,
-  Target,
   MessageSquare,
   Filter,
   Download,
@@ -85,6 +83,7 @@ export default function JournalClient({ userId }: JournalClientProps) {
     { id: 'poor', label: 'Poor', icon: Frown, color: 'text-red-500' },
   ];
 
+  // Entry types for display purposes only
   const entryTypes = [
     {
       id: 'reflection',
@@ -92,10 +91,11 @@ export default function JournalClient({ userId }: JournalClientProps) {
       icon: BookOpen,
       color: 'text-purple-500',
     },
-    { id: 'goal', label: 'Goal', icon: Target, color: 'text-green-500' },
-    { id: 'tip', label: 'Tip', icon: Lightbulb, color: 'text-yellow-500' },
+    { id: 'goal', label: 'Goal', icon: MessageSquare, color: 'text-green-500' },
+    { id: 'tip', label: 'Tip', icon: MessageSquare, color: 'text-yellow-500' },
     { id: 'note', label: 'Note', icon: MessageSquare, color: 'text-blue-500' },
   ];
+
 
   // Fetch journal entries for selected date
   useEffect(() => {
@@ -287,32 +287,6 @@ export default function JournalClient({ userId }: JournalClientProps) {
                   </CardContent>
                 </Card>
 
-                {/* Entry Types */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Entry Types</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    {entryTypes.map(type => {
-                      const Icon = type.icon;
-                      return (
-                        <button
-                          key={type.id}
-                          onClick={() => {
-                            setIsWriting(true);
-                            setActiveTab('timeline');
-                          }}
-                          className="w-full flex items-center gap-3 p-2 rounded-lg text-left hover:bg-card-2 transition-colors"
-                        >
-                          <Icon className={`h-4 w-4 ${type.color}`} />
-                          <span className="text-sm font-medium">
-                            {type.label}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </CardContent>
-                </Card>
               </div>
             </div>
 
