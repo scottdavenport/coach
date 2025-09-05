@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
 
     if (!validation.success) {
       return NextResponse.json(
-        { error: 'Invalid input', details: validation.details },
+        { error: 'Invalid input', details: (validation as any).details },
         { status: 400 }
       );
     }
@@ -273,17 +273,19 @@ export async function POST(request: NextRequest) {
     // Handle rate limit errors
     if (error.statusCode === 429) {
       return NextResponse.json(
-        { 
+        {
           error: error.message,
           remaining: error.remaining,
           resetTime: error.resetTime,
         },
-        { 
+        {
           status: 429,
           headers: {
             'X-RateLimit-Remaining': error.remaining?.toString() || '0',
             'X-RateLimit-Reset': error.resetTime?.toString() || '0',
-            'Retry-After': error.resetTime ? Math.ceil((error.resetTime - Date.now()) / 1000).toString() : '60',
+            'Retry-After': error.resetTime
+              ? Math.ceil((error.resetTime - Date.now()) / 1000).toString()
+              : '60',
           },
         }
       );

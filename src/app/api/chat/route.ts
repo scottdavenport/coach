@@ -43,12 +43,12 @@ export async function POST(request: NextRequest) {
     const validation = validateRequestBody(body, chatSchemas.message);
 
     if (!validation.success) {
-      logger.error('Input validation failed', { 
-        error: validation.error, 
-        details: validation.details 
+      logger.error('Input validation failed', {
+        error: validation.error,
+        details: validation.details,
       });
       return NextResponse.json(
-        { error: 'Invalid input', details: validation.details },
+        { error: 'Invalid input', details: (validation as any).details },
         { status: 400 }
       );
     }
@@ -739,22 +739,24 @@ Remember: You're not just responding to messages - you're building a comprehensi
   } catch (error: any) {
     // Handle rate limit errors
     if (error.statusCode === 429) {
-      logger.warn('Rate limit exceeded', { 
+      logger.warn('Rate limit exceeded', {
         clientId: getClientIdentifier(request),
-        error: error.message 
+        error: error.message,
       });
       return NextResponse.json(
-        { 
+        {
           error: error.message,
           remaining: error.remaining,
           resetTime: error.resetTime,
         },
-        { 
+        {
           status: 429,
           headers: {
             'X-RateLimit-Remaining': error.remaining?.toString() || '0',
             'X-RateLimit-Reset': error.resetTime?.toString() || '0',
-            'Retry-After': error.resetTime ? Math.ceil((error.resetTime - Date.now()) / 1000).toString() : '60',
+            'Retry-After': error.resetTime
+              ? Math.ceil((error.resetTime - Date.now()) / 1000).toString()
+              : '60',
           },
         }
       );

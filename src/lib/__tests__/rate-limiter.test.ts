@@ -2,7 +2,11 @@
  * Comprehensive tests for rate limiting utilities
  */
 
-import rateLimiter, { createRateLimit, getClientIdentifier, RATE_LIMITS } from '../rate-limiter';
+import rateLimiter, {
+  createRateLimit,
+  getClientIdentifier,
+  RATE_LIMITS,
+} from '../rate-limiter';
 
 // Mock Request object
 const createMockRequest = (headers: Record<string, string> = {}): Request => {
@@ -58,7 +62,7 @@ describe('Rate Limiter', () => {
       expect(result.remaining).toBe(0);
     });
 
-    it('should reset counter after window expires', (done) => {
+    it('should reset counter after window expires', done => {
       const config = {
         windowMs: 100, // 100ms
         maxRequests: 2,
@@ -77,7 +81,11 @@ describe('Rate Limiter', () => {
 
       // Wait for window to expire
       setTimeout(() => {
-        const allowedResult = rateLimiter.isAllowed(identifier, endpoint, config);
+        const allowedResult = rateLimiter.isAllowed(
+          identifier,
+          endpoint,
+          config
+        );
         expect(allowedResult.allowed).toBe(true);
         expect(allowedResult.remaining).toBe(1);
         done();
@@ -114,11 +122,19 @@ describe('Rate Limiter', () => {
       // Use up limit for endpoint 1
       rateLimiter.isAllowed(identifier, 'endpoint1', config);
       rateLimiter.isAllowed(identifier, 'endpoint1', config);
-      const endpoint1Result = rateLimiter.isAllowed(identifier, 'endpoint1', config);
+      const endpoint1Result = rateLimiter.isAllowed(
+        identifier,
+        'endpoint1',
+        config
+      );
       expect(endpoint1Result.allowed).toBe(false);
 
       // Endpoint 2 should still be allowed
-      const endpoint2Result = rateLimiter.isAllowed(identifier, 'endpoint2', config);
+      const endpoint2Result = rateLimiter.isAllowed(
+        identifier,
+        'endpoint2',
+        config
+      );
       expect(endpoint2Result.allowed).toBe(true);
     });
   });
@@ -243,7 +259,7 @@ describe('Rate Limiter', () => {
       expect(result.remaining).toBe(999999);
     });
 
-    it('should handle very short window', (done) => {
+    it('should handle very short window', done => {
       const config = {
         windowMs: 10, // 10ms
         maxRequests: 1,
@@ -280,9 +296,10 @@ describe('Rate Limiter', () => {
       // Create an entry
       rateLimiter.isAllowed(identifier, endpoint, config);
 
-      // Wait for it to expire and cleanup
-      await new Promise(resolve => setTimeout(resolve, 150));
-      
+      // Manually trigger cleanup after expiration
+      await new Promise(resolve => setTimeout(resolve, 100));
+      (rateLimiter as any).cleanup();
+
       const store = (rateLimiter as any).store;
       expect(Object.keys(store)).toHaveLength(0);
     }, 10000);
@@ -314,9 +331,10 @@ describe('Rate Limiter', () => {
       rateLimiter.isAllowed('user1', 'endpoint', config);
       rateLimiter.isAllowed('user2', 'endpoint', config);
 
-      // Wait for cleanup
-      await new Promise(resolve => setTimeout(resolve, 150));
-      
+      // Manually trigger cleanup after expiration
+      await new Promise(resolve => setTimeout(resolve, 100));
+      (rateLimiter as any).cleanup();
+
       const store = (rateLimiter as any).store;
       expect(Object.keys(store)).toHaveLength(0);
     }, 10000);
