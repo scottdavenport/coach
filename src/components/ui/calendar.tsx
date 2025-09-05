@@ -32,9 +32,11 @@ export function Calendar({
 }: CalendarProps) {
   const { userTimezone } = useUserTimezone();
   const [currentYear, setCurrentYear] = useState(() => {
+    if (!selectedDate) return new Date().getFullYear();
     return parseInt(selectedDate.split('-')[0]);
   });
   const [currentMonth, setCurrentMonth] = useState(() => {
+    if (!selectedDate) return new Date().getMonth() + 1;
     return parseInt(selectedDate.split('-')[1]);
   });
   const [isOpen, setIsOpen] = useState(false);
@@ -43,9 +45,11 @@ export function Calendar({
 
   // Update calendar month/year when selected date changes
   useEffect(() => {
-    const [year, month] = selectedDate.split('-').map(Number);
-    setCurrentYear(year);
-    setCurrentMonth(month);
+    if (selectedDate) {
+      const [year, month] = selectedDate.split('-').map(Number);
+      setCurrentYear(year);
+      setCurrentMonth(month);
+    }
   }, [selectedDate]);
 
   // Get calendar grid for current month
