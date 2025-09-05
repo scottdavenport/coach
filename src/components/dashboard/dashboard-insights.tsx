@@ -16,12 +16,15 @@ interface DashboardInsightsProps {
   onChatMessage?: (message: string) => void;
 }
 
-export function DashboardInsights({ 
-  userId, 
-  selectedDate, 
-  onChatMessage 
+export function DashboardInsights({
+  userId,
+  selectedDate,
+  onChatMessage,
 }: DashboardInsightsProps) {
-  const { insights, loading, error, updateMetric } = useDashboardInsights(userId, selectedDate);
+  const { insights, loading, error, updateMetric } = useDashboardInsights(
+    userId,
+    selectedDate
+  );
   const [editingTile, setEditingTile] = useState<string | null>(null);
 
   const handleChatAbout = (tileType: string, context: string) => {
@@ -33,7 +36,7 @@ export function DashboardInsights({
       trends: `Help me analyze these trends and what they mean for my health.`,
       goals: `I need help with my daily goals and how to achieve them better.`,
     };
-    
+
     const message = messages[tileType as keyof typeof messages] || context;
     onChatMessage?.(message);
   };
@@ -80,24 +83,23 @@ export function DashboardInsights({
     <div className="space-y-6">
       {/* Header */}
       <div className="text-center">
-        <h2 className="text-lg font-semibold text-gray-800 mb-1">
+        <h2 className="text-lg font-semibold text-text mb-1">
           Your Health Dashboard
         </h2>
-        <p className="text-sm text-gray-600">
-          {selectedDate 
-            ? new Date(selectedDate).toLocaleDateString('en-US', { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
+        <p className="text-sm text-muted">
+          {selectedDate
+            ? new Date(selectedDate).toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
               })
-            : 'Today\'s insights and progress'
-          }
+            : "Today's insights and progress"}
         </p>
       </div>
 
       {/* Tiles Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-6">
         {/* Health Tile */}
         <HealthTile
           metrics={insights.todayMetrics}
@@ -146,7 +148,9 @@ export function DashboardInsights({
       {/* Quick Actions */}
       <div className="flex justify-center space-x-4 pt-4">
         <button
-          onClick={() => handleChatAbout('general', 'How can I improve my health today?')}
+          onClick={() =>
+            handleChatAbout('general', 'How can I improve my health today?')
+          }
           className="px-4 py-2 bg-primary text-white rounded-lg text-sm hover:bg-primary/90 transition-colors"
         >
           Ask Coach Anything

@@ -71,9 +71,9 @@ export function useDashboardInsights(userId: string, selectedDate?: string) {
       // Fetch today's metrics with category information
       const { data: metrics, error: metricsError } = await supabase
         .from('user_daily_metrics')
-        .select(`
+        .select(
+          `
           id,
-          metric_key,
           metric_value,
           text_value,
           boolean_value,
@@ -82,6 +82,7 @@ export function useDashboardInsights(userId: string, selectedDate?: string) {
           confidence,
           metric_date,
           standard_metrics (
+            metric_key,
             display_name,
             data_type,
             unit,
@@ -92,7 +93,8 @@ export function useDashboardInsights(userId: string, selectedDate?: string) {
               color
             )
           )
-        `)
+        `
+        )
         .eq('user_id', userId)
         .eq('metric_date', targetDate)
         .order('created_at');
@@ -107,14 +109,16 @@ export function useDashboardInsights(userId: string, selectedDate?: string) {
 
       const { data: weeklyMetrics } = await supabase
         .from('user_daily_metrics')
-        .select(`
+        .select(
+          `
           metric_date,
           metric_value,
           standard_metrics (
             metric_key,
             metric_categories (name)
           )
-        `)
+        `
+        )
         .eq('user_id', userId)
         .gte('metric_date', weekStart.toISOString().split('T')[0])
         .lte('metric_date', targetDate)
@@ -147,8 +151,8 @@ export function useDashboardInsights(userId: string, selectedDate?: string) {
 
       // Process metrics data
       const todayMetrics: DashboardMetric[] = (metrics || []).map(metric => {
-        const standardMetric = Array.isArray(metric.standard_metrics) 
-          ? metric.standard_metrics[0] 
+        const standardMetric = Array.isArray(metric.standard_metrics)
+          ? metric.standard_metrics[0]
           : metric.standard_metrics;
         const category = Array.isArray(standardMetric?.metric_categories)
           ? standardMetric.metric_categories[0]
@@ -156,8 +160,8 @@ export function useDashboardInsights(userId: string, selectedDate?: string) {
 
         return {
           id: metric.id,
-          metric_key: metric.metric_key,
-          display_name: standardMetric?.display_name || metric.metric_key,
+          metric_key: standardMetric?.metric_key || 'unknown',
+          display_name: standardMetric?.display_name || 'Unknown Metric',
           data_type: standardMetric?.data_type || 'number',
           unit: standardMetric?.unit,
           metric_value: metric.metric_value,
@@ -184,8 +188,8 @@ export function useDashboardInsights(userId: string, selectedDate?: string) {
       };
 
       (weeklyMetrics || []).forEach(metric => {
-        const standardMetric = Array.isArray(metric.standard_metrics) 
-          ? metric.standard_metrics[0] 
+        const standardMetric = Array.isArray(metric.standard_metrics)
+          ? metric.standard_metrics[0]
           : metric.standard_metrics;
         const categoryData = Array.isArray(standardMetric?.metric_categories)
           ? standardMetric.metric_categories[0]
@@ -205,9 +209,17 @@ export function useDashboardInsights(userId: string, selectedDate?: string) {
 
       // Process recent insights
       const recentInsights = (journalEntries || []).map(entry => ({
-        type: entry.category as 'sleep' | 'energy' | 'activity' | 'mood' | 'general',
+        type: entry.category as
+          | 'sleep'
+          | 'energy'
+          | 'activity'
+          | 'mood'
+          | 'general',
         message: entry.content,
-        priority: entry.entry_type === 'tip' ? 'high' : 'medium' as 'high' | 'medium' | 'low',
+        priority:
+          entry.entry_type === 'tip'
+            ? 'high'
+            : ('medium' as 'high' | 'medium' | 'low'),
         timestamp: entry.created_at,
       }));
 
@@ -238,34 +250,44 @@ export function useDashboardInsights(userId: string, selectedDate?: string) {
     }
   }, [userId, selectedDate]);
 
-  const updateMetric = useCallback(async (
-    metricId: string,
-    updates: Partial<Pick<DashboardMetric, 'metric_value' | 'text_value' | 'boolean_value' | 'time_value'>>
-  ) => {
-    try {
-      const supabase = createClient();
-      
-      const { error } = await supabase
-        .from('user_daily_metrics')
-        .update({
-          ...updates,
-          source: 'manual',
-          confidence: 1.0,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', metricId);
+  const updateMetric = useCallback(
+    async (
+      metricId: string,
+      updates: Partial<
+        Pick<
+          DashboardMetric,
+          'metric_value' | 'text_value' | 'boolean_value' | 'time_value'
+        >
+      >
+    ) => {
+      try {
+        const supabase = createClient();
 
-      if (error) {
-        throw new Error(`Failed to update metric: ${error.message}`);
+        const { error } = await supabase
+          .from('user_daily_metrics')
+          .update({
+            ...updates,
+            source: 'manual',
+            confidence: 1.0,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', metricId);
+
+        if (error) {
+          throw new Error(`Failed to update metric: ${error.message}`);
+        }
+
+        // Refresh insights after update
+        await fetchInsights();
+      } catch (err) {
+        console.error('Error updating metric:', err);
+        setError(
+          err instanceof Error ? err.message : 'Failed to update metric'
+        );
       }
-
-      // Refresh insights after update
-      await fetchInsights();
-    } catch (err) {
-      console.error('Error updating metric:', err);
-      setError(err instanceof Error ? err.message : 'Failed to update metric');
-    }
-  }, [fetchInsights]);
+    },
+    [fetchInsights]
+  );
 
   useEffect(() => {
     fetchInsights();

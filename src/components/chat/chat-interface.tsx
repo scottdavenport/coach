@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Mic, Send, Plus, Upload, ChevronDown, ChevronUp } from 'lucide-react';
+import { Mic, Send, Plus, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ChatMessage } from './chat-message';
 import { FileUploadMenu } from './file-upload-menu';
@@ -24,8 +24,6 @@ interface ChatInterfaceProps {
   pendingQuestions?: string[];
   onQuestionAsked?: (question: string) => void;
   onDataStored?: () => void;
-  isCollapsed?: boolean;
-  onToggleCollapse?: () => void;
   initialMessage?: string;
 }
 
@@ -34,8 +32,6 @@ export function ChatInterface({
   pendingQuestions = [],
   onQuestionAsked,
   onDataStored,
-  isCollapsed = false,
-  onToggleCollapse,
   initialMessage,
 }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<any[]>([]);
@@ -1272,32 +1268,16 @@ export function ChatInterface({
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      {/* Collapse/Expand Header */}
-      {onToggleCollapse && (
-        <div className="flex items-center justify-between p-3 border-b border-line bg-background">
-          <h3 className="text-sm font-medium text-text">Chat with Coach</h3>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onToggleCollapse}
-            className="h-6 w-6 p-0 text-muted hover:text-text"
-          >
-            {isCollapsed ? (
-              <ChevronUp className="h-4 w-4" />
-            ) : (
-              <ChevronDown className="h-4 w-4" />
-            )}
-          </Button>
-        </div>
-      )}
-      {/* Collapsible Content */}
-      <div className={`transition-all duration-300 ease-in-out ${isCollapsed ? 'max-h-0 overflow-hidden' : 'flex-1 flex flex-col'}`}>
+      {/* Chat Content */}
+      <div className="flex-1 flex flex-col">
         {/* Drag overlay */}
         {isDragging && (
           <div className="absolute inset-0 bg-primary/10 border-2 border-dashed border-primary z-50 flex items-center justify-center">
             <div className="text-center">
               <Upload className="h-12 w-12 text-primary mx-auto mb-2" />
-              <p className="text-lg font-medium text-primary">Drop files here</p>
+              <p className="text-lg font-medium text-primary">
+                Drop files here
+              </p>
               <p className="text-sm text-muted">Upload images and documents</p>
             </div>
           </div>
@@ -1305,150 +1285,150 @@ export function ChatInterface({
 
         {/* Messages Area */}
         <div className="flex-1 overflow-y-auto p-4">
-        <div className="max-w-4xl mx-auto space-y-4">
-          {isLoadingHistory ? (
-            <div className="flex items-center justify-center h-full min-h-[400px]">
-              <div className="text-center text-muted">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-                <p>Loading conversation history...</p>
-              </div>
-            </div>
-          ) : messages.length === 0 ? (
-            <div className="flex items-center justify-center h-full min-h-[400px]">
-              <div className="text-center text-muted">
-                <p className="text-lg mb-2">Welcome to Coach!</p>
-                <p className="text-sm mb-3">
-                  Your AI health and fitness companion
-                </p>
-                <div className="text-sm text-muted space-y-2">
-                  <p>
-                    💡 <strong>Quick Start:</strong>
-                  </p>
-                  <p>
-                    • Upload a screenshot from your health app (Oura, Apple
-                    Health, Fitbit, etc.)
-                  </p>
-                  <p>
-                    • Or simply tell me how you're feeling and what's going on
-                  </p>
-                  <p>
-                    • I'll help track your progress and build your daily card
-                  </p>
-                  <p>
-                    • Check the "Daily Card" button to see your health data
-                    organized
-                  </p>
+          <div className="max-w-4xl mx-auto space-y-4">
+            {isLoadingHistory ? (
+              <div className="flex items-center justify-center h-full min-h-[400px]">
+                <div className="text-center text-muted">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                  <p>Loading conversation history...</p>
                 </div>
               </div>
-            </div>
-          ) : (
-            messages.map(message => (
-              <ChatMessage key={message.id} message={message} />
-            ))
-          )}
-
-          {isLoading && (
-            <div className="flex items-center space-x-2 text-muted">
-              <div className="flex space-x-1">
-                <div className="w-2 h-2 bg-muted rounded-full animate-bounce"></div>
-                <div
-                  className="w-2 h-2 bg-muted rounded-full animate-bounce"
-                  style={{ animationDelay: '0.1s' }}
-                ></div>
-                <div
-                  className="w-2 h-2 bg-muted rounded-full animate-bounce"
-                  style={{ animationDelay: '0.2s' }}
-                ></div>
-              </div>
-              <span className="text-sm">Coach is typing...</span>
-            </div>
-          )}
-
-          <div ref={messagesEndRef} />
-        </div>
-      </div>
-
-      {/* Input Area - Pinned to Bottom */}
-      <div className="border-t border-line p-4 bg-background">
-        <div className="max-w-4xl mx-auto">
-          {/* File Attachments Preview - Isolated */}
-          <IsolatedFileManager
-            files={fileManager.files}
-            onRemoveFile={fileManager.removeFile}
-          />
-
-          <div className="flex items-center space-x-3">
-            {/* Attachment Button */}
-            <div className="relative" ref={uploadMenuRef}>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsUploadMenuOpen(!isUploadMenuOpen)}
-                className="p-2 text-muted hover:text-text"
-                disabled={fileManager.files.length >= 10}
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-
-              {isUploadMenuOpen && (
-                <FileUploadMenu
-                  onFileSelect={handleFileSelectType}
-                  disabled={fileManager.files.length >= 10}
-                />
-              )}
-            </div>
-
-            {/* Text Input - Use Emergency Mode Input for Performance */}
-            <div className="flex-1">
-              <textarea
-                value={inputValue}
-                onChange={e => setInputValue(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder={
-                  fileManager.files.length > 0
-                    ? 'Add context about these files...'
-                    : 'Ask anything...'
-                }
-                className="w-full bg-card border border-line rounded-xl px-4 py-3 text-text placeholder:text-muted resize-none focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/30"
-                rows={1}
-                style={{ minHeight: '44px', maxHeight: '120px' }}
-                disabled={isLoading}
-              />
-            </div>
-
-            {/* Voice and Send Buttons */}
-            <div className="flex items-center space-x-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleVoiceRecord}
-                className={`p-2 ${isRecording ? 'text-destructive' : 'text-muted hover:text-text'}`}
-                disabled={fileManager.files.length >= 10}
-              >
-                {isRecording ? (
-                  <div className="w-4 h-4 bg-destructive rounded-full flex items-center justify-center">
-                    <div className="w-2 h-2 bg-white rounded-full"></div>
+            ) : messages.length === 0 ? (
+              <div className="flex items-center justify-center h-full min-h-[400px]">
+                <div className="text-center text-muted">
+                  <p className="text-lg mb-2">Welcome to Coach!</p>
+                  <p className="text-sm mb-3">
+                    Your AI health and fitness companion
+                  </p>
+                  <div className="text-sm text-muted space-y-2">
+                    <p>
+                      💡 <strong>Quick Start:</strong>
+                    </p>
+                    <p>
+                      • Upload a screenshot from your health app (Oura, Apple
+                      Health, Fitbit, etc.)
+                    </p>
+                    <p>
+                      • Or simply tell me how you're feeling and what's going on
+                    </p>
+                    <p>
+                      • I'll help track your progress and build your daily card
+                    </p>
+                    <p>
+                      • Check the "Daily Card" button to see your health data
+                      organized
+                    </p>
                   </div>
-                ) : (
-                  <Mic className="h-4 w-4" />
-                )}
-              </Button>
+                </div>
+              </div>
+            ) : (
+              messages.map(message => (
+                <ChatMessage key={message.id} message={message} />
+              ))
+            )}
 
-              <Button
-                onClick={handleSendMessage}
-                disabled={
-                  (!inputValue.trim() && fileManager.files.length === 0) ||
-                  isLoading
-                }
-                className="bg-primary text-black hover:bg-primary/90 disabled:opacity-50"
-                size="sm"
-              >
-                <Send className="h-4 w-4" />
-              </Button>
+            {isLoading && (
+              <div className="flex items-center space-x-2 text-muted">
+                <div className="flex space-x-1">
+                  <div className="w-2 h-2 bg-muted rounded-full animate-bounce"></div>
+                  <div
+                    className="w-2 h-2 bg-muted rounded-full animate-bounce"
+                    style={{ animationDelay: '0.1s' }}
+                  ></div>
+                  <div
+                    className="w-2 h-2 bg-muted rounded-full animate-bounce"
+                    style={{ animationDelay: '0.2s' }}
+                  ></div>
+                </div>
+                <span className="text-sm">Coach is typing...</span>
+              </div>
+            )}
+
+            <div ref={messagesEndRef} />
+          </div>
+        </div>
+
+        {/* Input Area - Pinned to Bottom */}
+        <div className="border-t border-line p-4 bg-background">
+          <div className="max-w-4xl mx-auto">
+            {/* File Attachments Preview - Isolated */}
+            <IsolatedFileManager
+              files={fileManager.files}
+              onRemoveFile={fileManager.removeFile}
+            />
+
+            <div className="flex items-center space-x-3">
+              {/* Attachment Button */}
+              <div className="relative" ref={uploadMenuRef}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsUploadMenuOpen(!isUploadMenuOpen)}
+                  className="p-2 text-muted hover:text-text"
+                  disabled={fileManager.files.length >= 10}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+
+                {isUploadMenuOpen && (
+                  <FileUploadMenu
+                    onFileSelect={handleFileSelectType}
+                    disabled={fileManager.files.length >= 10}
+                  />
+                )}
+              </div>
+
+              {/* Text Input - Use Emergency Mode Input for Performance */}
+              <div className="flex-1">
+                <textarea
+                  value={inputValue}
+                  onChange={e => setInputValue(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder={
+                    fileManager.files.length > 0
+                      ? 'Add context about these files...'
+                      : 'Ask anything...'
+                  }
+                  className="w-full bg-card border border-line rounded-xl px-4 py-3 text-text placeholder:text-muted resize-none focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/30"
+                  rows={1}
+                  style={{ minHeight: '44px', maxHeight: '120px' }}
+                  disabled={isLoading}
+                />
+              </div>
+
+              {/* Voice and Send Buttons */}
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleVoiceRecord}
+                  className={`p-2 ${isRecording ? 'text-destructive' : 'text-muted hover:text-text'}`}
+                  disabled={fileManager.files.length >= 10}
+                >
+                  {isRecording ? (
+                    <div className="w-4 h-4 bg-destructive rounded-full flex items-center justify-center">
+                      <div className="w-2 h-2 bg-white rounded-full"></div>
+                    </div>
+                  ) : (
+                    <Mic className="h-4 w-4" />
+                  )}
+                </Button>
+
+                <Button
+                  onClick={handleSendMessage}
+                  disabled={
+                    (!inputValue.trim() && fileManager.files.length === 0) ||
+                    isLoading
+                  }
+                  className="bg-primary text-black hover:bg-primary/90 disabled:opacity-50"
+                  size="sm"
+                >
+                  <Send className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
         {/* Hidden file input */}
         <input

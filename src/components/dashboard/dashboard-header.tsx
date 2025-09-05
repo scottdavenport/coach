@@ -10,7 +10,15 @@ import {
   DailyWorkoutModalRef,
 } from '@/components/dashboard/daily-workout-modal';
 import { DailyJournal } from '@/components/card/daily-narrative';
-import { Settings, Calendar, Dumbbell, Sun, RotateCcw } from 'lucide-react';
+import {
+  Settings,
+  Calendar,
+  Dumbbell,
+  Sun,
+  RotateCcw,
+  BarChart3,
+} from 'lucide-react';
+import { DashboardModal } from './dashboard-modal';
 
 interface DashboardHeaderProps {
   userId: string;
@@ -24,6 +32,7 @@ export function DashboardHeader({
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isWeeklySummaryOpen, setIsWeeklySummaryOpen] = useState(false);
   const [isDailyJournalOpen, setIsDailyJournalOpen] = useState(false);
+  const [isDashboardOpen, setIsDashboardOpen] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const workoutModalRef = useRef<DailyWorkoutModalRef>(null);
 
@@ -205,7 +214,10 @@ export function DashboardHeader({
 
   return (
     <>
-      <div className="flex items-center justify-between p-4 border-b border-line">
+      <div
+        className="flex items-center justify-between p-4 border-b border-line"
+        style={{ backgroundColor: 'hsl(var(--bg))' }}
+      >
         <div>
           <h1 className="text-xl font-semibold text-text">Coach</h1>
           <p className="text-sm text-muted">
@@ -226,6 +238,15 @@ export function DashboardHeader({
             {isResetting ? 'Resetting...' : 'Reset Data'}
           </Button>
 
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsDashboardOpen(true)}
+            className="h-8 w-8"
+            title="Health Dashboard"
+          >
+            <BarChart3 className="h-4 w-4" />
+          </Button>
           <Button
             variant="ghost"
             size="icon"
@@ -288,6 +309,12 @@ export function DashboardHeader({
         isOpen={isDailyJournalOpen}
         onClose={() => setIsDailyJournalOpen(false)}
         selectedDate={selectedDate}
+      />
+
+      <DashboardModal
+        isOpen={isDashboardOpen}
+        onClose={() => setIsDashboardOpen(false)}
+        userId={userId}
       />
     </>
   );
