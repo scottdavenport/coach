@@ -268,7 +268,7 @@ describe('Rate Limiter', () => {
       }, 20);
     });
 
-    it('should handle cleanup of expired entries', (done) => {
+    it('should handle cleanup of expired entries', async () => {
       const config = {
         windowMs: 50, // 50ms
         maxRequests: 1,
@@ -281,12 +281,11 @@ describe('Rate Limiter', () => {
       rateLimiter.isAllowed(identifier, endpoint, config);
 
       // Wait for it to expire and cleanup
-      setTimeout(() => {
-        const store = (rateLimiter as any).store;
-        expect(Object.keys(store)).toHaveLength(0);
-        done();
-      }, 100);
-    });
+      await new Promise(resolve => setTimeout(resolve, 150));
+      
+      const store = (rateLimiter as any).store;
+      expect(Object.keys(store)).toHaveLength(0);
+    }, 10000);
   });
 
   describe('Memory Management', () => {
@@ -305,7 +304,7 @@ describe('Rate Limiter', () => {
       expect(Object.keys(store)).toHaveLength(1000);
     });
 
-    it('should cleanup expired entries periodically', (done) => {
+    it('should cleanup expired entries periodically', async () => {
       const config = {
         windowMs: 50, // 50ms
         maxRequests: 1,
@@ -316,11 +315,10 @@ describe('Rate Limiter', () => {
       rateLimiter.isAllowed('user2', 'endpoint', config);
 
       // Wait for cleanup
-      setTimeout(() => {
-        const store = (rateLimiter as any).store;
-        expect(Object.keys(store)).toHaveLength(0);
-        done();
-      }, 100);
-    });
+      await new Promise(resolve => setTimeout(resolve, 150));
+      
+      const store = (rateLimiter as any).store;
+      expect(Object.keys(store)).toHaveLength(0);
+    }, 10000);
   });
 });

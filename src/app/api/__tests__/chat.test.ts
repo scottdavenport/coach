@@ -21,23 +21,27 @@ describe('/api/chat', () => {
     // Reset all mocks
     jest.clearAllMocks();
 
-    // Setup Supabase mock
+    // Setup Supabase mock with proper chaining
+    const mockSelect = jest.fn().mockReturnValue({
+      eq: jest.fn().mockReturnValue({
+        single: jest.fn(),
+      }),
+    });
+
+    const mockInsert = jest.fn().mockReturnValue({
+      select: jest.fn().mockReturnValue({
+        single: jest.fn(),
+      }),
+    });
+
     mockSupabase = {
       auth: {
         getUser: jest.fn(),
       },
-      from: jest.fn(() => ({
-        select: jest.fn(() => ({
-          eq: jest.fn(() => ({
-            single: jest.fn(),
-          })),
-        })),
-        insert: jest.fn(() => ({
-          select: jest.fn(() => ({
-            single: jest.fn(),
-          })),
-        })),
-      })),
+      from: jest.fn().mockReturnValue({
+        select: mockSelect,
+        insert: mockInsert,
+      }),
     };
 
     // Setup OpenAI mock
@@ -91,24 +95,18 @@ describe('/api/chat', () => {
       });
 
       // Mock user not found in database
-      mockSupabase
-        .from()
-        .select()
-        .eq()
-        .single.mockResolvedValue({
-          data: null,
-          error: { code: 'PGRST116' }, // User not found
-        });
+      const mockSelect = mockSupabase.from().select();
+      mockSelect.eq().single.mockResolvedValue({
+        data: null,
+        error: { code: 'PGRST116' }, // User not found
+      });
 
       // Mock successful user creation
-      mockSupabase
-        .from()
-        .insert()
-        .select()
-        .single.mockResolvedValue({
-          data: { id: 'test-user-id' },
-          error: null,
-        });
+      const mockInsert = mockSupabase.from().insert();
+      mockInsert.select().single.mockResolvedValue({
+        data: { id: 'test-user-id' },
+        error: null,
+      });
 
       mockValidateRequestBody.mockReturnValue({
         success: true,
@@ -332,14 +330,11 @@ describe('/api/chat', () => {
       });
 
       // Mock successful conversation storage
-      mockSupabase
-        .from()
-        .insert()
-        .select()
-        .single.mockResolvedValue({
-          data: { id: 'conv-id' },
-          error: null,
-        });
+      const mockInsert = mockSupabase.from().insert();
+      mockInsert.select().single.mockResolvedValue({
+        data: { id: 'conv-id' },
+        error: null,
+      });
 
       const request = createMockRequest(
         'http://localhost:3000/api/chat',
@@ -384,6 +379,13 @@ describe('/api/chat', () => {
       mockRateLimit.mockReturnValue({
         remaining: 29,
         resetTime: Date.now() + 60000,
+      });
+
+      // Mock successful conversation storage
+      const mockInsert = mockSupabase.from().insert();
+      mockInsert.select().single.mockResolvedValue({
+        data: { id: 'conv-id' },
+        error: null,
       });
 
       const request = createMockRequest(
