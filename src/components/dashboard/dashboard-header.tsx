@@ -276,15 +276,6 @@ export function DashboardHeader({
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => router.push('/summary')}
-            className="h-8 w-8"
-            title="Weekly Summary"
-          >
-            <Calendar className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
             onClick={() => setIsSettingsOpen(true)}
             className="h-8 w-8"
           >
