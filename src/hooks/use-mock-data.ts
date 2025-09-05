@@ -17,6 +17,51 @@ export interface MockDashboardData {
   weight: MockWeeklyData;
 }
 
+export interface MockCoachingData {
+  morningBriefing: {
+    focus: string;
+    insight: string;
+    recommendation: string;
+    motivation: string;
+  };
+  celebrations: Array<{
+    type: 'streak' | 'achievement' | 'personal_best' | 'improvement';
+    title: string;
+    description: string;
+    value: number;
+    icon: string;
+    color: string;
+  }>;
+  weeklyInsights: {
+    topPerformer: string;
+    improvement: string;
+    recommendation: string;
+    celebration: string;
+  };
+  notifications: Array<{
+    id: string;
+    type: 'context_aware' | 'timing_based' | 'pattern_based' | 'goal_based';
+    title: string;
+    message: string;
+    action?: string;
+    priority: 'high' | 'medium' | 'low';
+    read: boolean;
+  }>;
+  streaks: Array<{
+    type: 'sleep' | 'exercise' | 'goal_completion' | 'readiness';
+    current: number;
+    best: number;
+  }>;
+  achievements: Array<{
+    id: string;
+    name: string;
+    description: string;
+    icon: string;
+    color: string;
+    category: 'sleep' | 'exercise' | 'consistency' | 'improvement';
+  }>;
+}
+
 // Generate realistic sample data with actual trends
 function generateMockData(): MockDashboardData {
   // Sleep scores: 65-95 range with realistic weekly variation
@@ -114,6 +159,105 @@ export function getMockDashboardData(): MockDashboardData {
   // You can switch between different mock data sets here
   // For now, using the default good trends
   return generateMockData();
+}
+
+// Generate coaching mock data
+export function getMockCoachingData(): MockCoachingData {
+  return {
+    morningBriefing: {
+      focus: "Maintain your 8-hour sleep routine",
+      insight: "Your sleep improved 12% this week - keep it up!",
+      recommendation: "Based on your readiness score, try moderate exercise today",
+      motivation: "You're on a 5-day sleep improvement streak!"
+    },
+    celebrations: [
+      {
+        type: 'streak',
+        title: 'Sleep Streak',
+        description: '5 days of 8+ hour sleep',
+        value: 5,
+        icon: '🔥',
+        color: 'text-orange-400'
+      },
+      {
+        type: 'improvement',
+        title: 'Sleep Improvement',
+        description: '12% better this week',
+        value: 12,
+        icon: '📈',
+        color: 'text-green-400'
+      },
+      {
+        type: 'personal_best',
+        title: 'Readiness Personal Best',
+        description: '85 readiness score',
+        value: 85,
+        icon: '⭐',
+        color: 'text-yellow-400'
+      }
+    ],
+    weeklyInsights: {
+      topPerformer: 'Sleep consistency',
+      improvement: 'Readiness scores',
+      recommendation: 'Maintain evening routine',
+      celebration: 'Hit 3 personal bests this week'
+    },
+    notifications: [
+      {
+        id: 'wind-down',
+        type: 'timing_based',
+        title: 'Wind-Down Time',
+        message: 'It\'s time to start your evening routine for better sleep',
+        action: 'Start wind-down routine',
+        priority: 'medium',
+        read: false
+      },
+      {
+        id: 'goal-reminder',
+        type: 'goal_based',
+        title: 'Goal Deadline Approaching',
+        message: 'You\'re 2 days away from your monthly sleep goal',
+        action: 'Review goal progress',
+        priority: 'high',
+        read: false
+      }
+    ],
+    streaks: [
+      {
+        type: 'sleep',
+        current: 5,
+        best: 12
+      },
+      {
+        type: 'exercise',
+        current: 3,
+        best: 8
+      },
+      {
+        type: 'goal_completion',
+        current: 2,
+        best: 5
+      }
+    ],
+    achievements: [
+      {
+        id: 'sleep-champion',
+        name: 'Sleep Champion',
+        description: '7+ days of consistent sleep',
+        icon: '😴',
+        color: 'text-blue-500',
+        category: 'sleep'
+      },
+      {
+        id: 'consistency-master',
+        name: 'Consistency Master',
+        description: '80%+ consistency across all metrics',
+        icon: '🎯',
+        color: 'text-green-500',
+        category: 'consistency'
+      }
+    ]
+  };
 }
 
 // Helper function to get trend direction and color
