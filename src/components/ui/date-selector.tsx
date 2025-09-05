@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Calendar, ChevronLeft, ChevronRight, CalendarIcon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTrigger, DialogTitle } from '@/components/ui/dialog';
+import { Calendar } from '@/components/ui/calendar';
 import { useDate } from '@/components/providers/date-provider';
 import { useJournalEntries } from '@/hooks/use-journal-entries';
 
@@ -83,6 +84,7 @@ export function DateSelector({ userId, className = '' }: DateSelectorProps) {
           </Button>
         </DialogTrigger>
         <DialogContent className="w-auto p-0 max-w-sm">
+          <DialogTitle className="sr-only">Select Date</DialogTitle>
           <div className="p-3">
             <div className="flex justify-center mb-3">
               <Calendar
