@@ -9,75 +9,110 @@ import { z } from 'zod';
 export const commonSchemas = {
   uuid: z.string().uuid('Invalid UUID format'),
   email: z.string().email('Invalid email format'),
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format'),
+  date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format'),
   timezone: z.string().min(1, 'Timezone is required'),
   positiveNumber: z.number().positive('Must be a positive number'),
   nonEmptyString: z.string().min(1, 'String cannot be empty'),
-  maxLength: (max: number) => z.string().max(max, `String must be ${max} characters or less`),
-  minLength: (min: number) => z.string().min(min, `String must be at least ${min} characters`),
+  maxLength: (max: number) =>
+    z.string().max(max, `String must be ${max} characters or less`),
+  minLength: (min: number) =>
+    z.string().min(min, `String must be at least ${min} characters`),
 };
 
 // Chat API validation schemas
 export const chatSchemas = {
   message: z.object({
-    message: commonSchemas.maxLength(1000).refine(
-      (msg) => msg.trim().length > 0,
-      'Message cannot be empty or only whitespace'
-    ),
-    conversationId: commonSchemas.uuid.optional(),
-    conversationState: z.enum(['idle', 'active', 'processing']).optional(),
+    message: commonSchemas
+      .maxLength(1000)
+      .refine(
+        msg => msg.trim().length > 0,
+        'Message cannot be empty or only whitespace'
+      ),
+    conversationId: z.string().optional(),
+    conversationState: z
+      .enum([
+        'idle',
+        'morning_checkin',
+        'activity_planning',
+        'data_clarification',
+        'correction',
+        'multi_file_analysis',
+        'emergency_mode',
+      ])
+      .optional(),
+    checkinProgress: z.any().optional(),
     ocrData: z.any().optional(),
     multiFileData: z.any().optional(),
   }),
 
   // Validate OCR data structure
-  ocrData: z.object({
-    rawOcrText: z.string().optional(),
-    sleepScore: z.number().min(0).max(100).optional(),
-    totalSleep: z.number().positive().optional(),
-    timeInBed: z.number().positive().optional(),
-    sleepEfficiency: z.number().min(0).max(100).optional(),
-    restingHeartRate: z.number().positive().optional(),
-    heartRateVariability: z.number().positive().optional(),
-    readiness_score: z.number().min(0).max(100).optional(),
-    bodyTemperature: z.number().optional(),
-    respiratoryRate: z.number().positive().optional(),
-    oxygenSaturation: z.number().min(0).max(100).optional(),
-    remSleep: z.number().min(0).optional(),
-    deepSleep: z.number().min(0).optional(),
-  }).optional(),
+  ocrData: z
+    .object({
+      rawOcrText: z.string().optional(),
+      sleepScore: z.number().min(0).max(100).optional(),
+      totalSleep: z.number().positive().optional(),
+      timeInBed: z.number().positive().optional(),
+      sleepEfficiency: z.number().min(0).max(100).optional(),
+      restingHeartRate: z.number().positive().optional(),
+      heartRateVariability: z.number().positive().optional(),
+      readiness_score: z.number().min(0).max(100).optional(),
+      bodyTemperature: z.number().optional(),
+      respiratoryRate: z.number().positive().optional(),
+      oxygenSaturation: z.number().min(0).max(100).optional(),
+      remSleep: z.number().min(0).optional(),
+      deepSleep: z.number().min(0).optional(),
+    })
+    .optional(),
 
   // Validate multi-file data structure
-  multiFileData: z.object({
-    images: z.array(z.object({
-      fileName: z.string(),
-      fileSize: z.number().positive(),
-      mimeType: z.string(),
-      uploadId: z.string().optional(),
-      ocrData: z.any().optional(),
-      error: z.string().optional(),
-    })).optional(),
-    documents: z.array(z.object({
-      fileName: z.string(),
-      fileSize: z.number().positive(),
-      mimeType: z.string(),
-      uploadId: z.string().optional(),
-      content: z.string().optional(),
-      error: z.string().optional(),
-    })).optional(),
-  }).optional(),
+  multiFileData: z
+    .object({
+      images: z
+        .array(
+          z.object({
+            fileName: z.string(),
+            fileSize: z.number().positive(),
+            mimeType: z.string(),
+            uploadId: z.string().optional(),
+            ocrData: z.any().optional(),
+            error: z.string().optional(),
+          })
+        )
+        .optional(),
+      documents: z
+        .array(
+          z.object({
+            fileName: z.string(),
+            fileSize: z.number().positive(),
+            mimeType: z.string(),
+            uploadId: z.string().optional(),
+            content: z.string().optional(),
+            error: z.string().optional(),
+          })
+        )
+        .optional(),
+    })
+    .optional(),
 };
 
 // File upload validation schemas
 export const fileSchemas = {
   fileUpload: z.object({
-    files: z.array(z.instanceof(File)).min(1, 'At least one file is required').max(10, 'Maximum 10 files allowed'),
+    files: z
+      .array(z.instanceof(File))
+      .min(1, 'At least one file is required')
+      .max(10, 'Maximum 10 files allowed'),
   }),
 
   // Validate individual file
   file: z.object({
     name: z.string().min(1, 'File name is required'),
-    size: z.number().positive('File size must be positive').max(10 * 1024 * 1024, 'File size must be less than 10MB'),
+    size: z
+      .number()
+      .positive('File size must be positive')
+      .max(10 * 1024 * 1024, 'File size must be less than 10MB'),
     type: z.string().min(1, 'File type is required'),
   }),
 };
@@ -93,9 +128,24 @@ export const healthSchemas = {
   }),
 
   eventData: z.object({
-    event_type: z.enum(['check-in', 'note', 'workout', 'meal', 'sleep', 'mood']),
-    data: z.record(z.any()),
-    confidence: z.number().min(0).max(1).optional(),
+    events: z
+      .array(
+        z.object({
+          event_type: z.enum([
+            'check-in',
+            'note',
+            'workout',
+            'meal',
+            'sleep',
+            'mood',
+          ]),
+          data: z.record(z.any()),
+          confidence: z.number().min(0).max(1).optional(),
+        })
+      )
+      .optional(),
+    contextData: z.array(z.any()).optional(),
+    dailySummary: z.string().optional(),
   }),
 };
 
@@ -163,14 +213,16 @@ export function sanitizeObject(obj: any): any {
 export function validateRequestBody<T>(
   body: any,
   schema: z.ZodSchema<T>
-): { success: true; data: T } | { success: false; error: string; details?: any } {
+):
+  | { success: true; data: T }
+  | { success: false; error: string; details?: any } {
   try {
     // First sanitize the input
     const sanitizedBody = sanitizeObject(body);
-    
+
     // Then validate with schema
     const result = schema.safeParse(sanitizedBody);
-    
+
     if (result.success) {
       return { success: true, data: result.data };
     } else {
@@ -255,7 +307,10 @@ export function validateFile(file: File): { valid: boolean; error?: string } {
 /**
  * Validate multiple files
  */
-export function validateFiles(files: File[]): { valid: boolean; error?: string } {
+export function validateFiles(files: File[]): {
+  valid: boolean;
+  error?: string;
+} {
   // Check total count
   if (files.length === 0) {
     return {
@@ -291,7 +346,7 @@ export function validateUrlParams(
 ): { success: true; data: any } | { success: false; error: string } {
   try {
     const result = schema.safeParse(params);
-    
+
     if (result.success) {
       return { success: true, data: result.data };
     } else {
@@ -322,7 +377,7 @@ export function validateQueryParams(
     });
 
     const result = schema.safeParse(params);
-    
+
     if (result.success) {
       return { success: true, data: result.data };
     } else {
@@ -346,14 +401,22 @@ export function createValidationMiddleware<T>(
   schema: z.ZodSchema<T>,
   source: 'body' | 'params' | 'query' = 'body'
 ) {
-  return function (request: Request): { success: true; data: T } | { success: false; error: string; status: number } {
+  return function (
+    request: Request
+  ):
+    | { success: true; data: T }
+    | { success: false; error: string; status: number } {
     try {
       let data: any;
 
       if (source === 'body') {
         // This would need to be handled in the route handler
         // since we can't await request.json() here
-        return { success: false, error: 'Body validation must be done in route handler', status: 500 };
+        return {
+          success: false,
+          error: 'Body validation must be done in route handler',
+          status: 500,
+        };
       } else if (source === 'params') {
         const url = new URL(request.url);
         const pathSegments = url.pathname.split('/').filter(Boolean);
@@ -368,7 +431,7 @@ export function createValidationMiddleware<T>(
       }
 
       const result = schema.safeParse(data);
-      
+
       if (result.success) {
         return { success: true, data: result.data };
       } else {
