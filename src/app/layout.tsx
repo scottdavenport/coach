@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '@/components/providers/auth-provider';
+import { DateProvider } from '@/components/providers/date-provider';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -22,7 +23,11 @@ export default function RootLayout({
   return (
     <html lang="en" data-theme="dark">
       <body className={`${inter.variable} font-sans antialiased`}>
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <DateProvider>
+            {children}
+          </DateProvider>
+        </AuthProvider>
       </body>
     </html>
   );

@@ -19,8 +19,6 @@ import {
   Frown,
   Meh,
   TrendingUp,
-  Lightbulb,
-  Target,
   MessageSquare,
   Filter,
   Download,
@@ -28,6 +26,7 @@ import {
 import { createClient } from '@/lib/supabase/client';
 import { useJournalEntries } from '@/hooks/use-journal-entries';
 import { useUserTimezone } from '@/hooks/use-user-timezone';
+import { useDate } from '@/components/providers/date-provider';
 import {
   getTodayInTimezone,
   getUserPreferredTimezone,
@@ -58,8 +57,8 @@ interface MoodEntry {
 
 export default function JournalClient({ userId }: JournalClientProps) {
   const { userTimezone } = useUserTimezone();
+  const { selectedDate, formatDateForDisplay } = useDate();
   const [activeTab, setActiveTab] = useState('timeline');
-  const [selectedDate, setSelectedDate] = useState('');
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
   const [moodEntries, setMoodEntries] = useState<MoodEntry[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -71,25 +70,6 @@ export default function JournalClient({ userId }: JournalClientProps) {
 
   // Get journal entry dates for calendar indicators
   const { journalEntryDates } = useJournalEntries({ userId });
-
-  // Format date for display using established timezone utilities
-  const formatDateForDisplay = (dateString: string) => {
-    if (!dateString) return '';
-    const preferredTimezone = getUserPreferredTimezone(userTimezone);
-    return formatDateLong(
-      new Date(dateString + 'T00:00:00'),
-      preferredTimezone
-    );
-  };
-
-  // Initialize selectedDate with today's date in user's timezone
-  useEffect(() => {
-    if (!selectedDate && userTimezone) {
-      const preferredTimezone = getUserPreferredTimezone(userTimezone);
-      const todayString = getTodayInTimezone(preferredTimezone);
-      setSelectedDate(todayString);
-    }
-  }, [selectedDate, userTimezone]);
 
   const moods = [
     {
@@ -103,6 +83,7 @@ export default function JournalClient({ userId }: JournalClientProps) {
     { id: 'poor', label: 'Poor', icon: Frown, color: 'text-red-500' },
   ];
 
+  // Entry types for display purposes only
   const entryTypes = [
     {
       id: 'reflection',
@@ -110,8 +91,8 @@ export default function JournalClient({ userId }: JournalClientProps) {
       icon: BookOpen,
       color: 'text-purple-500',
     },
-    { id: 'goal', label: 'Goal', icon: Target, color: 'text-green-500' },
-    { id: 'tip', label: 'Tip', icon: Lightbulb, color: 'text-yellow-500' },
+    { id: 'goal', label: 'Goal', icon: MessageSquare, color: 'text-green-500' },
+    { id: 'tip', label: 'Tip', icon: MessageSquare, color: 'text-yellow-500' },
     { id: 'note', label: 'Note', icon: MessageSquare, color: 'text-blue-500' },
   ];
 
@@ -288,31 +269,6 @@ export default function JournalClient({ userId }: JournalClientProps) {
             {/* Left Sidebar - Date Navigation & Quick Actions */}
             <div className="lg:col-span-1">
               <div className="space-y-6">
-                {/* Date Selector */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <CalendarIcon className="h-5 w-5" />
-                      Select Date
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex justify-center">
-                      {selectedDate && userTimezone ? (
-                        <Calendar
-                          selectedDate={selectedDate}
-                          onDateSelect={setSelectedDate}
-                          journalEntryDates={journalEntryDates}
-                        />
-                      ) : (
-                        <div className="p-4 text-center text-muted-foreground">
-                          Loading calendar...
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-
                 {/* New Entry */}
                 <Card>
                   <CardHeader>
@@ -327,33 +283,6 @@ export default function JournalClient({ userId }: JournalClientProps) {
                       <Plus className="h-4 w-4 mr-2" />
                       New Entry
                     </Button>
-                  </CardContent>
-                </Card>
-
-                {/* Entry Types */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Entry Types</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    {entryTypes.map(type => {
-                      const Icon = type.icon;
-                      return (
-                        <button
-                          key={type.id}
-                          onClick={() => {
-                            setIsWriting(true);
-                            setActiveTab('timeline');
-                          }}
-                          className="w-full flex items-center gap-3 p-2 rounded-lg text-left hover:bg-card-2 transition-colors"
-                        >
-                          <Icon className={`h-4 w-4 ${type.color}`} />
-                          <span className="text-sm font-medium">
-                            {type.label}
-                          </span>
-                        </button>
-                      );
-                    })}
                   </CardContent>
                 </Card>
               </div>

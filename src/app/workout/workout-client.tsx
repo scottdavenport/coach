@@ -137,14 +137,18 @@ export default function WorkoutClient({ userId }: WorkoutClientProps) {
         <div className="max-w-6xl mx-auto">
           {/* Page Header */}
           <div className="mb-8">
-            <div className="flex items-center gap-3 mb-2">
-              <Dumbbell className="h-8 w-8 text-primary" />
-              <h1 className="text-3xl font-bold">Workout Companion</h1>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <Dumbbell className="h-8 w-8 text-primary" />
+                <div>
+                  <h1 className="text-3xl font-bold">Workout Companion</h1>
+                  <p className="text-muted-foreground">
+                    AI-powered personalized workouts based on your health data
+                    and preferences
+                  </p>
+                </div>
+              </div>
             </div>
-            <p className="text-muted-foreground">
-              AI-powered personalized workouts based on your health data and
-              preferences
-            </p>
           </div>
 
           {/* Quick Actions */}
@@ -213,11 +217,31 @@ export default function WorkoutClient({ userId }: WorkoutClientProps) {
             onValueChange={setActiveTab}
             className="w-full"
           >
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="generate">Generate</TabsTrigger>
-              <TabsTrigger value="workout">Workout</TabsTrigger>
-              <TabsTrigger value="preferences">Preferences</TabsTrigger>
-              <TabsTrigger value="progress">Progress</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-4 bg-card border border-line">
+              <TabsTrigger 
+                value="generate"
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-semibold data-[state=active]:shadow-md transition-all duration-200"
+              >
+                Generate
+              </TabsTrigger>
+              <TabsTrigger 
+                value="workout"
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-semibold data-[state=active]:shadow-md transition-all duration-200"
+              >
+                Workout
+              </TabsTrigger>
+              <TabsTrigger 
+                value="preferences"
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-semibold data-[state=active]:shadow-md transition-all duration-200"
+              >
+                Preferences
+              </TabsTrigger>
+              <TabsTrigger 
+                value="progress"
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-semibold data-[state=active]:shadow-md transition-all duration-200"
+              >
+                Progress
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="generate" className="mt-6">
