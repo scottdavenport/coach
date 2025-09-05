@@ -382,11 +382,31 @@ export default function JournalClient({ userId }: JournalClientProps) {
                 onValueChange={setActiveTab}
                 className="w-full"
               >
-                <TabsList className="grid w-full grid-cols-4">
-                  <TabsTrigger value="timeline">Timeline</TabsTrigger>
-                  <TabsTrigger value="mood">Mood</TabsTrigger>
-                  <TabsTrigger value="insights">Insights</TabsTrigger>
-                  <TabsTrigger value="search">Search</TabsTrigger>
+                <TabsList className="grid w-full grid-cols-4 bg-card border border-line">
+                  <TabsTrigger 
+                    value="timeline"
+                    className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-semibold data-[state=active]:shadow-md transition-all duration-200"
+                  >
+                    Timeline
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="mood"
+                    className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-semibold data-[state=active]:shadow-md transition-all duration-200"
+                  >
+                    Mood
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="insights"
+                    className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-semibold data-[state=active]:shadow-md transition-all duration-200"
+                  >
+                    Insights
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="search"
+                    className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-semibold data-[state=active]:shadow-md transition-all duration-200"
+                  >
+                    Search
+                  </TabsTrigger>
                 </TabsList>
                 <TabsContent value="timeline" className="mt-6">
                   <div className="space-y-6">
