@@ -20,12 +20,12 @@ import { useUserTimezone } from '@/hooks/use-user-timezone';
 import { useJournalEntries } from '@/hooks/use-journal-entries';
 import { JournalMetrics } from './journal-metrics';
 import { usePatternRecognition } from '@/hooks/use-pattern-recognition';
+import { useDate } from '@/components/providers/date-provider';
 
 interface DailyJournalProps {
   userId: string;
   isOpen: boolean;
   onClose: () => void;
-  selectedDate?: string;
 }
 
 interface NarrativeData {
@@ -46,12 +46,9 @@ export function DailyJournal({
   userId,
   isOpen,
   onClose,
-  selectedDate,
 }: DailyJournalProps) {
   const { userTimezone } = useUserTimezone();
-
-  // Initialize with empty string, will be set by useEffect when timezone is loaded
-  const [currentDate, setCurrentDate] = useState('');
+  const { selectedDate, formatDateForDisplay } = useDate();
   const [narrativeData, setNarrativeData] = useState<NarrativeData | null>(
     null
   );
@@ -74,37 +71,14 @@ export function DailyJournal({
     getSleepInsights,
   } = usePatternRecognition(userId);
 
-  // Update currentDate when selectedDate prop changes or initialize with today
-  useEffect(() => {
-    if (selectedDate) {
-      setCurrentDate(selectedDate);
-    } else if (!currentDate) {
-      // Only set to today if currentDate is empty (initial load)
-      const preferredTimezone = getUserPreferredTimezone(userTimezone);
-      const todayString = getTodayInTimezone(preferredTimezone);
-      console.log(
-        '🔍 Setting current date to today:',
-        todayString,
-        'in timezone:',
-        preferredTimezone
-      );
-      setCurrentDate(todayString);
-    }
-  }, [selectedDate, userTimezone, currentDate]);
+  // Use global selectedDate directly
+  const currentDate = selectedDate;
 
-  // Format date for display
+  // Format date for display using global formatter
   const formatDate = (dateString: string) => {
-    const preferredTimezone = getUserPreferredTimezone(userTimezone);
-    return formatDateLong(
-      new Date(dateString + 'T00:00:00'),
-      preferredTimezone
-    );
+    return formatDateForDisplay(dateString);
   };
 
-  // Handle date selection from calendar
-  const handleDateSelect = (dateString: string) => {
-    setCurrentDate(dateString);
-  };
 
   // Helper function to get natural activity descriptions
   const getActivityDescription = useCallback((activity: string): string => {

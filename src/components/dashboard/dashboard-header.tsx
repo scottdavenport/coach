@@ -19,6 +19,7 @@ import {
   BookOpen,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { DateSelector } from '@/components/ui/date-selector';
 
 interface DashboardHeaderProps {
   userId: string;
@@ -227,6 +228,10 @@ export function DashboardHeader({
             Your AI Health & Fitness Companion
           </p>
         </div>
+        
+        {/* Date Selector */}
+        <DateSelector userId={userId} />
+        
         <div className="flex items-center gap-2">
           {/* TEMPORARY RESET BUTTON */}
           <Button
@@ -306,7 +311,6 @@ export function DashboardHeader({
         userId={userId}
         isOpen={isDailyJournalOpen}
         onClose={() => setIsDailyJournalOpen(false)}
-        selectedDate={selectedDate}
       />
     </>
   );

@@ -28,6 +28,7 @@ import {
 import { createClient } from '@/lib/supabase/client';
 import { useJournalEntries } from '@/hooks/use-journal-entries';
 import { useUserTimezone } from '@/hooks/use-user-timezone';
+import { useDate } from '@/components/providers/date-provider';
 import {
   getTodayInTimezone,
   getUserPreferredTimezone,
@@ -58,8 +59,8 @@ interface MoodEntry {
 
 export default function JournalClient({ userId }: JournalClientProps) {
   const { userTimezone } = useUserTimezone();
+  const { selectedDate, formatDateForDisplay } = useDate();
   const [activeTab, setActiveTab] = useState('timeline');
-  const [selectedDate, setSelectedDate] = useState('');
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
   const [moodEntries, setMoodEntries] = useState<MoodEntry[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -71,25 +72,6 @@ export default function JournalClient({ userId }: JournalClientProps) {
 
   // Get journal entry dates for calendar indicators
   const { journalEntryDates } = useJournalEntries({ userId });
-
-  // Format date for display using established timezone utilities
-  const formatDateForDisplay = (dateString: string) => {
-    if (!dateString) return '';
-    const preferredTimezone = getUserPreferredTimezone(userTimezone);
-    return formatDateLong(
-      new Date(dateString + 'T00:00:00'),
-      preferredTimezone
-    );
-  };
-
-  // Initialize selectedDate with today's date in user's timezone
-  useEffect(() => {
-    if (!selectedDate && userTimezone) {
-      const preferredTimezone = getUserPreferredTimezone(userTimezone);
-      const todayString = getTodayInTimezone(preferredTimezone);
-      setSelectedDate(todayString);
-    }
-  }, [selectedDate, userTimezone]);
 
   const moods = [
     {
@@ -288,30 +270,6 @@ export default function JournalClient({ userId }: JournalClientProps) {
             {/* Left Sidebar - Date Navigation & Quick Actions */}
             <div className="lg:col-span-1">
               <div className="space-y-6">
-                {/* Date Selector */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <CalendarIcon className="h-5 w-5" />
-                      Select Date
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex justify-center">
-                      {selectedDate && userTimezone ? (
-                        <Calendar
-                          selectedDate={selectedDate}
-                          onDateSelect={setSelectedDate}
-                          journalEntryDates={journalEntryDates}
-                        />
-                      ) : (
-                        <div className="p-4 text-center text-muted-foreground">
-                          Loading calendar...
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
 
                 {/* New Entry */}
                 <Card>
