@@ -71,6 +71,13 @@ export default function JournalClient({ userId }: JournalClientProps) {
   // Get journal entry dates for calendar indicators
   const { journalEntryDates } = useJournalEntries({ userId });
 
+  // Helper function to format date consistently
+  const formatDateForDisplay = (dateString: string) => {
+    if (!dateString) return '';
+    const [year, month, day] = dateString.split('-');
+    return `${month}/${day}/${year}`;
+  };
+
   // Initialize selectedDate with today's date in user's timezone
   useEffect(() => {
     if (!selectedDate && userTimezone) {
@@ -431,8 +438,7 @@ export default function JournalClient({ userId }: JournalClientProps) {
                     <Card>
                       <CardHeader>
                         <CardTitle>
-                          Journal Timeline -{' '}
-                          {new Date(selectedDate).toLocaleDateString()}
+                          Journal Timeline - {formatDateForDisplay(selectedDate)}
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
