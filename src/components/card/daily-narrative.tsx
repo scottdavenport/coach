@@ -10,13 +10,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Calendar } from '@/components/ui/calendar';
-import {
-  Sun,
-  Loader2,
-  Brain,
-  TrendingUp,
-  Lightbulb,
-} from 'lucide-react';
+import { Sun, Loader2, Brain, TrendingUp, Lightbulb } from 'lucide-react';
 import {
   getTodayInTimezone,
   formatDateLong,
@@ -77,7 +71,7 @@ export function DailyJournal({
     getTopTopics,
     getTopActivities,
     getTopMoods,
-    getSleepInsights
+    getSleepInsights,
   } = usePatternRecognition(userId);
 
   // Update currentDate when selectedDate prop changes or initialize with today
@@ -201,9 +195,7 @@ export function DailyJournal({
       );
 
       // Extract insights from note entries (max 5)
-      const insights = noteEntries
-        .map(entry => entry.content)
-        .slice(0, 5);
+      const insights = noteEntries.map(entry => entry.content).slice(0, 5);
 
       return {
         activities: [], // No longer used - activities merged into narrative
@@ -394,7 +386,6 @@ export function DailyJournal({
     };
   }, [isOpen, userId, currentDate]); // Removed loadNarrativeData dependency to prevent infinite loops
 
-
   // Toggle pattern insights
   const togglePatterns = () => {
     setShowPatterns(!showPatterns);
@@ -421,123 +412,6 @@ export function DailyJournal({
               onDateSelect={handleDateSelect}
               journalEntryDates={journalEntryDates}
             />
-          </div>
-        )}
-
-        {/* AI Pattern Insights */}
-        {showPatterns && (
-          <div className="mb-6 p-4 bg-card-2 rounded-lg border border-line">
-            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-text">
-              <Brain className="h-5 w-5" />
-              AI Discovered Patterns
-            </h3>
-
-            {patternsLoading ? (
-              <div className="flex items-center justify-center py-4">
-                <Loader2 className="h-6 w-6 animate-spin mr-2" />
-                <span>Analyzing your conversation patterns...</span>
-              </div>
-            ) : patternsError ? (
-              <div className="text-red-600 text-center py-4">
-                Error loading patterns: {patternsError}
-              </div>
-            ) : patterns ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Top Topics */}
-                {getTopTopics(3).length > 0 && (
-                  <div className="bg-card p-3 rounded-lg border border-line">
-                    <h4 className="font-medium text-primary mb-2 flex items-center gap-2">
-                      <TrendingUp className="h-4 w-4" />
-                      Topics You Love
-                    </h4>
-                    <div className="space-y-1">
-                      {getTopTopics(3).map((topic, index) => (
-                        <div key={index} className="text-sm">
-                          <span className="font-medium text-text">{topic.topic}</span>
-                          <span className="text-muted ml-2">
-                            ({topic.frequency} mentions)
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Top Activities */}
-                {getTopActivities(3).length > 0 && (
-                  <div className="bg-card p-3 rounded-lg border border-line">
-                    <h4 className="font-medium text-green-400 mb-2 flex items-center gap-2">
-                      <TrendingUp className="h-4 w-4" />
-                      Your Favorite Activities
-                    </h4>
-                    <div className="space-y-1">
-                      {getTopActivities(3).map((activity, index) => (
-                        <div key={index} className="text-sm">
-                          <span className="font-medium text-text">
-                            {activity.activity}
-                          </span>
-                          <span className="text-muted ml-2">
-                            ({activity.frequency} times)
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Mood Patterns */}
-                {getTopMoods(3).length > 0 && (
-                  <div className="bg-card p-3 rounded-lg border border-line">
-                    <h4 className="font-medium text-purple-400 mb-2 flex items-center gap-2">
-                      <TrendingUp className="h-4 w-4" />
-                      Mood Patterns
-                    </h4>
-                    <div className="space-y-1">
-                      {getTopMoods(3).map((mood, index) => (
-                        <div key={index} className="text-sm">
-                          <span className="font-medium text-text">{mood.mood}</span>
-                          <span className="text-muted ml-2">
-                            ({mood.frequency} times)
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Sleep Insights */}
-                {getSleepInsights().length > 0 && (
-                  <div className="bg-card p-3 rounded-lg border border-line">
-                    <h4 className="font-medium text-indigo-400 mb-2 flex items-center gap-2">
-                      <TrendingUp className="h-4 w-4" />
-                      Sleep Patterns
-                    </h4>
-                    <div className="space-y-1">
-                      {getSleepInsights()
-                        .slice(0, 2)
-                        .map((sleep, index) => (
-                          <div key={index} className="text-sm">
-                            <span className="font-medium text-text">
-                              Quality: {sleep.sleepQuality}/10
-                            </span>
-                            <span className="text-muted ml-2">
-                              ({sleep.sleepDuration}h)
-                            </span>
-                          </div>
-                        ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="text-center py-4 text-muted">
-                <Lightbulb className="h-8 w-8 mx-auto mb-2 text-muted" />
-                <p>Start more conversations to discover your patterns!</p>
-                <p className="text-sm">
-                  AI will analyze your chat history to find insights.
-                </p>
-              </div>
-            )}
           </div>
         )}
 
@@ -593,7 +467,6 @@ export function DailyJournal({
                   </div>
                 )}
 
-
                 {/* Health Context - From AI analysis */}
                 {narrativeData.health_context && (
                   <div className="border-l-4 border-green-400 pl-4">
@@ -601,7 +474,12 @@ export function DailyJournal({
                       💚 Health Context
                     </h4>
                     <div className="text-sm">
-                      <p>{narrativeData.health_context.replace(/^\[.*?\]\s*/, '')}</p>
+                      <p>
+                        {narrativeData.health_context.replace(
+                          /^\[.*?\]\s*/,
+                          ''
+                        )}
+                      </p>
                     </div>
                   </div>
                 )}
@@ -677,6 +555,127 @@ export function DailyJournal({
             )}
           </Button>
         </div>
+
+        {/* AI Pattern Insights */}
+        {showPatterns && (
+          <div className="mb-6 p-4 bg-card-2 rounded-lg border border-line">
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-text">
+              <Brain className="h-5 w-5" />
+              AI Discovered Patterns
+            </h3>
+
+            {patternsLoading ? (
+              <div className="flex items-center justify-center py-4">
+                <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                <span>Analyzing your conversation patterns...</span>
+              </div>
+            ) : patternsError ? (
+              <div className="text-red-600 text-center py-4">
+                Error loading patterns: {patternsError}
+              </div>
+            ) : patterns ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Top Topics */}
+                {getTopTopics(3).length > 0 && (
+                  <div className="bg-card p-3 rounded-lg border border-line">
+                    <h4 className="font-medium text-primary mb-2 flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4" />
+                      Topics You Love
+                    </h4>
+                    <div className="space-y-1">
+                      {getTopTopics(3).map((topic, index) => (
+                        <div key={index} className="text-sm">
+                          <span className="font-medium text-text">
+                            {topic.topic}
+                          </span>
+                          <span className="text-muted ml-2">
+                            ({topic.frequency} mentions)
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Top Activities */}
+                {getTopActivities(3).length > 0 && (
+                  <div className="bg-card p-3 rounded-lg border border-line">
+                    <h4 className="font-medium text-green-400 mb-2 flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4" />
+                      Your Favorite Activities
+                    </h4>
+                    <div className="space-y-1">
+                      {getTopActivities(3).map((activity, index) => (
+                        <div key={index} className="text-sm">
+                          <span className="font-medium text-text">
+                            {activity.activity}
+                          </span>
+                          <span className="text-muted ml-2">
+                            ({activity.frequency} times)
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Mood Patterns */}
+                {getTopMoods(3).length > 0 && (
+                  <div className="bg-card p-3 rounded-lg border border-line">
+                    <h4 className="font-medium text-purple-400 mb-2 flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4" />
+                      Mood Patterns
+                    </h4>
+                    <div className="space-y-1">
+                      {getTopMoods(3).map((mood, index) => (
+                        <div key={index} className="text-sm">
+                          <span className="font-medium text-text">
+                            {mood.mood}
+                          </span>
+                          <span className="text-muted ml-2">
+                            ({mood.frequency} times)
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Sleep Insights */}
+                {getSleepInsights().length > 0 && (
+                  <div className="bg-card p-3 rounded-lg border border-line">
+                    <h4 className="font-medium text-indigo-400 mb-2 flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4" />
+                      Sleep Patterns
+                    </h4>
+                    <div className="space-y-1">
+                      {getSleepInsights()
+                        .slice(0, 2)
+                        .map((sleep, index) => (
+                          <div key={index} className="text-sm">
+                            <span className="font-medium text-text">
+                              Quality: {sleep.sleepQuality}/10
+                            </span>
+                            <span className="text-muted ml-2">
+                              ({sleep.sleepDuration}h)
+                            </span>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-4 text-muted">
+                <Lightbulb className="h-8 w-8 mx-auto mb-2 text-muted" />
+                <p>Start more conversations to discover your patterns!</p>
+                <p className="text-sm">
+                  AI will analyze your chat history to find insights.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Action Buttons */}
         <div className="flex justify-end gap-2 pt-4 border-t border-line">

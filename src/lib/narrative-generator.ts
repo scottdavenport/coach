@@ -9,6 +9,15 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+interface SleepReadinessContext {
+  sleepQuality: string;
+  sleepInsights: string[];
+  readinessInsights: string[];
+  trendAnalysis: string[];
+  recommendations: string[];
+  healthSummary: string;
+}
+
 export async function generateDailyNarrative(userId: string, date: string) {
   try {
     const supabase = await createClient();
