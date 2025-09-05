@@ -1,9 +1,8 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogTrigger, DialogTitle } from '@/components/ui/dialog';
 import { useDate } from '@/components/providers/date-provider';
 import { useJournalEntries } from '@/hooks/use-journal-entries';
 import { useUserTimezone } from '@/hooks/use-user-timezone';
@@ -35,6 +34,8 @@ export function DateSelector({ userId, className = '' }: DateSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const { journalEntryDates } = useJournalEntries({ userId });
   const { userTimezone } = useUserTimezone();
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
   // Calendar state
   const [currentYear, setCurrentYear] = useState(() => {
@@ -102,6 +103,28 @@ export function DateSelector({ userId, className = '' }: DateSelectorProps) {
     setIsOpen(false);
   };
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node) &&
+        buttonRef.current &&
+        !buttonRef.current.contains(event.target as Node)
+      ) {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
+
   // Check if a date has journal entries
   const hasJournalEntry = useCallback(
     (date: string) => {
@@ -152,24 +175,28 @@ export function DateSelector({ userId, className = '' }: DateSelectorProps) {
         </Button>
       </div>
 
-      {/* Date Display & Calendar */}
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogTrigger asChild>
-          <Button
-            variant="outline"
-            className="h-8 px-3 text-sm font-medium"
-            title="Select date"
+      {/* Date Display & Calendar Dropdown */}
+      <div className="relative">
+        <Button
+          ref={buttonRef}
+          variant="outline"
+          className="h-8 px-3 text-sm font-medium"
+          title="Select date"
+          onClick={() => setIsOpen(!isOpen)}
+        >
+          <CalendarIcon className="h-4 w-4 mr-2" />
+          {selectedDate ? formatDateForDisplay(selectedDate) : 'Select Date'}
+          {isToday && (
+            <span className="ml-2 text-xs text-primary">Today</span>
+          )}
+        </Button>
+
+        {/* Calendar Dropdown */}
+        {isOpen && (
+          <div
+            ref={dropdownRef}
+            className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 bg-background border border-line rounded-lg shadow-xl z-[100] p-4 min-w-[320px] max-w-[320px]"
           >
-            <CalendarIcon className="h-4 w-4 mr-2" />
-            {selectedDate ? formatDateForDisplay(selectedDate) : 'Select Date'}
-            {isToday && (
-              <span className="ml-2 text-xs text-primary">Today</span>
-            )}
-          </Button>
-        </DialogTrigger>
-        <DialogContent className="w-auto p-0 max-w-sm">
-          <DialogTitle className="sr-only">Select Date</DialogTitle>
-          <div className="p-4">
             {/* Calendar Header */}
             <div className="flex items-center justify-between mb-4">
               <Button
@@ -249,8 +276,8 @@ export function DateSelector({ userId, className = '' }: DateSelectorProps) {
               </Button>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
+        )}
+      </div>
     </div>
   );
 }
