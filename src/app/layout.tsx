@@ -3,6 +3,8 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '@/components/providers/auth-provider';
 import { DateProvider } from '@/components/providers/date-provider';
+import { ChatProvider } from '@/components/providers/chat-provider';
+import { GlobalLayout } from '@/components/layout/global-layout';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -25,7 +27,9 @@ export default function RootLayout({
       <body className={`${inter.variable} font-sans antialiased`}>
         <AuthProvider>
           <DateProvider>
-            {children}
+            <ChatProvider>
+              <GlobalLayout>{children}</GlobalLayout>
+            </ChatProvider>
           </DateProvider>
         </AuthProvider>
       </body>
