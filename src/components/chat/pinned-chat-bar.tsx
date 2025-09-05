@@ -1,7 +1,15 @@
 'use client';
 
 import { useState, useRef, useCallback } from 'react';
-import { Mic, Send, Plus, MessageSquare, Upload } from 'lucide-react';
+import {
+  Mic,
+  Send,
+  Plus,
+  MessageSquare,
+  Upload,
+  ChevronUp,
+  ChevronDown,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChat } from '@/components/providers/chat-provider';
 import { FilePreviewList } from './file-preview-chip';
@@ -21,6 +29,7 @@ export function PinnedChatBar({ userId }: PinnedChatBarProps) {
     setInputValue,
     isLoading,
     isChatExpanded,
+    messages,
     toggleChat,
     expandChat,
     addMessage,
@@ -76,7 +85,8 @@ export function PinnedChatBar({ userId }: PinnedChatBarProps) {
       }
 
       if (attachments.length > 0) {
-        await fileManager.addFiles(attachments);
+        const files = attachments.map(attachment => attachment.file);
+        await fileManager.addFiles(files);
       }
     },
     [fileManager]
@@ -221,7 +231,10 @@ export function PinnedChatBar({ userId }: PinnedChatBarProps) {
   );
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-line">
+    <div
+      className="fixed bottom-0 left-0 right-0 z-50 border-t border-line"
+      style={{ backgroundColor: 'hsl(var(--bg))' }}
+    >
       {/* Drag and drop overlay */}
       {isDragging && (
         <div
@@ -255,16 +268,41 @@ export function PinnedChatBar({ userId }: PinnedChatBarProps) {
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
       >
-        {/* Chat toggle button */}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={toggleChat}
-          className="h-10 w-10 flex-shrink-0"
-          title={isChatExpanded ? 'Collapse chat' : 'Expand chat'}
-        >
-          <MessageSquare className="h-5 w-5" />
-        </Button>
+        {/* Chat toggle button - more prominent */}
+        <div className="relative">
+          <Button
+            variant={isChatExpanded ? 'default' : 'outline'}
+            size="icon"
+            onClick={toggleChat}
+            className={`h-10 w-10 flex-shrink-0 transition-all duration-200 ${
+              isChatExpanded
+                ? 'bg-primary text-primary-foreground shadow-md'
+                : 'border-primary/20 hover:border-primary/40 hover:bg-primary/5 hover:shadow-sm'
+            }`}
+            title={
+              isChatExpanded
+                ? 'Collapse chat (↓)'
+                : `Expand chat (↑) - ${messages.length} messages`
+            }
+          >
+            <div
+              className={`transition-transform duration-200 ${isChatExpanded ? 'rotate-0' : 'rotate-0'}`}
+            >
+              {isChatExpanded ? (
+                <ChevronDown className="h-5 w-5" />
+              ) : (
+                <ChevronUp className="h-5 w-5" />
+              )}
+            </div>
+          </Button>
+
+          {/* Message count indicator when collapsed */}
+          {!isChatExpanded && messages.length > 0 && (
+            <div className="absolute -top-1 -right-1 h-5 w-5 bg-primary text-primary-foreground text-xs rounded-full flex items-center justify-center font-medium animate-pulse">
+              {messages.length > 9 ? '9+' : messages.length}
+            </div>
+          )}
+        </div>
 
         {/* Upload button */}
         <div className="relative" ref={uploadMenuRef}>
@@ -308,7 +346,7 @@ export function PinnedChatBar({ userId }: PinnedChatBarProps) {
             value={inputValue}
             onChange={setInputValue}
             onKeyPress={handleKeyPress}
-            placeholder={`Ask anything... (on ${currentPageContext})`}
+            placeholder={`Ask about the ${currentPageContext} or anything at all!`}
             disabled={isLoading}
             hasFiles={fileManager.files.length > 0}
           />

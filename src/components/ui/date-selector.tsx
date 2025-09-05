@@ -21,16 +21,16 @@ interface DateSelectorProps {
 }
 
 export function DateSelector({ userId, className = '' }: DateSelectorProps) {
-  const { 
-    selectedDate, 
-    setSelectedDate, 
-    formatDateForDisplay, 
+  const {
+    selectedDate,
+    setSelectedDate,
+    formatDateForDisplay,
     goToPreviousDay,
     goToNextDay,
-    goToToday, 
-    isToday 
+    goToToday,
+    isToday,
   } = useDate();
-  
+
   const [isOpen, setIsOpen] = useState(false);
   const { journalEntryDates } = useJournalEntries({ userId });
   const { userTimezone } = useUserTimezone();
@@ -163,7 +163,7 @@ export function DateSelector({ userId, className = '' }: DateSelectorProps) {
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
-        
+
         <Button
           variant="ghost"
           size="icon"
@@ -186,17 +186,15 @@ export function DateSelector({ userId, className = '' }: DateSelectorProps) {
         >
           <CalendarIcon className="h-4 w-4 mr-2" />
           {selectedDate ? formatDateForDisplay(selectedDate) : 'Select Date'}
-          {isToday && (
-            <span className="ml-2 text-xs text-primary">Today</span>
-          )}
+          {isToday && <span className="ml-2 text-xs text-primary">Today</span>}
         </Button>
 
         {/* Calendar Dropdown */}
         {isOpen && (
           <div
             ref={dropdownRef}
-            className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 bg-background border border-line rounded-lg shadow-xl z-[100] p-4 min-w-[320px] max-w-[320px] backdrop-blur-sm"
-            style={{ backgroundColor: 'hsl(var(--background))' }}
+            className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 border border-line rounded-lg shadow-xl z-[100] p-4 min-w-[320px] max-w-[320px] backdrop-blur-sm"
+            style={{ backgroundColor: 'hsl(var(--bg))' }}
           >
             {/* Calendar Header */}
             <div className="flex items-center justify-between mb-4">

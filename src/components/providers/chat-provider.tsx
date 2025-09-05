@@ -53,6 +53,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       journal: 'Journal',
       workout: 'Workout',
       chat: 'Chat',
+      settings: 'Settings',
       summary: 'Summary',
     };
 

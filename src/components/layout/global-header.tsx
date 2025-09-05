@@ -7,6 +7,7 @@ import {
   Dumbbell,
   MessageSquare,
   RotateCcw,
+  Settings,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DateSelector } from '@/components/ui/date-selector';
@@ -32,6 +33,7 @@ export function GlobalHeader() {
       journal: 'Daily Journal',
       workout: 'Workout Companion',
       chat: 'Chat with Coach',
+      settings: 'Settings',
       summary: 'Summary',
     };
 
@@ -53,6 +55,7 @@ export function GlobalHeader() {
       journal: 'Track your daily activities and reflections',
       workout: 'Plan and track your fitness journey',
       chat: 'Your AI Health & Fitness Companion',
+      settings: 'Manage your account preferences and app settings',
       summary: 'Weekly and monthly health summaries',
     };
 
@@ -72,6 +75,7 @@ export function GlobalHeader() {
       journal: BookOpen,
       workout: Dumbbell,
       chat: MessageSquare,
+      settings: Settings,
       summary: BarChart3,
     };
 
@@ -105,7 +109,10 @@ export function GlobalHeader() {
   const PageIcon = getPageIcon();
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-50 border-b border-line bg-background">
+    <div
+      className="fixed top-0 left-0 right-0 z-50 border-b border-line"
+      style={{ backgroundColor: 'hsl(var(--bg))' }}
+    >
       <div className="flex items-center justify-between p-4">
         <div
           className="cursor-pointer hover:opacity-80 transition-opacity"
@@ -166,6 +173,15 @@ export function GlobalHeader() {
             title="Workout Companion"
           >
             <Dumbbell className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => router.push('/settings')}
+            className={`h-8 w-8 ${pathname === '/settings' ? 'bg-primary/10 text-primary' : ''}`}
+            title="Settings"
+          >
+            <Settings className="h-4 w-4" />
           </Button>
         </div>
       </div>
