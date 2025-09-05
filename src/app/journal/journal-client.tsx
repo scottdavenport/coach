@@ -28,7 +28,10 @@ import {
 import { createClient } from '@/lib/supabase/client';
 import { useJournalEntries } from '@/hooks/use-journal-entries';
 import { useUserTimezone } from '@/hooks/use-user-timezone';
-import { getTodayInTimezone, getUserPreferredTimezone } from '@/lib/timezone-utils';
+import {
+  getTodayInTimezone,
+  getUserPreferredTimezone,
+} from '@/lib/timezone-utils';
 
 interface JournalClientProps {
   userId: string;
@@ -70,7 +73,7 @@ export default function JournalClient({ userId }: JournalClientProps) {
 
   // Initialize selectedDate with today's date in user's timezone
   useEffect(() => {
-    if (!selectedDate) {
+    if (!selectedDate && userTimezone) {
       const preferredTimezone = getUserPreferredTimezone(userTimezone);
       const todayString = getTodayInTimezone(preferredTimezone);
       setSelectedDate(todayString);
@@ -103,6 +106,8 @@ export default function JournalClient({ userId }: JournalClientProps) {
 
   // Fetch journal entries for selected date
   useEffect(() => {
+    if (!selectedDate) return; // Don't fetch until selectedDate is initialized
+
     const fetchJournalEntries = async () => {
       try {
         const supabase = createClient();
@@ -129,6 +134,8 @@ export default function JournalClient({ userId }: JournalClientProps) {
 
   // Fetch mood entries for selected date
   useEffect(() => {
+    if (!selectedDate) return; // Don't fetch until selectedDate is initialized
+
     const fetchMoodEntries = async () => {
       try {
         const supabase = createClient();
@@ -280,12 +287,16 @@ export default function JournalClient({ userId }: JournalClientProps) {
                   </CardHeader>
                   <CardContent>
                     <div className="flex justify-center">
-                      {selectedDate && (
+                      {selectedDate && userTimezone ? (
                         <Calendar
                           selectedDate={selectedDate}
                           onDateSelect={setSelectedDate}
                           journalEntryDates={journalEntryDates}
                         />
+                      ) : (
+                        <div className="p-4 text-center text-muted-foreground">
+                          Loading calendar...
+                        </div>
                       )}
                     </div>
                   </CardContent>
