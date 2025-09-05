@@ -27,6 +27,8 @@ import {
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useJournalEntries } from '@/hooks/use-journal-entries';
+import { useUserTimezone } from '@/hooks/use-user-timezone';
+import { getTodayInTimezone, getUserPreferredTimezone } from '@/lib/timezone-utils';
 
 interface JournalClientProps {
   userId: string;
@@ -51,10 +53,9 @@ interface MoodEntry {
 }
 
 export default function JournalClient({ userId }: JournalClientProps) {
+  const { userTimezone } = useUserTimezone();
   const [activeTab, setActiveTab] = useState('timeline');
-  const [selectedDate, setSelectedDate] = useState(
-    new Date().toISOString().split('T')[0]
-  );
+  const [selectedDate, setSelectedDate] = useState('');
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
   const [moodEntries, setMoodEntries] = useState<MoodEntry[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -66,6 +67,15 @@ export default function JournalClient({ userId }: JournalClientProps) {
 
   // Get journal entry dates for calendar indicators
   const { journalEntryDates } = useJournalEntries({ userId });
+
+  // Initialize selectedDate with today's date in user's timezone
+  useEffect(() => {
+    if (!selectedDate) {
+      const preferredTimezone = getUserPreferredTimezone(userTimezone);
+      const todayString = getTodayInTimezone(preferredTimezone);
+      setSelectedDate(todayString);
+    }
+  }, [selectedDate, userTimezone]);
 
   const moods = [
     {
@@ -270,11 +280,13 @@ export default function JournalClient({ userId }: JournalClientProps) {
                   </CardHeader>
                   <CardContent>
                     <div className="flex justify-center">
-                      <Calendar
-                        selectedDate={selectedDate}
-                        onDateSelect={setSelectedDate}
-                        journalEntryDates={journalEntryDates}
-                      />
+                      {selectedDate && (
+                        <Calendar
+                          selectedDate={selectedDate}
+                          onDateSelect={setSelectedDate}
+                          journalEntryDates={journalEntryDates}
+                        />
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -343,7 +355,6 @@ export default function JournalClient({ userId }: JournalClientProps) {
 
             {/* Main Content Area */}
             <div className="lg:col-span-3">
-
               <Tabs
                 value={activeTab}
                 onValueChange={setActiveTab}
