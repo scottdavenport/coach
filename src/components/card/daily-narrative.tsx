@@ -48,7 +48,7 @@ export function DailyJournal({
   onClose,
 }: DailyJournalProps) {
   const { userTimezone } = useUserTimezone();
-  const { selectedDate, formatDateForDisplay } = useDate();
+  const { selectedDate, formatDateForDisplay, setSelectedDate } = useDate();
   const [narrativeData, setNarrativeData] = useState<NarrativeData | null>(
     null
   );
@@ -383,7 +383,7 @@ export function DailyJournal({
           <div className="flex justify-center mb-6 p-4 bg-card-2 rounded-lg border border-line">
             <Calendar
               selectedDate={currentDate}
-              onDateSelect={handleDateSelect}
+              onDateSelect={setSelectedDate}
               journalEntryDates={journalEntryDates}
             />
           </div>
