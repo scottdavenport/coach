@@ -96,7 +96,6 @@ export default function JournalClient({ userId }: JournalClientProps) {
     { id: 'note', label: 'Note', icon: MessageSquare, color: 'text-blue-500' },
   ];
 
-
   // Fetch journal entries for selected date
   useEffect(() => {
     if (!selectedDate) return; // Don't fetch until selectedDate is initialized
@@ -286,7 +285,6 @@ export default function JournalClient({ userId }: JournalClientProps) {
                     </Button>
                   </CardContent>
                 </Card>
-
               </div>
             </div>
 
