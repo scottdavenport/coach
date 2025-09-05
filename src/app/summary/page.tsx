@@ -1,8 +1,8 @@
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
-import DashboardClient from './dashboard-client';
+import SummaryClient from './summary-client';
 
-export default async function DashboardPage() {
+export default async function SummaryPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   
@@ -12,7 +12,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <DashboardClient userId={user.id} />
+      <SummaryClient userId={user.id} />
     </div>
   );
 }

@@ -145,6 +145,18 @@ create table daily_journal (
   updated_at timestamp with time zone default now()
 );
 
+-- Mood Tracking
+create table mood_tracking (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references users(id) on delete cascade,
+  journal_date date not null,
+  mood text check (mood in ('excellent', 'good', 'okay', 'poor')),
+  energy_level integer check (energy_level >= 1 and energy_level <= 10),
+  notes text,
+  created_at timestamp with time zone default now(),
+  updated_at timestamp with time zone default now()
+);
+
 -- Daily Goals
 create table daily_goals (
   id uuid primary key default gen_random_uuid(),
@@ -248,6 +260,7 @@ create index idx_oura_data_user_id on oura_data(user_id);
 create index idx_weekly_summaries_user_id on weekly_summaries(user_id);
 create index idx_monthly_trends_user_id on monthly_trends(user_id);
 create index idx_daily_journal_user_id on daily_journal(user_id);
+create index idx_mood_tracking_user_id on mood_tracking(user_id);
 create index idx_daily_goals_user_id on daily_goals(user_id);
 create index idx_daily_activities_user_id on daily_activities(user_id);
 create index idx_standard_metrics_category on standard_metrics(category_id);
@@ -267,6 +280,7 @@ alter table ocr_feedback enable row level security;
 alter table weekly_summaries enable row level security;
 alter table monthly_trends enable row level security;
 alter table daily_journal enable row level security;
+alter table mood_tracking enable row level security;
 alter table daily_goals enable row level security;
 alter table daily_activities enable row level security;
 alter table metric_categories enable row level security;
@@ -285,6 +299,7 @@ create policy "Users can manage own ocr feedback" on ocr_feedback for all using 
 create policy "Users can manage own weekly summaries" on weekly_summaries for all using (user_id = auth.uid());
 create policy "Users can manage own monthly trends" on monthly_trends for all using (user_id = auth.uid());
 create policy "Users can manage own daily journal" on daily_journal for all using (user_id = auth.uid());
+create policy "Users can manage own mood tracking" on mood_tracking for all using (user_id = auth.uid());
 create policy "Users can manage own daily goals" on daily_goals for all using (user_id = auth.uid());
 create policy "Users can manage own daily activities" on daily_activities for all using (user_id = auth.uid());
 

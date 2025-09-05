@@ -4,7 +4,6 @@ import { useState, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { SettingsModal } from '@/components/settings/settings-modal';
-import { WeeklySummaryModal } from '@/components/card/weekly-summary-modal';
 import {
   DailyWorkoutModal,
   DailyWorkoutModalRef,
@@ -17,9 +16,9 @@ import {
   Sun,
   RotateCcw,
   BarChart3,
+  BookOpen,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { DashboardModal } from './dashboard-modal';
 
 interface DashboardHeaderProps {
   userId: string;
@@ -31,9 +30,7 @@ export function DashboardHeader({
   selectedDate,
 }: DashboardHeaderProps) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isWeeklySummaryOpen, setIsWeeklySummaryOpen] = useState(false);
   const [isDailyJournalOpen, setIsDailyJournalOpen] = useState(false);
-  const [isDashboardOpen, setIsDashboardOpen] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const workoutModalRef = useRef<DailyWorkoutModalRef>(null);
   const router = useRouter();
@@ -247,7 +244,7 @@ export function DashboardHeader({
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setIsDashboardOpen(true)}
+            onClick={() => router.push('/dashboard')}
             className="h-8 w-8"
             title="Health Dashboard"
           >
@@ -256,11 +253,11 @@ export function DashboardHeader({
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setIsDailyJournalOpen(true)}
+            onClick={() => router.push('/journal')}
             className="h-8 w-8"
             title="Daily Journal"
           >
-            <Sun className="h-4 w-4" />
+            <BookOpen className="h-4 w-4" />
           </Button>
           <Button
             variant="ghost"
@@ -274,7 +271,7 @@ export function DashboardHeader({
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setIsWeeklySummaryOpen(true)}
+            onClick={() => router.push('/summary')}
             className="h-8 w-8"
             title="Weekly Summary"
           >
@@ -303,11 +300,6 @@ export function DashboardHeader({
         userId={userId}
       />
 
-      <WeeklySummaryModal
-        isOpen={isWeeklySummaryOpen}
-        onClose={() => setIsWeeklySummaryOpen(false)}
-      />
-
       <DailyWorkoutModal userId={userId} ref={workoutModalRef} />
 
       <DailyJournal
@@ -315,12 +307,6 @@ export function DashboardHeader({
         isOpen={isDailyJournalOpen}
         onClose={() => setIsDailyJournalOpen(false)}
         selectedDate={selectedDate}
-      />
-
-      <DashboardModal
-        isOpen={isDashboardOpen}
-        onClose={() => setIsDashboardOpen(false)}
-        userId={userId}
       />
     </>
   );
