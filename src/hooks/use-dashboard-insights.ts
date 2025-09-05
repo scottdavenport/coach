@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { USE_MOCK_DATA } from './use-mock-data';
 
 export interface DashboardMetric {
   id: string;
@@ -60,6 +61,13 @@ export function useDashboardInsights(userId: string, selectedDate?: string) {
 
   const fetchInsights = useCallback(async () => {
     if (!userId) return;
+
+    // If mock data is enabled, skip real data fetching
+    if (USE_MOCK_DATA) {
+      setLoading(false);
+      setInsights(null); // Let the minimal dashboard handle mock data
+      return;
+    }
 
     try {
       setLoading(true);

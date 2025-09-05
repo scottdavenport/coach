@@ -7,7 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { DashboardInsights } from './dashboard-insights';
+import { MinimalDashboard } from './minimal-dashboard';
 
 interface DashboardModalProps {
   isOpen: boolean;
@@ -29,7 +29,7 @@ export function DashboardModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
         <DialogHeader>
           <DialogTitle className="text-lg font-semibold text-text">
             Health Dashboard
@@ -37,7 +37,7 @@ export function DashboardModal({
         </DialogHeader>
 
         <div className="overflow-y-auto max-h-[calc(90vh-80px)]">
-          <DashboardInsights
+          <MinimalDashboard
             userId={userId}
             onChatMessage={handleChatMessage}
           />
