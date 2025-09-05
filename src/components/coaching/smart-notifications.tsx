@@ -5,7 +5,15 @@ import { SmartNotification as SmartNotificationType } from '@/lib/coaching/types
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Bell, AlertTriangle, Clock, Target, Lightbulb, X, Check } from 'lucide-react';
+import {
+  Bell,
+  AlertTriangle,
+  Clock,
+  Target,
+  Lightbulb,
+  X,
+  Check,
+} from 'lucide-react';
 
 interface SmartNotificationsProps {
   notifications: SmartNotificationType[];
@@ -14,20 +22,24 @@ interface SmartNotificationsProps {
   className?: string;
 }
 
-export function SmartNotifications({ 
-  notifications, 
-  onMarkAsRead, 
+export function SmartNotifications({
+  notifications,
+  onMarkAsRead,
   onMarkAllAsRead,
-  className = '' 
+  className = '',
 }: SmartNotificationsProps) {
-  const [expandedNotifications, setExpandedNotifications] = useState<Set<string>>(new Set());
+  const [expandedNotifications, setExpandedNotifications] = useState<
+    Set<string>
+  >(new Set());
 
   if (!notifications || notifications.length === 0) {
     return null;
   }
 
   const unreadNotifications = notifications.filter(n => !n.read);
-  const highPriorityNotifications = notifications.filter(n => n.priority === 'high' && !n.read);
+  const highPriorityNotifications = notifications.filter(
+    n => n.priority === 'high' && !n.read
+  );
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
@@ -47,28 +59,28 @@ export function SmartNotifications({
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'high':
-        return 'bg-red-100 text-red-800 border-red-200';
+        return 'bg-red-500/10 text-red-500 border-red-500/20';
       case 'medium':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+        return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20';
       case 'low':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
+        return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
       default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+        return 'bg-card-2 text-text border-border';
     }
   };
 
   const getTypeColor = (type: string) => {
     switch (type) {
       case 'context_aware':
-        return 'bg-red-50 border-red-200';
+        return 'bg-red-500/10 border-red-500/20';
       case 'timing_based':
-        return 'bg-blue-50 border-blue-200';
+        return 'bg-blue-500/10 border-blue-500/20';
       case 'pattern_based':
-        return 'bg-purple-50 border-purple-200';
+        return 'bg-purple-500/10 border-purple-500/20';
       case 'goal_based':
-        return 'bg-green-50 border-green-200';
+        return 'bg-green-500/10 border-green-500/20';
       default:
-        return 'bg-gray-50 border-gray-200';
+        return 'bg-card-2 border-border';
     }
   };
 
@@ -91,27 +103,33 @@ export function SmartNotifications({
   };
 
   return (
-    <Card className={`bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 ${className}`}>
+    <Card className={`bg-card border-border ${className}`}>
       <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg font-semibold text-blue-900 flex items-center gap-2">
+          <CardTitle className="text-lg font-semibold text-text flex items-center gap-2">
             <Bell className="h-5 w-5" />
             Smart Notifications
           </CardTitle>
           <div className="flex items-center gap-2">
             {unreadNotifications.length > 0 && (
-              <Badge variant="destructive" className="bg-red-100 text-red-700">
+              <Badge
+                variant="destructive"
+                className="bg-red-500/10 text-red-500"
+              >
                 {unreadNotifications.length} New
               </Badge>
             )}
             {highPriorityNotifications.length > 0 && (
-              <Badge variant="secondary" className="bg-orange-100 text-orange-700">
+              <Badge
+                variant="secondary"
+                className="bg-yellow-500/10 text-yellow-500"
+              >
                 {highPriorityNotifications.length} High Priority
               </Badge>
             )}
           </div>
         </div>
-        
+
         {unreadNotifications.length > 0 && (
           <div className="flex justify-end">
             <Button
@@ -126,63 +144,70 @@ export function SmartNotifications({
           </div>
         )}
       </CardHeader>
-      
+
       <CardContent className="space-y-3">
-        {notifications.map((notification) => (
+        {notifications.map(notification => (
           <div
             key={notification.id}
             className={`p-4 rounded-lg border transition-all ${
-              notification.read 
-                ? 'bg-gray-50 border-gray-200 opacity-75' 
+              notification.read
+                ? 'bg-card-2 border-border opacity-75'
                 : getTypeColor(notification.type)
             }`}
           >
             <div className="flex items-start justify-between">
               <div className="flex items-start gap-3 flex-1">
-                <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
-                  notification.read ? 'bg-gray-200' : getPriorityColor(notification.priority)
-                }`}>
+                <div
+                  className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
+                    notification.read
+                      ? 'bg-card-2'
+                      : getPriorityColor(notification.priority)
+                  }`}
+                >
                   {getNotificationIcon(notification.type)}
                 </div>
-                
+
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <h3 className={`font-medium ${notification.read ? 'text-gray-600' : 'text-gray-900'}`}>
+                    <h3
+                      className={`font-medium ${notification.read ? 'text-muted' : 'text-text'}`}
+                    >
                       {notification.title}
                     </h3>
-                    <Badge variant="outline" className={`text-xs ${getPriorityColor(notification.priority)}`}>
+                    <Badge
+                      variant="outline"
+                      className={`text-xs ${getPriorityColor(notification.priority)}`}
+                    >
                       {notification.priority}
                     </Badge>
                     {!notification.read && (
-                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                      <div className="w-2 h-2 bg-primary rounded-full"></div>
                     )}
                   </div>
-                  
-                  <p className={`text-sm ${notification.read ? 'text-gray-500' : 'text-gray-700'} mb-2`}>
+
+                  <p
+                    className={`text-sm ${notification.read ? 'text-muted' : 'text-muted'} mb-2`}
+                  >
                     {notification.message}
                   </p>
-                  
+
                   {notification.action && (
                     <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-xs"
-                      >
+                      <Button variant="outline" size="sm" className="text-xs">
                         {notification.action}
                       </Button>
                     </div>
                   )}
-                  
+
                   <div className="text-xs text-gray-500 mt-2">
-                    {notification.timestamp.toLocaleTimeString('en-US', { 
-                      hour: '2-digit', 
-                      minute: '2-digit' 
+                    {notification.timestamp.toLocaleTimeString('en-US', {
+                      hour: '2-digit',
+                      minute: '2-digit',
                     })}
                   </div>
                 </div>
               </div>
-              
+
               {!notification.read && (
                 <Button
                   variant="ghost"
@@ -196,11 +221,13 @@ export function SmartNotifications({
             </div>
           </div>
         ))}
-        
+
         {notifications.length === 0 && (
           <div className="text-center py-8">
             <Bell className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500 text-sm">No notifications at the moment</p>
+            <p className="text-gray-500 text-sm">
+              No notifications at the moment
+            </p>
           </div>
         )}
       </CardContent>

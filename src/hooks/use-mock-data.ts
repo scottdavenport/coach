@@ -23,6 +23,7 @@ export interface MockCoachingData {
     insight: string;
     recommendation: string;
     motivation: string;
+    timestamp: Date;
   };
   celebrations: Array<{
     type: 'streak' | 'achievement' | 'personal_best' | 'improvement';
@@ -37,6 +38,8 @@ export interface MockCoachingData {
     improvement: string;
     recommendation: string;
     celebration: string;
+    weekStart: Date;
+    weekEnd: Date;
   };
   notifications: Array<{
     id: string;
@@ -45,12 +48,15 @@ export interface MockCoachingData {
     message: string;
     action?: string;
     priority: 'high' | 'medium' | 'low';
+    timestamp: Date;
     read: boolean;
   }>;
   streaks: Array<{
     type: 'sleep' | 'exercise' | 'goal_completion' | 'readiness';
     current: number;
     best: number;
+    startDate: Date;
+    lastUpdate: Date;
   }>;
   achievements: Array<{
     id: string;
@@ -59,6 +65,19 @@ export interface MockCoachingData {
     icon: string;
     color: string;
     category: 'sleep' | 'exercise' | 'consistency' | 'improvement';
+    unlockedAt: Date;
+  }>;
+  challenges: Array<{
+    id: string;
+    title: string;
+    description: string;
+    type: 'daily' | 'weekly' | 'monthly';
+    target: number;
+    current: number;
+    reward: string;
+    startDate: Date;
+    endDate: Date;
+    completed: boolean;
   }>;
 }
 
@@ -165,10 +184,12 @@ export function getMockDashboardData(): MockDashboardData {
 export function getMockCoachingData(): MockCoachingData {
   return {
     morningBriefing: {
-      focus: "Maintain your 8-hour sleep routine",
-      insight: "Your sleep improved 12% this week - keep it up!",
-      recommendation: "Based on your readiness score, try moderate exercise today",
-      motivation: "You're on a 5-day sleep improvement streak!"
+      focus: 'Maintain your 8-hour sleep routine',
+      insight: 'Your sleep improved 12% this week - keep it up!',
+      recommendation:
+        'Based on your readiness score, try moderate exercise today',
+      motivation: "You're on a 5-day sleep improvement streak!",
+      timestamp: new Date(),
     },
     celebrations: [
       {
@@ -177,7 +198,7 @@ export function getMockCoachingData(): MockCoachingData {
         description: '5 days of 8+ hour sleep',
         value: 5,
         icon: '🔥',
-        color: 'text-orange-400'
+        color: 'text-orange-400',
       },
       {
         type: 'improvement',
@@ -185,7 +206,7 @@ export function getMockCoachingData(): MockCoachingData {
         description: '12% better this week',
         value: 12,
         icon: '📈',
-        color: 'text-green-400'
+        color: 'text-green-400',
       },
       {
         type: 'personal_best',
@@ -193,51 +214,61 @@ export function getMockCoachingData(): MockCoachingData {
         description: '85 readiness score',
         value: 85,
         icon: '⭐',
-        color: 'text-yellow-400'
-      }
+        color: 'text-yellow-400',
+      },
     ],
     weeklyInsights: {
       topPerformer: 'Sleep consistency',
       improvement: 'Readiness scores',
       recommendation: 'Maintain evening routine',
-      celebration: 'Hit 3 personal bests this week'
+      celebration: 'Hit 3 personal bests this week',
+      weekStart: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+      weekEnd: new Date(),
     },
     notifications: [
       {
         id: 'wind-down',
         type: 'timing_based',
         title: 'Wind-Down Time',
-        message: 'It\'s time to start your evening routine for better sleep',
+        message: "It's time to start your evening routine for better sleep",
         action: 'Start wind-down routine',
         priority: 'medium',
-        read: false
+        timestamp: new Date(),
+        read: false,
       },
       {
         id: 'goal-reminder',
         type: 'goal_based',
         title: 'Goal Deadline Approaching',
-        message: 'You\'re 2 days away from your monthly sleep goal',
+        message: "You're 2 days away from your monthly sleep goal",
         action: 'Review goal progress',
         priority: 'high',
-        read: false
-      }
+        timestamp: new Date(),
+        read: false,
+      },
     ],
     streaks: [
       {
         type: 'sleep',
         current: 5,
-        best: 12
+        best: 12,
+        startDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+        lastUpdate: new Date(),
       },
       {
         type: 'exercise',
         current: 3,
-        best: 8
+        best: 8,
+        startDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+        lastUpdate: new Date(),
       },
       {
         type: 'goal_completion',
         current: 2,
-        best: 5
-      }
+        best: 5,
+        startDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+        lastUpdate: new Date(),
+      },
     ],
     achievements: [
       {
@@ -246,7 +277,8 @@ export function getMockCoachingData(): MockCoachingData {
         description: '7+ days of consistent sleep',
         icon: '😴',
         color: 'text-blue-500',
-        category: 'sleep'
+        category: 'sleep',
+        unlockedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
       },
       {
         id: 'consistency-master',
@@ -254,9 +286,36 @@ export function getMockCoachingData(): MockCoachingData {
         description: '80%+ consistency across all metrics',
         icon: '🎯',
         color: 'text-green-500',
-        category: 'consistency'
-      }
-    ]
+        category: 'consistency',
+        unlockedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), // 5 days ago
+      },
+    ],
+    challenges: [
+      {
+        id: 'sleep-challenge',
+        title: '7-Day Sleep Streak',
+        description: 'Maintain 8+ hours of sleep for 7 consecutive days',
+        type: 'daily',
+        target: 7,
+        current: 5,
+        reward: 'Sleep Master Badge',
+        startDate: new Date(),
+        endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        completed: false,
+      },
+      {
+        id: 'readiness-challenge',
+        title: 'Weekly Readiness Goal',
+        description: 'Achieve 80+ readiness score 5 days this week',
+        type: 'weekly',
+        target: 5,
+        current: 3,
+        reward: 'Energy Boost Badge',
+        startDate: new Date(),
+        endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        completed: false,
+      },
+    ],
   };
 }
 
