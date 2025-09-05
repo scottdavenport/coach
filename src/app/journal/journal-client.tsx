@@ -31,6 +31,7 @@ import { useUserTimezone } from '@/hooks/use-user-timezone';
 import {
   getTodayInTimezone,
   getUserPreferredTimezone,
+  formatDateLong,
 } from '@/lib/timezone-utils';
 
 interface JournalClientProps {
@@ -71,11 +72,14 @@ export default function JournalClient({ userId }: JournalClientProps) {
   // Get journal entry dates for calendar indicators
   const { journalEntryDates } = useJournalEntries({ userId });
 
-  // Helper function to format date consistently
+  // Format date for display using established timezone utilities
   const formatDateForDisplay = (dateString: string) => {
     if (!dateString) return '';
-    const [year, month, day] = dateString.split('-');
-    return `${month}/${day}/${year}`;
+    const preferredTimezone = getUserPreferredTimezone(userTimezone);
+    return formatDateLong(
+      new Date(dateString + 'T00:00:00'),
+      preferredTimezone
+    );
   };
 
   // Initialize selectedDate with today's date in user's timezone
@@ -438,7 +442,8 @@ export default function JournalClient({ userId }: JournalClientProps) {
                     <Card>
                       <CardHeader>
                         <CardTitle>
-                          Journal Timeline - {formatDateForDisplay(selectedDate)}
+                          Journal Timeline -{' '}
+                          {formatDateForDisplay(selectedDate)}
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
