@@ -6,11 +6,11 @@ import { WeeklySummaryCard } from '@/components/card/weekly-summary-card';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  Calendar, 
-  TrendingUp, 
-  Target, 
-  BarChart3, 
+import {
+  Calendar,
+  TrendingUp,
+  Target,
+  BarChart3,
   Lightbulb,
   ChevronLeft,
   ChevronRight,
@@ -21,7 +21,7 @@ import {
   Circle,
   Plus,
   Edit3,
-  Trash2
+  Trash2,
 } from 'lucide-react';
 
 interface SummaryClientProps {
@@ -78,11 +78,14 @@ export default function SummaryClient({ userId }: SummaryClientProps) {
     const start = new Date(currentWeekStart);
     const end = new Date(start);
     end.setDate(start.getDate() + 6);
-    
+
     return {
-      start: start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      start: start.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+      }),
       end: end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      year: start.getFullYear()
+      year: start.getFullYear(),
     };
   };
 
@@ -123,7 +126,8 @@ export default function SummaryClient({ userId }: SummaryClientProps) {
 
   const completedGoals = weeklyGoals.filter(goal => goal.completed).length;
   const totalGoals = weeklyGoals.length;
-  const completionRate = totalGoals > 0 ? (completedGoals / totalGoals) * 100 : 0;
+  const completionRate =
+    totalGoals > 0 ? (completedGoals / totalGoals) * 100 : 0;
 
   const weekRange = getWeekRange();
   const weekDates = getWeekDates();
@@ -131,7 +135,10 @@ export default function SummaryClient({ userId }: SummaryClientProps) {
   return (
     <div className="h-screen flex flex-col">
       {/* Fixed Header */}
-      <div className="fixed top-0 left-0 right-0 z-50 border-b border-line" style={{ backgroundColor: 'hsl(var(--bg))' }}>
+      <div
+        className="fixed top-0 left-0 right-0 z-50 border-b border-line"
+        style={{ backgroundColor: 'hsl(var(--bg))' }}
+      >
         <DashboardHeader userId={userId} />
       </div>
 
@@ -181,7 +188,9 @@ export default function SummaryClient({ userId }: SummaryClientProps) {
                   <h2 className="text-xl font-semibold">
                     {weekRange.start} - {weekRange.end}, {weekRange.year}
                   </h2>
-                  <p className="text-sm text-muted-foreground">Week of {weekRange.start}</p>
+                  <p className="text-sm text-muted-foreground">
+                    Week of {weekRange.start}
+                  </p>
                 </div>
                 <Button
                   variant="outline"
@@ -207,7 +216,10 @@ export default function SummaryClient({ userId }: SummaryClientProps) {
                   <CardContent>
                     <div className="grid grid-cols-7 gap-1 mb-4">
                       {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, index) => (
-                        <div key={day} className="text-center text-xs font-medium text-muted-foreground p-2">
+                        <div
+                          key={index}
+                          className="text-center text-xs font-medium text-muted-foreground p-2"
+                        >
                           {day}
                         </div>
                       ))}
@@ -237,7 +249,9 @@ export default function SummaryClient({ userId }: SummaryClientProps) {
                       <div className="text-2xl font-bold text-primary">
                         {completedGoals}/{totalGoals}
                       </div>
-                      <p className="text-sm text-muted-foreground">Goals Completed</p>
+                      <p className="text-sm text-muted-foreground">
+                        Goals Completed
+                      </p>
                       <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
                         <div
                           className="bg-primary h-2 rounded-full transition-all duration-300"
@@ -254,13 +268,13 @@ export default function SummaryClient({ userId }: SummaryClientProps) {
                         <input
                           type="text"
                           value={newGoal}
-                          onChange={(e) => setNewGoal(e.target.value)}
+                          onChange={e => setNewGoal(e.target.value)}
                           placeholder="Goal title..."
                           className="w-full p-2 border border-line rounded-md bg-background text-sm"
                         />
                         <textarea
                           value={newGoalDescription}
-                          onChange={(e) => setNewGoalDescription(e.target.value)}
+                          onChange={e => setNewGoalDescription(e.target.value)}
                           placeholder="Description (optional)..."
                           className="w-full p-2 border border-line rounded-md bg-background text-sm resize-none"
                           rows={2}
@@ -295,7 +309,7 @@ export default function SummaryClient({ userId }: SummaryClientProps) {
                     )}
 
                     <div className="space-y-2 max-h-48 overflow-y-auto">
-                      {weeklyGoals.map((goal) => (
+                      {weeklyGoals.map(goal => (
                         <div
                           key={goal.id}
                           className="flex items-start gap-2 p-2 border border-line rounded-md"
@@ -311,7 +325,9 @@ export default function SummaryClient({ userId }: SummaryClientProps) {
                             )}
                           </button>
                           <div className="flex-1 min-w-0">
-                            <p className={`text-sm ${goal.completed ? 'line-through text-muted-foreground' : ''}`}>
+                            <p
+                              className={`text-sm ${goal.completed ? 'line-through text-muted-foreground' : ''}`}
+                            >
                               {goal.title}
                             </p>
                             {goal.description && (
@@ -342,7 +358,11 @@ export default function SummaryClient({ userId }: SummaryClientProps) {
 
             {/* Main Content Area */}
             <div className="lg:col-span-2">
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <Tabs
+                value={activeTab}
+                onValueChange={setActiveTab}
+                className="w-full"
+              >
                 <TabsList className="grid w-full grid-cols-4">
                   <TabsTrigger value="overview">Overview</TabsTrigger>
                   <TabsTrigger value="progress">Progress</TabsTrigger>
@@ -358,9 +378,9 @@ export default function SummaryClient({ userId }: SummaryClientProps) {
                         <CardTitle>Weekly Summary</CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <WeeklySummaryCard 
-                          weekStart={currentWeekStart} 
-                          onClose={() => {}} 
+                        <WeeklySummaryCard
+                          weekStart={currentWeekStart}
+                          onClose={() => {}}
                         />
                       </CardContent>
                     </Card>
@@ -371,9 +391,13 @@ export default function SummaryClient({ userId }: SummaryClientProps) {
                         <CardContent className="p-6">
                           <div className="flex items-center justify-between">
                             <div>
-                              <p className="text-sm font-medium text-muted-foreground">Sleep Average</p>
+                              <p className="text-sm font-medium text-muted-foreground">
+                                Sleep Average
+                              </p>
                               <p className="text-2xl font-bold">7.2h</p>
-                              <p className="text-xs text-green-500">+0.3h from last week</p>
+                              <p className="text-xs text-green-500">
+                                +0.3h from last week
+                              </p>
                             </div>
                             <div className="p-2 bg-blue-500/10 rounded-lg">
                               <Calendar className="h-6 w-6 text-blue-500" />
@@ -385,9 +409,13 @@ export default function SummaryClient({ userId }: SummaryClientProps) {
                         <CardContent className="p-6">
                           <div className="flex items-center justify-between">
                             <div>
-                              <p className="text-sm font-medium text-muted-foreground">Activity Score</p>
+                              <p className="text-sm font-medium text-muted-foreground">
+                                Activity Score
+                              </p>
                               <p className="text-2xl font-bold">8.4</p>
-                              <p className="text-xs text-green-500">+0.8 from last week</p>
+                              <p className="text-xs text-green-500">
+                                +0.8 from last week
+                              </p>
                             </div>
                             <div className="p-2 bg-green-500/10 rounded-lg">
                               <TrendingUp className="h-6 w-6 text-green-500" />
@@ -399,9 +427,15 @@ export default function SummaryClient({ userId }: SummaryClientProps) {
                         <CardContent className="p-6">
                           <div className="flex items-center justify-between">
                             <div>
-                              <p className="text-sm font-medium text-muted-foreground">Goals Completed</p>
-                              <p className="text-2xl font-bold">{completedGoals}</p>
-                              <p className="text-xs text-blue-500">of {totalGoals} total</p>
+                              <p className="text-sm font-medium text-muted-foreground">
+                                Goals Completed
+                              </p>
+                              <p className="text-2xl font-bold">
+                                {completedGoals}
+                              </p>
+                              <p className="text-xs text-blue-500">
+                                of {totalGoals} total
+                              </p>
                             </div>
                             <div className="p-2 bg-purple-500/10 rounded-lg">
                               <Target className="h-6 w-6 text-purple-500" />
@@ -427,7 +461,9 @@ export default function SummaryClient({ userId }: SummaryClientProps) {
                           <div className="text-center">
                             <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
                             <p>Progress charts will be displayed here</p>
-                            <p className="text-sm">Visual representations of your weekly achievements</p>
+                            <p className="text-sm">
+                              Visual representations of your weekly achievements
+                            </p>
                           </div>
                         </div>
                       </CardContent>
@@ -442,31 +478,49 @@ export default function SummaryClient({ userId }: SummaryClientProps) {
                           <div className="flex items-center justify-between p-3 border border-line rounded-lg">
                             <div>
                               <p className="font-medium">Sleep Quality</p>
-                              <p className="text-sm text-muted-foreground">Average score this week</p>
+                              <p className="text-sm text-muted-foreground">
+                                Average score this week
+                              </p>
                             </div>
                             <div className="text-right">
-                              <p className="text-lg font-bold text-green-500">+12%</p>
-                              <p className="text-sm text-muted-foreground">vs last week</p>
+                              <p className="text-lg font-bold text-green-500">
+                                +12%
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                vs last week
+                              </p>
                             </div>
                           </div>
                           <div className="flex items-center justify-between p-3 border border-line rounded-lg">
                             <div>
                               <p className="font-medium">Activity Level</p>
-                              <p className="text-sm text-muted-foreground">Daily steps average</p>
+                              <p className="text-sm text-muted-foreground">
+                                Daily steps average
+                              </p>
                             </div>
                             <div className="text-right">
-                              <p className="text-lg font-bold text-green-500">+8%</p>
-                              <p className="text-sm text-muted-foreground">vs last week</p>
+                              <p className="text-lg font-bold text-green-500">
+                                +8%
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                vs last week
+                              </p>
                             </div>
                           </div>
                           <div className="flex items-center justify-between p-3 border border-line rounded-lg">
                             <div>
                               <p className="font-medium">Goal Completion</p>
-                              <p className="text-sm text-muted-foreground">Weekly goals achieved</p>
+                              <p className="text-sm text-muted-foreground">
+                                Weekly goals achieved
+                              </p>
                             </div>
                             <div className="text-right">
-                              <p className="text-lg font-bold text-blue-500">75%</p>
-                              <p className="text-sm text-muted-foreground">completion rate</p>
+                              <p className="text-lg font-bold text-blue-500">
+                                75%
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                completion rate
+                              </p>
                             </div>
                           </div>
                         </div>
@@ -487,31 +541,45 @@ export default function SummaryClient({ userId }: SummaryClientProps) {
                       <CardContent>
                         <div className="space-y-4">
                           <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                            <h4 className="font-semibold text-blue-900 mb-2">Weekly Highlights</h4>
+                            <h4 className="font-semibold text-blue-900 mb-2">
+                              Weekly Highlights
+                            </h4>
                             <p className="text-blue-800 text-sm">
-                              You had your best sleep week in the last month, with an average of 7.2 hours per night. 
-                              Your consistency in going to bed at the same time each night is paying off.
+                              You had your best sleep week in the last month,
+                              with an average of 7.2 hours per night. Your
+                              consistency in going to bed at the same time each
+                              night is paying off.
                             </p>
                           </div>
                           <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                            <h4 className="font-semibold text-green-900 mb-2">Activity Achievement</h4>
+                            <h4 className="font-semibold text-green-900 mb-2">
+                              Activity Achievement
+                            </h4>
                             <p className="text-green-800 text-sm">
-                              You exceeded your daily step goal on 5 out of 7 days this week. 
-                              Consider setting a higher target for next week to continue challenging yourself.
+                              You exceeded your daily step goal on 5 out of 7
+                              days this week. Consider setting a higher target
+                              for next week to continue challenging yourself.
                             </p>
                           </div>
                           <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
-                            <h4 className="font-semibold text-purple-900 mb-2">Goal Focus</h4>
+                            <h4 className="font-semibold text-purple-900 mb-2">
+                              Goal Focus
+                            </h4>
                             <p className="text-purple-800 text-sm">
-                              You completed 75% of your weekly goals. The goals you didn't complete were mostly 
-                              related to evening routines. Consider scheduling these earlier in the day.
+                              You completed 75% of your weekly goals. The goals
+                              you didn't complete were mostly related to evening
+                              routines. Consider scheduling these earlier in the
+                              day.
                             </p>
                           </div>
                           <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
-                            <h4 className="font-semibold text-orange-900 mb-2">Next Week Focus</h4>
+                            <h4 className="font-semibold text-orange-900 mb-2">
+                              Next Week Focus
+                            </h4>
                             <p className="text-orange-800 text-sm">
-                              Based on your patterns, focus on maintaining your sleep schedule and consider 
-                              adding one new habit to your morning routine for better consistency.
+                              Based on your patterns, focus on maintaining your
+                              sleep schedule and consider adding one new habit
+                              to your morning routine for better consistency.
                             </p>
                           </div>
                         </div>
@@ -528,54 +596,70 @@ export default function SummaryClient({ userId }: SummaryClientProps) {
                       </CardHeader>
                       <CardContent className="space-y-6">
                         <div>
-                          <h4 className="font-semibold mb-3">Recommended Goals for Next Week</h4>
+                          <h4 className="font-semibold mb-3">
+                            Recommended Goals for Next Week
+                          </h4>
                           <div className="space-y-3">
                             <div className="p-3 border border-line rounded-lg">
                               <div className="flex items-center gap-2 mb-1">
                                 <Target className="h-4 w-4 text-green-500" />
-                                <span className="font-medium">Maintain Sleep Schedule</span>
+                                <span className="font-medium">
+                                  Maintain Sleep Schedule
+                                </span>
                               </div>
                               <p className="text-sm text-muted-foreground">
-                                Keep your current bedtime routine to maintain the sleep quality improvements
+                                Keep your current bedtime routine to maintain
+                                the sleep quality improvements
                               </p>
                             </div>
                             <div className="p-3 border border-line rounded-lg">
                               <div className="flex items-center gap-2 mb-1">
                                 <TrendingUp className="h-4 w-4 text-blue-500" />
-                                <span className="font-medium">Increase Daily Steps</span>
+                                <span className="font-medium">
+                                  Increase Daily Steps
+                                </span>
                               </div>
                               <p className="text-sm text-muted-foreground">
-                                Aim for 8,500 steps daily to build on this week's success
+                                Aim for 8,500 steps daily to build on this
+                                week's success
                               </p>
                             </div>
                             <div className="p-3 border border-line rounded-lg">
                               <div className="flex items-center gap-2 mb-1">
                                 <Lightbulb className="h-4 w-4 text-purple-500" />
-                                <span className="font-medium">Morning Routine</span>
+                                <span className="font-medium">
+                                  Morning Routine
+                                </span>
                               </div>
                               <p className="text-sm text-muted-foreground">
-                                Add 10 minutes of morning journaling to start each day with intention
+                                Add 10 minutes of morning journaling to start
+                                each day with intention
                               </p>
                             </div>
                           </div>
                         </div>
 
                         <div>
-                          <h4 className="font-semibold mb-3">Weekly Intentions</h4>
+                          <h4 className="font-semibold mb-3">
+                            Weekly Intentions
+                          </h4>
                           <div className="space-y-2">
                             <div className="p-3 bg-card-2 rounded-lg">
                               <p className="text-sm">
-                                <strong>Focus:</strong> Consistency over perfection
+                                <strong>Focus:</strong> Consistency over
+                                perfection
                               </p>
                             </div>
                             <div className="p-3 bg-card-2 rounded-lg">
                               <p className="text-sm">
-                                <strong>Energy:</strong> Prioritize sleep and recovery
+                                <strong>Energy:</strong> Prioritize sleep and
+                                recovery
                               </p>
                             </div>
                             <div className="p-3 bg-card-2 rounded-lg">
                               <p className="text-sm">
-                                <strong>Growth:</strong> Build on this week's momentum
+                                <strong>Growth:</strong> Build on this week's
+                                momentum
                               </p>
                             </div>
                           </div>
