@@ -1,19 +1,9 @@
 import ReactMarkdown from 'react-markdown';
 import Image from 'next/image';
+import { ChatMessage as ChatMessageType } from '@/types';
 
 interface ChatMessageProps {
-  message: {
-    id: number;
-    content: string;
-    role: 'user' | 'assistant';
-    timestamp: Date;
-    isUploading?: boolean;
-    isOcrResult?: boolean;
-    hasFile?: boolean;
-    fileUrl?: string;
-    fileName?: string;
-    structuredData?: any;
-  };
+  message: ChatMessageType;
 }
 
 export function ChatMessage({ message }: ChatMessageProps) {
@@ -73,11 +63,13 @@ export function ChatMessage({ message }: ChatMessageProps) {
 
             {/* Display file icon for non-image files */}
             {fileUrl &&
-              !(fileName.toLowerCase().includes('.jpg') ||
+              !(
+                fileName.toLowerCase().includes('.jpg') ||
                 fileName.toLowerCase().includes('.jpeg') ||
                 fileName.toLowerCase().includes('.png') ||
                 fileName.toLowerCase().includes('.gif') ||
-                fileName.toLowerCase().includes('.webp')) && (
+                fileName.toLowerCase().includes('.webp')
+              ) && (
                 <div className="mb-3 flex items-center justify-center p-4 bg-black/10 rounded-lg">
                   <span className="text-4xl">📄</span>
                 </div>

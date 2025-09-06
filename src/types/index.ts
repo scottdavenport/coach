@@ -32,6 +32,21 @@ export interface ConversationMessage {
   created_at?: string;
 }
 
+// New type for the chat interface (compatible with original format)
+export interface ChatMessage {
+  id: number | string;
+  content: string;
+  role: 'user' | 'assistant';
+  timestamp?: Date;
+  created_at?: string;
+  attachments?: {
+    id: string;
+    name: string;
+    type: string;
+    size: number;
+  }[];
+}
+
 export interface ParsedConversation {
   // Enhanced data type detection (expanded categories)
   data_types: {

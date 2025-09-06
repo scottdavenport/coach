@@ -1,32 +1,31 @@
 'use client';
 
-import React from 'react';
-import { ChatInterface } from '@/components/chat/chat-interface';
-import { DashboardHeader } from '@/components/dashboard/dashboard-header';
+import React, { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useChat } from '@/components/providers/chat-provider';
 
 interface ChatClientProps {
   userId: string;
 }
 
 export default function ChatClient({ userId }: ChatClientProps) {
-  const handleDataStored = () => {
-    // Data stored - could trigger journal refresh if needed
-    console.log('Data stored successfully');
-  };
+  const router = useRouter();
+  const { expandChat } = useChat();
+
+  useEffect(() => {
+    // Redirect to dashboard and expand chat
+    expandChat();
+    router.push('/dashboard');
+  }, [router, expandChat]);
 
   return (
-    <div className="h-screen flex flex-col">
-      {/* Fixed Header */}
-      <div
-        className="fixed top-0 left-0 right-0 z-50 border-b border-line"
-        style={{ backgroundColor: 'hsl(var(--bg))' }}
-      >
-        <DashboardHeader userId={userId} />
-      </div>
-
-      {/* Chat Interface - with top padding to account for fixed header */}
-      <div className="flex-1 pt-[73px]">
-        <ChatInterface userId={userId} onDataStored={handleDataStored} />
+    <div className="max-w-7xl mx-auto p-6">
+      <div className="text-center">
+        <h1 className="text-2xl font-bold mb-4">Redirecting to Dashboard...</h1>
+        <p className="text-muted-foreground">
+          Chat is now available on all pages via the pinned chat bar at the
+          bottom.
+        </p>
       </div>
     </div>
   );
