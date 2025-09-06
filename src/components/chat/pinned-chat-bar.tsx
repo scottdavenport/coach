@@ -165,6 +165,7 @@ export function PinnedChatBar({ userId }: PinnedChatBarProps) {
         // Files are processed, we can clear them after sending
       }
 
+
       // Send to API
       const response = await fetch('/api/chat', {
         method: 'POST',

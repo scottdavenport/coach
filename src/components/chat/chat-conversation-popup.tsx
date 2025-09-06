@@ -13,7 +13,7 @@ interface ChatConversationPopupProps {
 }
 
 export function ChatConversationPopup({ userId }: ChatConversationPopupProps) {
-  const { isChatExpanded, collapseChat, currentPageContext } = useChat();
+  const { isChatExpanded, collapseChat, currentPageContext, messages: contextMessages } = useChat();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -21,6 +21,13 @@ export function ChatConversationPopup({ userId }: ChatConversationPopupProps) {
 
   // Load conversation history
   const loadConversationHistory = useCallback(async () => {
+    // If we have context messages, use those instead of loading from database
+    if (contextMessages.length > 0) {
+      setMessages(contextMessages);
+      setIsLoadingHistory(false);
+      return;
+    }
+
     if (messages.length > 0) return; // Don't reload if already loaded
 
     setIsLoadingHistory(true);
@@ -52,7 +59,7 @@ export function ChatConversationPopup({ userId }: ChatConversationPopupProps) {
     } finally {
       setIsLoadingHistory(false);
     }
-  }, [userId, messages.length, supabase]);
+  }, [userId, messages.length, supabase, contextMessages]);
 
   // Load history when popup opens
   useEffect(() => {
@@ -72,6 +79,13 @@ export function ChatConversationPopup({ userId }: ChatConversationPopupProps) {
       }, 100);
     }
   }, [isChatExpanded]);
+
+  // Update messages when context messages change
+  useEffect(() => {
+    if (contextMessages.length > 0) {
+      setMessages(contextMessages);
+    }
+  }, [contextMessages]);
 
   // Scroll to bottom when messages load (instant, no animation)
   useEffect(() => {
