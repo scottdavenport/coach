@@ -238,162 +238,167 @@ export function PinnedChatBar({ userId }: PinnedChatBarProps) {
       className="fixed bottom-0 left-0 right-0 z-50 border-t border-line"
       style={{ backgroundColor: 'hsl(var(--bg))' }}
     >
-      {/* Drag and drop overlay */}
-      {isDragging && (
+      {/* Max-width container to match conversation modal */}
+      <div className="max-w-4xl mx-auto">
+        {/* Drag and drop overlay */}
+        {isDragging && (
+          <div
+            className="absolute inset-0 bg-primary/10 border-2 border-dashed border-primary flex items-center justify-center z-10"
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          >
+            <div className="text-center">
+              <p className="text-primary font-medium">
+                Drop files here to upload
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* File previews */}
+        {fileManager.files.length > 0 && (
+          <div className="px-4 py-2 border-b border-line">
+            <FilePreviewList
+              files={fileManager.files}
+              onRemoveFile={fileManager.removeFile}
+            />
+          </div>
+        )}
+
+        {/* Main input bar */}
         <div
-          className="absolute inset-0 bg-primary/10 border-2 border-dashed border-primary flex items-center justify-center z-10"
+          className="flex items-center gap-2 p-4"
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
         >
-          <div className="text-center">
-            <p className="text-primary font-medium">
-              Drop files here to upload
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* File previews */}
-      {fileManager.files.length > 0 && (
-        <div className="px-4 py-2 border-b border-line">
-          <FilePreviewList
-            files={fileManager.files}
-            onRemoveFile={fileManager.removeFile}
-          />
-        </div>
-      )}
-
-      {/* Main input bar */}
-      <div
-        className="flex items-center gap-2 p-4"
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-      >
-        {/* Chat toggle button - more prominent */}
-        <div className="relative">
-          <Button
-            variant={isChatExpanded ? 'default' : 'outline'}
-            size="icon"
-            onClick={toggleChat}
-            className={`h-10 w-10 flex-shrink-0 transition-all duration-200 ${
-              isChatExpanded
-                ? 'bg-primary text-primary-foreground shadow-md'
-                : 'border-primary/20 hover:border-primary/40 hover:bg-primary/5 hover:shadow-sm'
-            }`}
-            title={
-              isChatExpanded
-                ? 'Collapse chat (↓)'
-                : `Expand chat (↑) - ${messages.length} messages`
-            }
-          >
-            <div
-              className={`transition-transform duration-200 ${isChatExpanded ? 'rotate-0' : 'rotate-0'}`}
+          {/* Chat toggle button - more prominent */}
+          <div className="relative">
+            <Button
+              variant={isChatExpanded ? 'default' : 'outline'}
+              size="icon"
+              onClick={toggleChat}
+              className={`h-10 w-10 flex-shrink-0 transition-all duration-200 ${
+                isChatExpanded
+                  ? 'bg-primary text-primary-foreground shadow-md'
+                  : 'border-primary/20 hover:border-primary/40 hover:bg-primary/5 hover:shadow-sm'
+              }`}
+              title={
+                isChatExpanded
+                  ? 'Collapse chat (↓)'
+                  : `Expand chat (↑) - ${messages.length} messages`
+              }
             >
-              {isChatExpanded ? (
-                <ChevronDown className="h-5 w-5" />
-              ) : (
-                <ChevronUp className="h-5 w-5" />
-              )}
-            </div>
-          </Button>
+              <div
+                className={`transition-transform duration-200 ${isChatExpanded ? 'rotate-0' : 'rotate-0'}`}
+              >
+                {isChatExpanded ? (
+                  <ChevronDown className="h-5 w-5" />
+                ) : (
+                  <ChevronUp className="h-5 w-5" />
+                )}
+              </div>
+            </Button>
 
-          {/* Message count indicator when collapsed */}
-          {!isChatExpanded && messages.length > lastSeenMessageCount && (
-            <div className="absolute -top-1 -right-1 h-5 w-5 bg-primary text-primary-foreground text-xs rounded-full flex items-center justify-center font-medium animate-pulse">
-              {messages.length - lastSeenMessageCount > 9
-                ? '9+'
-                : messages.length - lastSeenMessageCount}
-            </div>
-          )}
-        </div>
+            {/* Message count indicator when collapsed */}
+            {!isChatExpanded && messages.length > lastSeenMessageCount && (
+              <div className="absolute -top-1 -right-1 h-5 w-5 bg-primary text-primary-foreground text-xs rounded-full flex items-center justify-center font-medium animate-pulse">
+                {messages.length - lastSeenMessageCount > 9
+                  ? '9+'
+                  : messages.length - lastSeenMessageCount}
+              </div>
+            )}
+          </div>
 
-        {/* Upload button */}
-        <div className="relative" ref={uploadMenuRef}>
+          {/* Upload button */}
+          <div className="relative" ref={uploadMenuRef}>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsUploadMenuOpen(!isUploadMenuOpen)}
+              className="h-10 w-10 flex-shrink-0"
+              title="Upload files"
+            >
+              <Plus className="h-5 w-5" />
+            </Button>
+
+            {isUploadMenuOpen && (
+              <div className="absolute bottom-full left-0 mb-2 bg-card border border-line rounded-xl shadow-card2 p-2 min-w-[220px]">
+                <div className="space-y-1">
+                  <div className="px-3 py-1 text-xs font-medium text-muted border-b border-line">
+                    Upload Files
+                  </div>
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-card-2 rounded-lg transition-colors"
+                  >
+                    <Upload className="h-4 w-4" />
+                    Choose Files
+                  </button>
+                  <button
+                    onClick={() => setIsUploadMenuOpen(false)}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-card-2 rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Text input */}
+          <div className="flex-1">
+            <OptimizedInput
+              value={inputValue}
+              onChange={setInputValue}
+              onKeyPress={handleKeyPress}
+              placeholder={`Ask about the ${currentPageContext} or anything at all!`}
+              disabled={isLoading}
+              hasFiles={fileManager.files.length > 0}
+            />
+          </div>
+
+          {/* Voice input button */}
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setIsUploadMenuOpen(!isUploadMenuOpen)}
-            className="h-10 w-10 flex-shrink-0"
-            title="Upload files"
+            onClick={() => setIsRecording(!isRecording)}
+            className={`h-10 w-10 flex-shrink-0 ${isRecording ? 'text-red-500' : ''}`}
+            title="Voice input"
           >
-            <Plus className="h-5 w-5" />
+            <Mic className="h-5 w-5" />
           </Button>
 
-          {isUploadMenuOpen && (
-            <div className="absolute bottom-full left-0 mb-2 bg-card border border-line rounded-xl shadow-card2 p-2 min-w-[220px]">
-              <div className="space-y-1">
-                <div className="px-3 py-1 text-xs font-medium text-muted border-b border-line">
-                  Upload Files
-                </div>
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-card-2 rounded-lg transition-colors"
-                >
-                  <Upload className="h-4 w-4" />
-                  Choose Files
-                </button>
-                <button
-                  onClick={() => setIsUploadMenuOpen(false)}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-card-2 rounded-lg transition-colors"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          )}
+          {/* Send button */}
+          <Button
+            onClick={handleSendMessage}
+            disabled={
+              (!inputValue.trim() && fileManager.files.length === 0) ||
+              isLoading
+            }
+            className="h-10 w-10 flex-shrink-0"
+            title="Send message"
+          >
+            <Send className="h-5 w-5" />
+          </Button>
         </div>
 
-        {/* Text input */}
-        <div className="flex-1">
-          <OptimizedInput
-            value={inputValue}
-            onChange={setInputValue}
-            onKeyPress={handleKeyPress}
-            placeholder={`Ask about the ${currentPageContext} or anything at all!`}
-            disabled={isLoading}
-            hasFiles={fileManager.files.length > 0}
-          />
-        </div>
-
-        {/* Voice input button */}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setIsRecording(!isRecording)}
-          className={`h-10 w-10 flex-shrink-0 ${isRecording ? 'text-red-500' : ''}`}
-          title="Voice input"
-        >
-          <Mic className="h-5 w-5" />
-        </Button>
-
-        {/* Send button */}
-        <Button
-          onClick={handleSendMessage}
-          disabled={
-            (!inputValue.trim() && fileManager.files.length === 0) || isLoading
-          }
-          className="h-10 w-10 flex-shrink-0"
-          title="Send message"
-        >
-          <Send className="h-5 w-5" />
-        </Button>
+        {/* Hidden file input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          accept="image/*,.pdf,.doc,.docx,.txt,.csv,.xlsx,.xls"
+          onChange={e => {
+            if (e.target.files) {
+              handleFileUpload(Array.from(e.target.files));
+            }
+          }}
+          className="hidden"
+        />
       </div>
-
-      {/* Hidden file input */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        multiple
-        accept="image/*,.pdf,.doc,.docx,.txt,.csv,.xlsx,.xls"
-        onChange={e => {
-          if (e.target.files) {
-            handleFileUpload(Array.from(e.target.files));
-          }
-        }}
-        className="hidden"
-      />
+      </div>
     </div>
   );
 }

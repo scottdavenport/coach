@@ -130,8 +130,8 @@ export function GlobalHeader() {
           </div>
         </div>
 
-        {/* Date Selector - only show on dashboard */}
-        {pathname === '/dashboard' && user && <DateSelector userId={user.id} />}
+        {/* Date Selector - show on all pages */}
+        {user && <DateSelector userId={user.id} />}
 
         <div className="flex items-center gap-2">
           {/* TEMPORARY RESET BUTTON */}

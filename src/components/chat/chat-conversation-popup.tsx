@@ -13,7 +13,13 @@ interface ChatConversationPopupProps {
 }
 
 export function ChatConversationPopup({ userId }: ChatConversationPopupProps) {
-  const { isChatExpanded, collapseChat, currentPageContext, messages: contextMessages, isLoading } = useChat();
+  const {
+    isChatExpanded,
+    collapseChat,
+    currentPageContext,
+    messages: contextMessages,
+    isLoading,
+  } = useChat();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -82,11 +88,13 @@ export function ChatConversationPopup({ userId }: ChatConversationPopupProps) {
         if (prevMessages.length === 0) {
           return contextMessages;
         }
-        
+
         // Merge context messages with existing messages, avoiding duplicates
         const existingIds = new Set(prevMessages.map(msg => msg.id));
-        const newMessages = contextMessages.filter(msg => !existingIds.has(msg.id));
-        
+        const newMessages = contextMessages.filter(
+          msg => !existingIds.has(msg.id)
+        );
+
         return [...prevMessages, ...newMessages];
       });
     }
@@ -113,27 +121,6 @@ export function ChatConversationPopup({ userId }: ChatConversationPopupProps) {
       className="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-40 border border-line rounded-lg shadow-lg max-h-[60vh] flex flex-col w-full max-w-4xl"
       style={{ backgroundColor: 'hsl(var(--bg))' }}
     >
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-line">
-        <div>
-          <h3 className="font-semibold text-text">Chat with Coach</h3>
-          <p className="text-sm text-muted">
-            Currently on {currentPageContext}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleClose}
-            className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
-            title="Close chat"
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-
       {/* Messages Area - Simple conversation history */}
       <div className="flex-1 overflow-y-auto p-4">
         <div className="max-w-4xl mx-auto space-y-4">
