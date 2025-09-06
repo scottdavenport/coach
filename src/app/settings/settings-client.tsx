@@ -47,17 +47,15 @@ export default function SettingsClient({ userId }: SettingsClientProps) {
 
   return (
     <div className="max-w-4xl mx-auto p-6">
-      <div className="mb-8">
-        <div className="flex items-center gap-3">
+      {/* Page Title */}
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-text flex items-center gap-3">
           <Settings className="h-8 w-8 text-primary" />
-          <div>
-            <h1 className="text-3xl font-bold">Settings</h1>
-            <p className="text-muted-foreground">
-              Manage your account preferences and app settings
-            </p>
-          </div>
-        </div>
+          Settings
+        </h1>
+        <p className="text-muted mt-2">Manage your account preferences and app settings</p>
       </div>
+      
 
       <Tabs defaultValue="profile" className="w-full">
         <TabsList className="grid w-full grid-cols-5">

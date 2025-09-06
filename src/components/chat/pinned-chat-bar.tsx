@@ -398,7 +398,6 @@ export function PinnedChatBar({ userId }: PinnedChatBarProps) {
           className="hidden"
         />
       </div>
-      </div>
     </div>
   );
 }

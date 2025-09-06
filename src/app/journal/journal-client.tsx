@@ -224,6 +224,15 @@ export default function JournalClient({ userId }: JournalClientProps) {
 
   return (
     <div className="max-w-7xl mx-auto p-6">
+      {/* Page Title */}
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-text flex items-center gap-3">
+          <BookOpen className="h-8 w-8 text-primary" />
+          Daily Journal
+        </h1>
+        <p className="text-muted mt-2">Track your daily activities and reflections</p>
+      </div>
+      
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Left Sidebar - Date Navigation & Quick Actions */}
         <div className="lg:col-span-1">

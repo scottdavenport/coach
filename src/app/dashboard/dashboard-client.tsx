@@ -52,6 +52,15 @@ export default function DashboardClient({ userId }: DashboardClientProps) {
 
   return (
     <div className="max-w-7xl mx-auto p-6">
+      {/* Page Title */}
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-text flex items-center gap-3">
+          <BarChart3 className="h-8 w-8 text-primary" />
+          Health Dashboard
+        </h1>
+        <p className="text-muted mt-2">Comprehensive health analytics and insights</p>
+      </div>
+      
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Left Sidebar - Health Categories */}
         <div className="lg:col-span-1">

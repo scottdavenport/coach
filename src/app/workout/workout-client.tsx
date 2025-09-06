@@ -123,6 +123,15 @@ export default function WorkoutClient({ userId }: WorkoutClientProps) {
 
   return (
     <div className="max-w-6xl mx-auto p-6">
+      {/* Page Title */}
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-text flex items-center gap-3">
+          <Dumbbell className="h-8 w-8 text-primary" />
+          Workout Companion
+        </h1>
+        <p className="text-muted mt-2">Plan and track your fitness journey</p>
+      </div>
+      
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <Card
