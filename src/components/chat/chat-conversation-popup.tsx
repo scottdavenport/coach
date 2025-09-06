@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { X, ChevronDown } from 'lucide-react';
+import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChat } from '@/components/providers/chat-provider';
 import { createClient } from '@/lib/supabase/client';
@@ -61,19 +61,26 @@ export function ChatConversationPopup({ userId }: ChatConversationPopupProps) {
     }
   }, [isChatExpanded, loadConversationHistory]);
 
-  // Scroll to bottom when new messages arrive
+  // Scroll to bottom when popup opens
   useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    if (isChatExpanded && messagesEndRef.current) {
+      // Small delay to ensure DOM is ready
+      setTimeout(() => {
+        if (messagesEndRef.current) {
+          messagesEndRef.current.scrollIntoView({ behavior: 'instant' });
+        }
+      }, 100);
+    }
+  }, [isChatExpanded]);
+
+  // Scroll to bottom when messages load (instant, no animation)
+  useEffect(() => {
+    if (messagesEndRef.current && messages.length > 0) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'instant' });
     }
   }, [messages]);
 
-  // Handle minimize to input bar
-  const handleMinimize = () => {
-    collapseChat();
-  };
-
-  // Handle close (same as minimize for now)
+  // Handle close
   const handleClose = () => {
     collapseChat();
   };
@@ -96,15 +103,6 @@ export function ChatConversationPopup({ userId }: ChatConversationPopupProps) {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleMinimize}
-            className="h-8 w-8 hover:bg-primary/10"
-            title="Minimize to input bar"
-          >
-            <ChevronDown className="h-4 w-4" />
-          </Button>
           <Button
             variant="ghost"
             size="icon"
