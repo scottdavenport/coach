@@ -13,7 +13,7 @@ interface ChatConversationPopupProps {
 }
 
 export function ChatConversationPopup({ userId }: ChatConversationPopupProps) {
-  const { isChatExpanded, collapseChat, currentPageContext, messages: contextMessages } = useChat();
+  const { isChatExpanded, collapseChat, currentPageContext, messages: contextMessages, isLoading } = useChat();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -157,6 +157,24 @@ export function ChatConversationPopup({ userId }: ChatConversationPopupProps) {
             messages.map(message => (
               <ChatMessageComponent key={message.id} message={message} />
             ))
+          )}
+
+          {/* Loading indicator when AI is thinking */}
+          {isLoading && (
+            <div className="flex items-center space-x-2 text-muted">
+              <div className="flex space-x-1">
+                <div className="w-2 h-2 bg-muted rounded-full animate-bounce"></div>
+                <div
+                  className="w-2 h-2 bg-muted rounded-full animate-bounce"
+                  style={{ animationDelay: '0.1s' }}
+                ></div>
+                <div
+                  className="w-2 h-2 bg-muted rounded-full animate-bounce"
+                  style={{ animationDelay: '0.2s' }}
+                ></div>
+              </div>
+              <span className="text-sm">Coach is typing...</span>
+            </div>
           )}
 
           <div ref={messagesEndRef} />
