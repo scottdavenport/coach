@@ -17,6 +17,7 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { WorkoutTemplate, UserWorkout } from '@/types';
+import { USE_MOCK_DATA } from '@/hooks/use-mock-data';
 
 interface WorkoutClientProps {
   userId: string;
@@ -131,7 +132,7 @@ export default function WorkoutClient({ userId }: WorkoutClientProps) {
         </h1>
         <p className="text-muted mt-2">Plan and track your fitness journey</p>
       </div>
-      
+
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <Card
@@ -222,7 +223,7 @@ export default function WorkoutClient({ userId }: WorkoutClientProps) {
         </TabsList>
 
         <TabsContent value="generate" className="mt-6">
-          <Card>
+          <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Target className="h-5 w-5" />
@@ -314,13 +315,15 @@ export default function WorkoutClient({ userId }: WorkoutClientProps) {
               showControls={true}
             />
           ) : (
-            <Card>
+            <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
               <CardContent className="p-12 text-center">
-                <Dumbbell className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-xl font-semibold mb-2">
+                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Dumbbell className="h-8 w-8 text-primary" />
+                </div>
+                <h3 className="text-xl font-semibold text-text mb-2">
                   No Active Workout
                 </h3>
-                <p className="text-muted-foreground mb-6">
+                <p className="text-muted max-w-md mx-auto mb-6">
                   Generate a workout to get started with your fitness journey.
                 </p>
                 <Button onClick={handleGenerateWorkout} disabled={isGenerating}>
