@@ -16,6 +16,7 @@ interface ChatContextType {
   isLoading: boolean;
   isChatExpanded: boolean;
   currentPageContext: string;
+  lastSeenMessageCount: number;
 
   // Chat actions
   toggleChat: () => void;
@@ -24,6 +25,7 @@ interface ChatContextType {
   addMessage: (message: ChatMessage) => void;
   setMessages: (messages: ChatMessage[]) => void;
   setIsLoading: (loading: boolean) => void;
+  markMessagesAsSeen: () => void;
 
   // Input state
   inputValue: string;
@@ -38,6 +40,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(false);
   const [isChatExpanded, setIsChatExpanded] = useState(false);
   const [inputValue, setInputValue] = useState('');
+  const [lastSeenMessageCount, setLastSeenMessageCount] = useState(0);
 
   // Get current page context from pathname
   const getPageContext = useCallback((path: string): string => {
@@ -66,16 +69,29 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
   // Chat visibility actions
   const toggleChat = useCallback(() => {
-    setIsChatExpanded(prev => !prev);
-  }, []);
+    setIsChatExpanded(prev => {
+      const newExpanded = !prev;
+      if (newExpanded) {
+        // Mark messages as seen when expanding
+        setLastSeenMessageCount(messages.length);
+      }
+      return newExpanded;
+    });
+  }, [messages.length]);
 
   const expandChat = useCallback(() => {
     setIsChatExpanded(true);
-  }, []);
+    // Mark messages as seen when expanding
+    setLastSeenMessageCount(messages.length);
+  }, [messages.length]);
 
   const collapseChat = useCallback(() => {
     setIsChatExpanded(false);
   }, []);
+
+  const markMessagesAsSeen = useCallback(() => {
+    setLastSeenMessageCount(messages.length);
+  }, [messages.length]);
 
   // Message management
   const addMessage = useCallback((message: ChatMessage) => {
@@ -103,12 +119,14 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     isLoading,
     isChatExpanded,
     currentPageContext,
+    lastSeenMessageCount,
     toggleChat,
     expandChat,
     collapseChat,
     addMessage,
     setMessages,
     setIsLoading,
+    markMessagesAsSeen,
     inputValue,
     setInputValue,
   };
