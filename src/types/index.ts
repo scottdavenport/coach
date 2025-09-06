@@ -48,30 +48,29 @@ export interface ChatMessage {
 }
 
 export interface ParsedConversation {
-  // Enhanced data type detection (expanded categories)
+  // Simplified data type detection - focus on 5 core categories
   data_types: {
-    health: boolean;
-    activity: boolean;
-    mood: boolean;
-    nutrition: boolean;
-    sleep: boolean;
-    workout: boolean;
-    lifestyle: boolean;
-    biometric: boolean;
-    wellness: boolean;
-    social: boolean;
-    work: boolean;
-    travel: boolean;
+    health: boolean; // Physical health metrics, symptoms, medical info
+    activity: boolean; // Exercise, workouts, physical activity
+    mood: boolean; // Emotional state, mental health, feelings
+    lifestyle: boolean; // Daily habits, routines, social activities
+    goals: boolean; // Intentions, plans, aspirations
   };
 
-  // Extracted specific values with confidence
+  // Extracted insights with confidence
+  insights: {
+    observations: string[]; // What the user shared
+    recommendations: string[]; // Actionable advice
+    concerns: string[]; // Things to watch or address
+  };
+
+  // Key metrics extracted from conversation
   extracted_metrics: {
     [metric_key: string]: {
       value: any;
       confidence: number;
       source: 'conversation' | 'ocr' | 'file' | 'inferred';
       time_reference?: string; // "yesterday", "this morning", etc.
-      comparative?: 'better' | 'worse' | 'same' | 'improving' | 'declining';
     };
   };
 
@@ -83,7 +82,7 @@ export interface ParsedConversation {
     confidence: number;
   }>;
 
-  // Emotional context and tone
+  // Emotional context
   emotional_context: {
     tone:
       | 'positive'
@@ -93,55 +92,15 @@ export interface ParsedConversation {
       | 'excited'
       | 'concerned';
     intensity: number; // 1-10
-    specific_emotions: string[];
   };
 
-  // Time references with proper date association
-  time_references: Array<{
-    reference: string; // "yesterday", "this morning", "last week"
-    associated_date?: string; // ISO date if determinable
-    context: string; // what happened at that time
-  }>;
+  // Follow-up questions for natural conversation flow
+  follow_up_questions: string[];
 
-  // User preferences mentioned
-  preferences: Array<{
-    type: 'workout_time' | 'equipment' | 'activity_type' | 'diet' | 'schedule';
-    value: string;
-    confidence: number;
-  }>;
-
-  // Enhanced insights with pattern recognition
-  insights: {
-    observations: string[];
-    patterns: string[]; // "This is the third time you've mentioned poor sleep"
-    recommendations: string[];
-    concerns: string[];
-    data_quality_issues: string[]; // conflicting data, missing context
-  };
-
-  // Context-aware follow-ups
-  follow_up_questions: {
-    immediate: string[]; // natural conversational follow-ups
-    contextual: string[]; // based on user's history and patterns
-    data_driven: string[]; // based on extracted metrics and trends
-  };
-
-  // File upload context
+  // File upload context (if any)
   file_context?: {
     has_ocr_data: boolean;
-    has_document_data: boolean;
     extracted_data: string[];
-    data_validation_needed: string[];
-  };
-
-  // Conversation themes and topics
-  conversation_themes: string[];
-
-  // Historical context references
-  historical_context?: {
-    references_past_data: boolean;
-    pattern_continuations: string[];
-    trend_mentions: string[];
   };
 }
 

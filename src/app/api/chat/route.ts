@@ -474,13 +474,9 @@ Remember: You're not just responding to messages - you're building a comprehensi
       (parsedData.data_types?.health ||
         parsedData.data_types?.activity ||
         parsedData.data_types?.mood ||
-        parsedData.data_types?.nutrition ||
-        parsedData.data_types?.sleep ||
-        parsedData.data_types?.workout ||
-        parsedData.data_types?.travel ||
         parsedData.data_types?.lifestyle ||
-        parsedData.insights?.observations?.length > 0 ||
-        parsedData.insights?.patterns?.length > 0)
+        parsedData.data_types?.goals ||
+        parsedData.insights?.observations?.length > 0)
     ) {
       try {
         logger.info('Conversation insights detected for storage', {
@@ -492,13 +488,12 @@ Remember: You're not just responding to messages - you're building a comprehensi
             health: parsedData?.data_types?.health,
             activity: parsedData?.data_types?.activity,
             mood: parsedData?.data_types?.mood,
-            nutrition: parsedData?.data_types?.nutrition,
-            sleep: parsedData?.data_types?.sleep,
-            workout: parsedData?.data_types?.workout,
+            lifestyle: parsedData?.data_types?.lifestyle,
+            goals: parsedData?.data_types?.goals,
           },
         });
 
-        // Store the conversation insights with enhanced context
+        // Store the conversation insights with simplified context
         // Get user's timezone preference for proper date handling
         const { data: userData } = await supabase
           .from('users')
@@ -517,49 +512,42 @@ Remember: You're not just responding to messages - you're building a comprehensi
           day: '2-digit',
         }).format(now);
 
-        const enhancedInsights = {
+        const simplifiedInsights = {
           user_id: user.id,
-          conversation_date: userDate, // Using user's timezone date for consistency
+          conversation_date: userDate,
           message: message,
-          insights: Array.isArray(parsedData.insights?.observations)
-            ? parsedData.insights.observations
-            : parsedData.insights?.patterns || [],
+          insights: parsedData.insights?.observations || [],
           data_types: {
             health: parsedData.data_types?.health,
             activity: parsedData.data_types?.activity,
             mood: parsedData.data_types?.mood,
-            nutrition: parsedData.data_types?.nutrition,
-            sleep: parsedData.data_types?.sleep,
-            workout: parsedData.data_types?.workout,
+            lifestyle: parsedData.data_types?.lifestyle,
+            goals: parsedData.data_types?.goals,
             // Add flags for file data
             has_ocr_data: !!finalOcrData,
             has_multifile_data: !!multiFileData,
           },
-          follow_up_questions: Array.isArray(
-            parsedData.follow_up_questions?.immediate
-          )
-            ? parsedData.follow_up_questions.immediate
-            : parsedData.follow_up_questions?.contextual || [],
+          follow_up_questions: parsedData.follow_up_questions || [],
           created_at: new Date().toISOString(),
         };
 
         // Add OCR and multi-file context to insights if present
         if (ocrData) {
-          enhancedInsights.insights.push(
+          simplifiedInsights.insights.push(
             `OCR data extracted from uploaded image: ${JSON.stringify(ocrData).substring(0, 200)}...`
           );
         }
 
         if (multiFileData) {
           if (multiFileData.images?.length > 0) {
-            enhancedInsights.insights.push(
+            simplifiedInsights.insights.push(
               `Uploaded ${multiFileData.images.length} image(s) with analysis`
             );
           }
           if (multiFileData.documents?.length > 0) {
             multiFileData.documents.forEach((doc: any) => {
               if (doc.content) {
-                enhancedInsights.insights.push(
+                simplifiedInsights.insights.push(
                   `Document analysis: ${doc.fileName} - ${doc.content.substring(0, 150)}...`
                 );
               }
@@ -572,21 +560,21 @@ Remember: You're not just responding to messages - you're building a comprehensi
           userId: user.id,
           userDate,
           userTimezone,
-          insightsCount: enhancedInsights.insights.length,
-          dataTypes: enhancedInsights.data_types,
-          enhancedInsights: JSON.stringify(enhancedInsights, null, 2),
+          insightsCount: simplifiedInsights.insights.length,
+          dataTypes: simplifiedInsights.data_types,
+          simplifiedInsights: JSON.stringify(simplifiedInsights, null, 2),
         });
 
         const { data: insertedData, error: insightError } = await supabase
           .from('conversation_insights')
-          .insert(enhancedInsights)
+          .insert(simplifiedInsights)
           .select();
 
         if (insightError) {
           logger.error('Failed to store conversation insights', insightError, {
             userId: user.id,
             errorDetails: insightError,
-            attemptedData: enhancedInsights,
+            attemptedData: simplifiedInsights,
           });
         } else {
           logger.info('Conversation insights stored successfully', {
@@ -848,31 +836,28 @@ async function parseConversationForRichContext(
       messages: [
         {
           role: 'system',
-          content: `You are an advanced conversation analyzer for a health and fitness AI companion. Extract rich, contextual information from user messages to enable personalized coaching.
+          content: `You are a health and wellness conversation analyzer. Extract key insights from user messages to enable personalized coaching.
 
 RESPONSE FORMAT (JSON only):
 {
   "data_types": {
-    "health": boolean,
-    "activity": boolean,
-    "mood": boolean,
-    "nutrition": boolean,
-    "sleep": boolean,
-    "workout": boolean,
-    "lifestyle": boolean,
-    "biometric": boolean,
-    "wellness": boolean,
-    "social": boolean,
-    "work": boolean,
-    "travel": boolean
+    "health": boolean,      // Physical health metrics, symptoms, medical info
+    "activity": boolean,    // Exercise, workouts, physical activity
+    "mood": boolean,        // Emotional state, mental health, feelings
+    "lifestyle": boolean,   // Daily habits, routines, social activities
+    "goals": boolean        // Intentions, plans, aspirations
+  },
+  "insights": {
+    "observations": ["string"],     // What the user shared
+    "recommendations": ["string"],  // Actionable advice
+    "concerns": ["string"]          // Things to watch or address
   },
   "extracted_metrics": {
     "metric_key": {
       "value": any,
       "confidence": number,
       "source": "conversation|ocr|file|inferred",
-      "time_reference": "string (optional)",
-      "comparative": "better|worse|same|improving|declining (optional)"
+      "time_reference": "string (optional)"
     }
   },
   "goals_mentioned": [
@@ -885,84 +870,50 @@ RESPONSE FORMAT (JSON only):
   ],
   "emotional_context": {
     "tone": "positive|negative|neutral|frustrated|excited|concerned",
-    "intensity": number,
-    "specific_emotions": ["string"]
+    "intensity": number
   },
-  "time_references": [
-    {
-      "reference": "string",
-      "associated_date": "ISO date (optional)",
-      "context": "string"
-    }
-  ],
-  "preferences": [
-    {
-      "type": "workout_time|equipment|activity_type|diet|schedule",
-      "value": "string",
-      "confidence": number
-    }
-  ],
-  "insights": {
-    "observations": ["string"],
-    "patterns": ["string"],
-    "recommendations": ["string"],
-    "concerns": ["string"],
-    "data_quality_issues": ["string"]
-  },
-  "follow_up_questions": {
-    "immediate": ["string"],
-    "contextual": ["string"],
-    "data_driven": ["string"]
-  },
+  "follow_up_questions": ["string"],
   "file_context": {
     "has_ocr_data": boolean,
-    "has_document_data": boolean,
-    "extracted_data": ["string"],
-    "data_validation_needed": ["string"]
-  },
-  "conversation_themes": ["string"],
-  "historical_context": {
-    "references_past_data": boolean,
-    "pattern_continuations": ["string"],
-    "trend_mentions": ["string"]
+    "extracted_data": ["string"]
   }
 }
 
 ANALYSIS GUIDELINES:
+- Focus on actionable insights that help the user
 - Extract specific values when mentioned (e.g., "slept 8 hours" → sleep_duration: 8)
 - Detect emotional context and intensity
-- Identify time references and associate with proper dates when possible
-- Extract user preferences and goals
-- Look for comparative statements ("better than yesterday", "worse than usual")
-- Identify data quality issues (conflicting information)
-- Generate context-aware follow-ups based on user's likely patterns
-- Detect conversation themes and ongoing topics
-- Reference past data patterns when relevant
+- Generate natural follow-up questions
+- Keep insights practical and relevant
 
 EXAMPLES:
 User: "I slept terribly last night, only 5 hours, but I'm feeling surprisingly energetic this morning"
 → {
-  "data_types": {"sleep": true, "mood": true},
+  "data_types": {"health": true, "mood": true},
+  "insights": {
+    "observations": ["Poor sleep quality (5 hours)", "Unexpected high energy despite poor sleep"],
+    "recommendations": ["Monitor energy levels throughout the day", "Consider earlier bedtime tonight"],
+    "concerns": ["Sleep debt may catch up later"]
+  },
   "extracted_metrics": {
     "sleep_duration": {"value": 5, "confidence": 0.9, "source": "conversation", "time_reference": "last night"},
-    "energy_level": {"value": "high", "confidence": 0.8, "source": "conversation", "time_reference": "this morning", "comparative": "better"}
+    "energy_level": {"value": "high", "confidence": 0.8, "source": "conversation", "time_reference": "this morning"}
   },
-  "emotional_context": {"tone": "neutral", "intensity": 6, "specific_emotions": ["surprised"]},
-  "insights": {
-    "observations": ["User had poor sleep but high energy - unusual pattern"],
-    "patterns": ["Disconnect between sleep quality and energy levels"],
-    "concerns": ["Poor sleep quality may impact recovery"]
-  }
+  "emotional_context": {"tone": "neutral", "intensity": 6},
+  "follow_up_questions": ["How are you feeling now?", "What time did you go to bed?"]
 }
 
 User: "I want to start working out in the mornings before work"
 → {
-  "data_types": {"workout": true, "lifestyle": true},
-  "goals_mentioned": [{"goal": "morning workouts", "category": "fitness", "timeframe": "ongoing", "confidence": 0.9}],
-  "preferences": [{"type": "workout_time", "value": "morning", "confidence": 0.9}],
+  "data_types": {"activity": true, "goals": true, "lifestyle": true},
   "insights": {
-    "recommendations": ["Consider gradual transition to morning workouts", "Plan workout routine that fits morning schedule"]
-  }
+    "observations": ["Interest in morning workouts", "Goal to establish fitness routine"],
+    "recommendations": ["Start with 2-3 mornings per week", "Prepare workout clothes the night before"],
+    "concerns": []
+  },
+  "goals_mentioned": [{"goal": "morning workouts", "category": "fitness", "timeframe": "ongoing", "confidence": 0.9}],
+  "emotional_context": {"tone": "positive", "intensity": 7},
+  "follow_up_questions": ["What type of workouts interest you?", "How much time do you have in the mornings?"]
 }`,
         },
         {
@@ -970,7 +921,7 @@ User: "I want to start working out in the mornings before work"
           content: message,
         },
       ],
-      max_tokens: 800,
+      max_tokens: 600,
       temperature: 0.7,
     });
 
@@ -978,60 +929,41 @@ User: "I want to start working out in the mornings before work"
 
     try {
       const parsed = JSON.parse(responseText);
-
-      // Return the parsed data directly
-      const enhancedParsed: ParsedConversation = {
-        ...parsed,
-      };
-
-      return enhancedParsed;
+      return parsed as ParsedConversation;
     } catch (parseError) {
       logger.error(
         'Failed to parse AI response',
         parseError instanceof Error ? parseError : new Error('Parse error')
       );
-      // Return enhanced fallback
-      return createEnhancedFallback();
+      return createSimplifiedFallback();
     }
   } catch (error) {
     logger.error(
       'Error in conversation parsing',
       error instanceof Error ? error : new Error('Unknown error')
     );
-    return createEnhancedFallback();
+    return createSimplifiedFallback();
   }
 }
 
-function createEnhancedFallback(): ParsedConversation {
+function createSimplifiedFallback(): ParsedConversation {
   return {
     data_types: {
       health: false,
       activity: false,
       mood: false,
-      nutrition: false,
-      sleep: false,
-      workout: false,
       lifestyle: false,
-      biometric: false,
-      wellness: false,
-      social: false,
-      work: false,
-      travel: false,
+      goals: false,
+    },
+    insights: {
+      observations: [],
+      recommendations: [],
+      concerns: [],
     },
     extracted_metrics: {},
     goals_mentioned: [],
-    emotional_context: { tone: 'neutral', intensity: 5, specific_emotions: [] },
-    time_references: [],
-    preferences: [],
-    insights: {
-      observations: [],
-      patterns: [],
-      recommendations: [],
-      concerns: [],
-      data_quality_issues: [],
-    },
-    follow_up_questions: { immediate: [], contextual: [], data_driven: [] },
-    conversation_themes: [],
+    emotional_context: { tone: 'neutral', intensity: 5 },
+    follow_up_questions: [],
   };
 }
 
