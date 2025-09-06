@@ -32,12 +32,13 @@ export interface ConversationMessage {
   created_at?: string;
 }
 
-// New type for the chat interface
+// New type for the chat interface (compatible with original format)
 export interface ChatMessage {
-  id: string;
+  id: number | string;
   content: string;
   role: 'user' | 'assistant';
-  created_at: string;
+  timestamp?: Date;
+  created_at?: string;
   attachments?: {
     id: string;
     name: string;

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { useChat } from '@/components/providers/chat-provider';
 import { createClient } from '@/lib/supabase/client';
 import { ChatMessage } from '@/types';
-import ReactMarkdown from 'react-markdown';
+import { ChatMessage as ChatMessageComponent } from '@/components/chat/chat-message';
 
 interface ChatConversationPopupProps {
   userId: string;
@@ -45,12 +45,12 @@ export function ChatConversationPopup({ userId }: ChatConversationPopupProps) {
       }
 
       if (data) {
-        // Convert to ChatMessage format
+        // Convert to original ChatMessage format
         const historyMessages: ChatMessage[] = data.map((conv, index) => ({
-          id: `history-${index}`,
+          id: Date.now() + index,
           content: conv.message || '',
           role: conv.metadata?.role === 'assistant' ? 'assistant' : 'user',
-          created_at: conv.created_at,
+          timestamp: new Date(conv.created_at || Date.now()),
         }));
         setMessages(historyMessages);
       }
@@ -150,84 +150,7 @@ export function ChatConversationPopup({ userId }: ChatConversationPopupProps) {
             </div>
           ) : (
             messages.map(message => (
-              <div
-                key={message.id}
-                className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
-                <div
-                  className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-                    message.role === 'user'
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-card text-text border border-line'
-                  }`}
-                >
-                  <div className="text-base leading-7">
-                    {message.role === 'user' ? (
-                      <div className="whitespace-pre-wrap">
-                        {message.content}
-                      </div>
-                    ) : (
-                      <div className="prose prose-sm max-w-none dark:prose-invert">
-                        <ReactMarkdown
-                          components={{
-                            p: ({ children }) => (
-                              <p className="mb-3 last:mb-0 text-text">
-                                {children}
-                              </p>
-                            ),
-                            ul: ({ children }) => (
-                              <ul className="mb-3 last:mb-0 list-disc list-inside text-text">
-                                {children}
-                              </ul>
-                            ),
-                            ol: ({ children }) => (
-                              <ol className="mb-3 last:mb-0 list-decimal list-inside text-text">
-                                {children}
-                              </ol>
-                            ),
-                            li: ({ children }) => (
-                              <li className="mb-1 text-text">{children}</li>
-                            ),
-                            strong: ({ children }) => (
-                              <strong className="font-semibold text-text">
-                                {children}
-                              </strong>
-                            ),
-                            em: ({ children }) => (
-                              <em className="italic text-text">{children}</em>
-                            ),
-                            code: ({ children }) => (
-                              <code className="bg-muted px-1 py-0.5 rounded text-sm font-mono text-text">
-                                {children}
-                              </code>
-                            ),
-                            pre: ({ children }) => (
-                              <pre className="bg-muted p-3 rounded-lg overflow-x-auto text-sm font-mono text-text">
-                                {children}
-                              </pre>
-                            ),
-                          }}
-                        >
-                          {message.content}
-                        </ReactMarkdown>
-                      </div>
-                    )}
-                  </div>
-
-                  <div
-                    className={`mt-1 text-xs ${
-                      message.role === 'user'
-                        ? 'text-primary-foreground/70'
-                        : 'text-muted-foreground'
-                    }`}
-                  >
-                    {new Date(message.created_at).toLocaleTimeString([], {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </div>
-                </div>
-              </div>
+              <ChatMessageComponent key={message.id} message={message} />
             ))
           )}
 

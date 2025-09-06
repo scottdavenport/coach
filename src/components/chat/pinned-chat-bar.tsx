@@ -123,18 +123,12 @@ export function PinnedChatBar({ userId }: PinnedChatBarProps) {
     setIsLoading(true);
 
     try {
-      // Create user message
-      const userMessage: ChatMessage = {
-        id: Math.random().toString(36).substr(2, 9),
+      // Create user message (using original format)
+      const userMessage = {
+        id: Date.now(),
         content: messageText,
         role: 'user' as const,
-        created_at: new Date().toISOString(),
-        attachments: fileManager.files.map(f => ({
-          id: f.id,
-          name: f.fileName,
-          type: f.fileType,
-          size: f.fileSize,
-        })),
+        timestamp: new Date(),
       };
 
       addMessage(userMessage);
@@ -165,8 +159,7 @@ export function PinnedChatBar({ userId }: PinnedChatBarProps) {
         // Files are processed, we can clear them after sending
       }
 
-
-      // Send to API
+      // Send to API (using original format)
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
@@ -174,27 +167,35 @@ export function PinnedChatBar({ userId }: PinnedChatBarProps) {
         },
         body: JSON.stringify({
           message: messageText,
-          attachments: fileManager.files,
-          pageContext: currentPageContext,
+          conversationId: Date.now().toString(),
+          conversationState: 'idle',
+          checkinProgress: {},
         }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to send message');
+        const errorText = await response.text();
+        console.error('API Error Response:', {
+          status: response.status,
+          statusText: response.statusText,
+          body: errorText,
+        });
+        throw new Error(
+          `Failed to send message: ${response.status} ${response.statusText}`
+        );
       }
 
       const data = await response.json();
 
-      // Add assistant response
-      if (data.response) {
-        const assistantMessage: ChatMessage = {
-          id: Math.random().toString(36).substr(2, 9),
-          content: data.response,
-          role: 'assistant' as const,
-          created_at: new Date().toISOString(),
-        };
-        addMessage(assistantMessage);
-      }
+      // Add assistant response (using original format)
+      const aiMessage = {
+        id: Date.now() + 1,
+        content: data.message,
+        role: 'assistant' as const,
+        timestamp: new Date(),
+      };
+
+      addMessage(aiMessage);
 
       // Clear files after successful send
       fileManager.clearFiles();
