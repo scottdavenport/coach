@@ -4,15 +4,15 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Save, 
-  User, 
-  Target, 
-  Dumbbell, 
-  Clock, 
+import {
+  Save,
+  User,
+  Target,
+  Dumbbell,
+  Clock,
   Calendar,
   AlertTriangle,
-  CheckCircle
+  CheckCircle,
 } from 'lucide-react';
 import { UserWorkoutPreferences } from '@/types';
 
@@ -21,7 +21,10 @@ interface WorkoutPreferencesProps {
   onPreferencesUpdate?: (preferences: UserWorkoutPreferences) => void;
 }
 
-export function WorkoutPreferences({ userId, onPreferencesUpdate }: WorkoutPreferencesProps) {
+export function WorkoutPreferences({
+  userId,
+  onPreferencesUpdate,
+}: WorkoutPreferencesProps) {
   const [preferences, setPreferences] = useState<UserWorkoutPreferences>({
     id: '',
     user_id: userId,
@@ -38,7 +41,9 @@ export function WorkoutPreferences({ userId, onPreferencesUpdate }: WorkoutPrefe
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>(
+    'idle'
+  );
 
   // Load preferences on mount
   useEffect(() => {
@@ -49,7 +54,7 @@ export function WorkoutPreferences({ userId, onPreferencesUpdate }: WorkoutPrefe
     try {
       const response = await fetch('/api/workouts/preferences');
       const data = await response.json();
-      
+
       if (data.success && data.preferences) {
         setPreferences(data.preferences);
       }
@@ -90,14 +95,25 @@ export function WorkoutPreferences({ userId, onPreferencesUpdate }: WorkoutPrefe
     }
   };
 
-  const updatePreference = (field: keyof UserWorkoutPreferences, value: any) => {
+  const updatePreference = (
+    field: keyof UserWorkoutPreferences,
+    value: any
+  ) => {
     setPreferences(prev => ({
       ...prev,
       [field]: value,
     }));
   };
 
-  const toggleArrayItem = (field: 'primary_goals' | 'available_equipment' | 'preferred_workout_times' | 'injury_limitations' | 'exercise_preferences', item: string) => {
+  const toggleArrayItem = (
+    field:
+      | 'primary_goals'
+      | 'available_equipment'
+      | 'preferred_workout_times'
+      | 'injury_limitations'
+      | 'exercise_preferences',
+    item: string
+  ) => {
     setPreferences(prev => ({
       ...prev,
       [field]: prev[field].includes(item)
@@ -120,7 +136,7 @@ export function WorkoutPreferences({ userId, onPreferencesUpdate }: WorkoutPrefe
 
   return (
     <div className="space-y-6">
-      <Card>
+      <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <User className="h-5 w-5" />
@@ -130,12 +146,16 @@ export function WorkoutPreferences({ userId, onPreferencesUpdate }: WorkoutPrefe
         <CardContent className="space-y-6">
           {/* Fitness Level */}
           <div>
-            <label className="text-sm font-medium mb-2 block">Fitness Level</label>
+            <label className="text-sm font-medium mb-2 block">
+              Fitness Level
+            </label>
             <div className="flex gap-2">
-              {['beginner', 'intermediate', 'advanced'].map((level) => (
+              {['beginner', 'intermediate', 'advanced'].map(level => (
                 <Button
                   key={level}
-                  variant={preferences.fitness_level === level ? 'default' : 'outline'}
+                  variant={
+                    preferences.fitness_level === level ? 'default' : 'outline'
+                  }
                   size="sm"
                   onClick={() => updatePreference('fitness_level', level)}
                   className="capitalize"
@@ -148,7 +168,9 @@ export function WorkoutPreferences({ userId, onPreferencesUpdate }: WorkoutPrefe
 
           {/* Primary Goals */}
           <div>
-            <label className="text-sm font-medium mb-2 block">Primary Goals</label>
+            <label className="text-sm font-medium mb-2 block">
+              Primary Goals
+            </label>
             <div className="flex flex-wrap gap-2">
               {[
                 'general_fitness',
@@ -159,10 +181,14 @@ export function WorkoutPreferences({ userId, onPreferencesUpdate }: WorkoutPrefe
                 'flexibility',
                 'sports_performance',
                 'rehabilitation',
-              ].map((goal) => (
+              ].map(goal => (
                 <Badge
                   key={goal}
-                  variant={preferences.primary_goals.includes(goal) ? 'default' : 'outline'}
+                  variant={
+                    preferences.primary_goals.includes(goal)
+                      ? 'default'
+                      : 'outline'
+                  }
                   className="cursor-pointer capitalize"
                   onClick={() => toggleArrayItem('primary_goals', goal)}
                 >
@@ -174,7 +200,9 @@ export function WorkoutPreferences({ userId, onPreferencesUpdate }: WorkoutPrefe
 
           {/* Available Equipment */}
           <div>
-            <label className="text-sm font-medium mb-2 block">Available Equipment</label>
+            <label className="text-sm font-medium mb-2 block">
+              Available Equipment
+            </label>
             <div className="flex flex-wrap gap-2">
               {[
                 'bodyweight',
@@ -189,12 +217,18 @@ export function WorkoutPreferences({ userId, onPreferencesUpdate }: WorkoutPrefe
                 'bike',
                 'elliptical',
                 'rower',
-              ].map((equipment) => (
+              ].map(equipment => (
                 <Badge
                   key={equipment}
-                  variant={preferences.available_equipment.includes(equipment) ? 'default' : 'outline'}
+                  variant={
+                    preferences.available_equipment.includes(equipment)
+                      ? 'default'
+                      : 'outline'
+                  }
                   className="cursor-pointer capitalize"
-                  onClick={() => toggleArrayItem('available_equipment', equipment)}
+                  onClick={() =>
+                    toggleArrayItem('available_equipment', equipment)
+                  }
                 >
                   {equipment.replace('_', ' ')}
                 </Badge>
@@ -208,12 +242,18 @@ export function WorkoutPreferences({ userId, onPreferencesUpdate }: WorkoutPrefe
               Preferred Workout Duration (minutes)
             </label>
             <div className="flex gap-2">
-              {[15, 30, 45, 60, 90].map((duration) => (
+              {[15, 30, 45, 60, 90].map(duration => (
                 <Button
                   key={duration}
-                  variant={preferences.preferred_workout_duration === duration ? 'default' : 'outline'}
+                  variant={
+                    preferences.preferred_workout_duration === duration
+                      ? 'default'
+                      : 'outline'
+                  }
                   size="sm"
-                  onClick={() => updatePreference('preferred_workout_duration', duration)}
+                  onClick={() =>
+                    updatePreference('preferred_workout_duration', duration)
+                  }
                 >
                   {duration} min
                 </Button>
@@ -223,14 +263,22 @@ export function WorkoutPreferences({ userId, onPreferencesUpdate }: WorkoutPrefe
 
           {/* Workout Times */}
           <div>
-            <label className="text-sm font-medium mb-2 block">Preferred Workout Times</label>
+            <label className="text-sm font-medium mb-2 block">
+              Preferred Workout Times
+            </label>
             <div className="flex flex-wrap gap-2">
-              {['morning', 'afternoon', 'evening', 'anytime'].map((time) => (
+              {['morning', 'afternoon', 'evening', 'anytime'].map(time => (
                 <Badge
                   key={time}
-                  variant={preferences.preferred_workout_times.includes(time) ? 'default' : 'outline'}
+                  variant={
+                    preferences.preferred_workout_times.includes(time)
+                      ? 'default'
+                      : 'outline'
+                  }
                   className="cursor-pointer capitalize"
-                  onClick={() => toggleArrayItem('preferred_workout_times', time)}
+                  onClick={() =>
+                    toggleArrayItem('preferred_workout_times', time)
+                  }
                 >
                   {time}
                 </Badge>
@@ -244,12 +292,18 @@ export function WorkoutPreferences({ userId, onPreferencesUpdate }: WorkoutPrefe
               Workout Frequency (days per week)
             </label>
             <div className="flex gap-2">
-              {[1, 2, 3, 4, 5, 6, 7].map((frequency) => (
+              {[1, 2, 3, 4, 5, 6, 7].map(frequency => (
                 <Button
                   key={frequency}
-                  variant={preferences.workout_frequency === frequency ? 'default' : 'outline'}
+                  variant={
+                    preferences.workout_frequency === frequency
+                      ? 'default'
+                      : 'outline'
+                  }
                   size="sm"
-                  onClick={() => updatePreference('workout_frequency', frequency)}
+                  onClick={() =>
+                    updatePreference('workout_frequency', frequency)
+                  }
                 >
                   {frequency} days
                 </Button>
@@ -259,7 +313,9 @@ export function WorkoutPreferences({ userId, onPreferencesUpdate }: WorkoutPrefe
 
           {/* Injury Limitations */}
           <div>
-            <label className="text-sm font-medium mb-2 block">Injury Limitations</label>
+            <label className="text-sm font-medium mb-2 block">
+              Injury Limitations
+            </label>
             <div className="flex flex-wrap gap-2">
               {[
                 'knee_injury',
@@ -270,10 +326,14 @@ export function WorkoutPreferences({ userId, onPreferencesUpdate }: WorkoutPrefe
                 'neck_injury',
                 'hip_injury',
                 'none',
-              ].map((injury) => (
+              ].map(injury => (
                 <Badge
                   key={injury}
-                  variant={preferences.injury_limitations.includes(injury) ? 'destructive' : 'outline'}
+                  variant={
+                    preferences.injury_limitations.includes(injury)
+                      ? 'destructive'
+                      : 'outline'
+                  }
                   className="cursor-pointer capitalize"
                   onClick={() => toggleArrayItem('injury_limitations', injury)}
                 >
@@ -285,7 +345,9 @@ export function WorkoutPreferences({ userId, onPreferencesUpdate }: WorkoutPrefe
 
           {/* Exercise Preferences */}
           <div>
-            <label className="text-sm font-medium mb-2 block">Exercise Preferences</label>
+            <label className="text-sm font-medium mb-2 block">
+              Exercise Preferences
+            </label>
             <div className="flex flex-wrap gap-2">
               {[
                 'strength_training',
@@ -300,12 +362,18 @@ export function WorkoutPreferences({ userId, onPreferencesUpdate }: WorkoutPrefe
                 'martial_arts',
                 'sports',
                 'outdoor_activities',
-              ].map((preference) => (
+              ].map(preference => (
                 <Badge
                   key={preference}
-                  variant={preferences.exercise_preferences.includes(preference) ? 'default' : 'outline'}
+                  variant={
+                    preferences.exercise_preferences.includes(preference)
+                      ? 'default'
+                      : 'outline'
+                  }
                   className="cursor-pointer capitalize"
-                  onClick={() => toggleArrayItem('exercise_preferences', preference)}
+                  onClick={() =>
+                    toggleArrayItem('exercise_preferences', preference)
+                  }
                 >
                   {preference.replace('_', ' ')}
                 </Badge>
@@ -329,9 +397,9 @@ export function WorkoutPreferences({ userId, onPreferencesUpdate }: WorkoutPrefe
                 </div>
               )}
             </div>
-            
-            <Button 
-              onClick={savePreferences} 
+
+            <Button
+              onClick={savePreferences}
               disabled={isSaving}
               className="flex items-center gap-2"
             >
@@ -354,31 +422,43 @@ export function WorkoutPreferences({ userId, onPreferencesUpdate }: WorkoutPrefe
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
               <span className="font-medium">Fitness Level:</span>
-              <span className="ml-2 capitalize">{preferences.fitness_level}</span>
+              <span className="ml-2 capitalize">
+                {preferences.fitness_level}
+              </span>
             </div>
             <div>
               <span className="font-medium">Duration:</span>
-              <span className="ml-2">{preferences.preferred_workout_duration} minutes</span>
+              <span className="ml-2">
+                {preferences.preferred_workout_duration} minutes
+              </span>
             </div>
             <div>
               <span className="font-medium">Frequency:</span>
-              <span className="ml-2">{preferences.workout_frequency} days/week</span>
+              <span className="ml-2">
+                {preferences.workout_frequency} days/week
+              </span>
             </div>
             <div>
               <span className="font-medium">Equipment:</span>
-              <span className="ml-2">{preferences.available_equipment.length} types</span>
+              <span className="ml-2">
+                {preferences.available_equipment.length} types
+              </span>
             </div>
             <div className="col-span-2">
               <span className="font-medium">Goals:</span>
               <span className="ml-2">
-                {preferences.primary_goals.map(goal => goal.replace('_', ' ')).join(', ')}
+                {preferences.primary_goals
+                  .map(goal => goal.replace('_', ' '))
+                  .join(', ')}
               </span>
             </div>
             {preferences.injury_limitations.length > 0 && (
               <div className="col-span-2">
                 <span className="font-medium">Limitations:</span>
                 <span className="ml-2">
-                  {preferences.injury_limitations.map(injury => injury.replace('_', ' ')).join(', ')}
+                  {preferences.injury_limitations
+                    .map(injury => injury.replace('_', ' '))
+                    .join(', ')}
                 </span>
               </div>
             )}

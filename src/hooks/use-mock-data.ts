@@ -1,8 +1,8 @@
 'use client';
 
 // Easy toggle system for mock data
-// For now, let's enable mock data by default in development
-export const USE_MOCK_DATA = process.env.NODE_ENV === 'development';
+// Mock data disabled by default - enable only when needed for testing
+export const USE_MOCK_DATA = false;
 
 export interface MockWeeklyData {
   current: number;

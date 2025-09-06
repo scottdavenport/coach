@@ -26,6 +26,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useJournalEntries } from '@/hooks/use-journal-entries';
 import { useUserTimezone } from '@/hooks/use-user-timezone';
 import { useDate } from '@/components/providers/date-provider';
+import { USE_MOCK_DATA } from '@/hooks/use-mock-data';
 import {
   getTodayInTimezone,
   getUserPreferredTimezone,
@@ -223,7 +224,7 @@ export default function JournalClient({ userId }: JournalClientProps) {
   };
 
   return (
-    <div className="max-w-7xl mx-auto p-6">
+    <div className="max-w-6xl mx-auto p-6">
       {/* Page Title */}
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-text flex items-center gap-3">
@@ -235,316 +236,369 @@ export default function JournalClient({ userId }: JournalClientProps) {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Left Sidebar - Date Navigation & Quick Actions */}
-        <div className="lg:col-span-1">
-          <div className="space-y-6">
-            {/* New Entry */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Quick Actions</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Button
-                  onClick={() => setIsWriting(true)}
-                  className="w-full justify-start"
-                  variant="outline"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  New Entry
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+      {/* Quick Actions */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <Card
+          className="cursor-pointer hover:shadow-md transition-shadow"
+          onClick={() => setIsWriting(true)}
+        >
+          <CardContent className="p-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <Plus className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-semibold">New Entry</h3>
+                <p className="text-sm text-muted-foreground">
+                  Start writing your thoughts
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-        {/* Main Content Area */}
-        <div className="lg:col-span-3">
-          <Tabs
-            value={activeTab}
-            onValueChange={setActiveTab}
-            className="w-full"
-          >
-            <TabsList className="grid w-full grid-cols-4 bg-card border border-line">
-              <TabsTrigger
-                value="timeline"
-                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-semibold data-[state=active]:shadow-md transition-all duration-200"
-              >
-                Timeline
-              </TabsTrigger>
-              <TabsTrigger
-                value="mood"
-                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-semibold data-[state=active]:shadow-md transition-all duration-200"
-              >
-                Mood
-              </TabsTrigger>
-              <TabsTrigger
-                value="insights"
-                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-semibold data-[state=active]:shadow-md transition-all duration-200"
-              >
-                Insights
-              </TabsTrigger>
-              <TabsTrigger
-                value="search"
-                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-semibold data-[state=active]:shadow-md transition-all duration-200"
-              >
-                Search
-              </TabsTrigger>
-            </TabsList>
-            <TabsContent value="timeline" className="mt-6">
-              <div className="space-y-6">
-                {/* Writing Interface */}
-                {isWriting && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>New Journal Entry</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                        {entryTypes.map(type => {
-                          const Icon = type.icon;
-                          return (
-                            <button
-                              key={type.id}
-                              onClick={() => handleAddJournalEntry(type.id)}
-                              className="flex flex-col items-center gap-2 p-3 border border-line rounded-lg hover:bg-card-2 transition-colors"
-                            >
-                              <Icon className={`h-5 w-5 ${type.color}`} />
-                              <span className="text-xs font-medium">
-                                {type.label}
-                              </span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                      <Textarea
-                        value={newEntry}
-                        onChange={e => setNewEntry(e.target.value)}
-                        placeholder="Write your thoughts, goals, or reflections here..."
-                        className="min-h-[200px] resize-none"
-                      />
-                      <div className="flex gap-2">
-                        <Button
-                          onClick={() => setIsWriting(false)}
-                          variant="outline"
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          onClick={() => handleAddJournalEntry('note')}
-                          disabled={!newEntry.trim()}
-                        >
-                          Save Entry
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
+        <Card
+          className="cursor-pointer hover:shadow-md transition-shadow"
+          onClick={() => setActiveTab('mood')}
+        >
+          <CardContent className="p-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-500/10 rounded-lg">
+                <Heart className="h-6 w-6 text-blue-500" />
+              </div>
+              <div>
+                <h3 className="font-semibold">Track Mood</h3>
+                <p className="text-sm text-muted-foreground">
+                  Log your emotional state
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-                {/* Timeline View */}
+        <Card
+          className="cursor-pointer hover:shadow-md transition-shadow"
+          onClick={() => setActiveTab('insights')}
+        >
+          <CardContent className="p-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-500/10 rounded-lg">
+                <TrendingUp className="h-6 w-6 text-green-500" />
+              </div>
+              <div>
+                <h3 className="font-semibold">View Insights</h3>
+                <p className="text-sm text-muted-foreground">
+                  AI-powered patterns
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card
+          className="cursor-pointer hover:shadow-md transition-shadow"
+          onClick={() => setActiveTab('search')}
+        >
+          <CardContent className="p-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-500/10 rounded-lg">
+                <Search className="h-6 w-6 text-purple-500" />
+              </div>
+              <div>
+                <h3 className="font-semibold">Search Entries</h3>
+                <p className="text-sm text-muted-foreground">
+                  Find past reflections
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Main Content Area */}
+      <div>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-4 bg-card border border-line">
+            <TabsTrigger
+              value="timeline"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-semibold data-[state=active]:shadow-md transition-all duration-200"
+            >
+              Timeline
+            </TabsTrigger>
+            <TabsTrigger
+              value="mood"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-semibold data-[state=active]:shadow-md transition-all duration-200"
+            >
+              Mood
+            </TabsTrigger>
+            <TabsTrigger
+              value="insights"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-semibold data-[state=active]:shadow-md transition-all duration-200"
+            >
+              Insights
+            </TabsTrigger>
+            <TabsTrigger
+              value="search"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-semibold data-[state=active]:shadow-md transition-all duration-200"
+            >
+              Search
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="timeline" className="mt-6">
+            <div className="space-y-6">
+              {/* Writing Interface */}
+              {isWriting && (
                 <Card>
                   <CardHeader>
-                    <CardTitle>
-                      Journal Timeline - {formatDateForDisplay(selectedDate)}
-                    </CardTitle>
+                    <CardTitle>New Journal Entry</CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    {journalEntries.length === 0 ? (
-                      <div className="text-center py-12">
-                        <BookOpen className="h-16 w-16 text-muted-foreground mx-auto mb-4 opacity-50" />
-                        <h3 className="text-lg font-medium mb-2">
-                          No entries yet
-                        </h3>
-                        <p className="text-muted-foreground mb-4">
-                          Start your journaling journey by adding your first
-                          entry.
-                        </p>
-                        <Button onClick={() => setIsWriting(true)}>
-                          <Plus className="h-4 w-4 mr-2" />
-                          Add First Entry
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        {filteredEntries.map(entry => {
-                          const entryType = entryTypes.find(
-                            t => t.id === entry.entry_type
-                          );
-                          const Icon = entryType?.icon || MessageSquare;
-                          const color = entryType?.color || 'text-primary';
-
-                          return (
-                            <div
-                              key={entry.id}
-                              className="border-l-4 border-primary/20 pl-4 py-4"
-                            >
-                              <div className="flex items-start justify-between mb-2">
-                                <div className="flex items-center gap-2">
-                                  <Icon className={`h-4 w-4 ${color}`} />
-                                  <span className="text-sm font-medium text-muted-foreground">
-                                    {entryType?.label || 'Note'}
-                                  </span>
-                                  <span className="text-xs text-muted-foreground">
-                                    {new Date(
-                                      entry.created_at
-                                    ).toLocaleTimeString()}
-                                  </span>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  <Button size="sm" variant="ghost">
-                                    <Edit3 className="h-3 w-3" />
-                                  </Button>
-                                  <Button size="sm" variant="ghost">
-                                    <Trash2 className="h-3 w-3" />
-                                  </Button>
-                                </div>
-                              </div>
-                              <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                                {entry.content}
-                              </p>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                      {entryTypes.map(type => {
+                        const Icon = type.icon;
+                        return (
+                          <button
+                            key={type.id}
+                            onClick={() => handleAddJournalEntry(type.id)}
+                            className="flex flex-col items-center gap-2 p-3 border border-line rounded-lg hover:bg-card-2 transition-colors"
+                          >
+                            <Icon className={`h-5 w-5 ${type.color}`} />
+                            <span className="text-xs font-medium">
+                              {type.label}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <Textarea
+                      value={newEntry}
+                      onChange={e => setNewEntry(e.target.value)}
+                      placeholder="Write your thoughts, goals, or reflections here..."
+                      className="min-h-[200px] resize-none"
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => setIsWriting(false)}
+                        variant="outline"
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={() => handleAddJournalEntry('note')}
+                        disabled={!newEntry.trim()}
+                      >
+                        Save Entry
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
-              </div>
-            </TabsContent>
+              )}
 
-            <TabsContent value="mood" className="mt-6">
-              <div className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Mood & Energy Tracking</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    {/* Mood Selection */}
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground mb-3 block">
-                        How are you feeling today?
-                      </label>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                        {moods.map(mood => {
-                          const Icon = mood.icon;
-                          return (
-                            <button
-                              key={mood.id}
-                              onClick={() => setSelectedMood(mood.id)}
-                              className={`flex flex-col items-center gap-2 p-4 border rounded-lg transition-colors ${
-                                selectedMood === mood.id
-                                  ? 'border-primary bg-primary/10'
-                                  : 'border-line hover:bg-card-2'
-                              }`}
-                            >
-                              <Icon className={`h-6 w-6 ${mood.color}`} />
-                              <span className="text-sm font-medium">
-                                {mood.label}
-                              </span>
-                            </button>
-                          );
-                        })}
+              {/* Timeline View */}
+              <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
+                <CardHeader>
+                  <CardTitle>
+                    Journal Timeline - {formatDateForDisplay(selectedDate)}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {journalEntries.length === 0 ? (
+                    <div className="text-center py-12">
+                      <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <BookOpen className="h-8 w-8 text-primary" />
                       </div>
+                      <h3 className="text-lg font-semibold text-text mb-2">
+                        No entries yet
+                      </h3>
+                      <p className="text-muted max-w-md mx-auto mb-4">
+                        Start your journaling journey by adding your first
+                        entry.
+                      </p>
+                      <Button onClick={() => setIsWriting(true)}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add First Entry
+                      </Button>
                     </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {filteredEntries.map(entry => {
+                        const entryType = entryTypes.find(
+                          t => t.id === entry.entry_type
+                        );
+                        const Icon = entryType?.icon || MessageSquare;
+                        const color = entryType?.color || 'text-primary';
 
-                    {/* Energy Level */}
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground mb-3 block">
-                        Energy Level: {energyLevel}/10
-                      </label>
-                      <input
-                        type="range"
-                        min="1"
-                        max="10"
-                        value={energyLevel}
-                        onChange={e => setEnergyLevel(Number(e.target.value))}
-                        className="w-full"
-                      />
-                      <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                        <span>Low</span>
-                        <span>High</span>
-                      </div>
+                        return (
+                          <div
+                            key={entry.id}
+                            className="border-l-4 border-primary/20 pl-4 py-4"
+                          >
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <Icon className={`h-4 w-4 ${color}`} />
+                                <span className="text-sm font-medium text-muted-foreground">
+                                  {entryType?.label || 'Note'}
+                                </span>
+                                <span className="text-xs text-muted-foreground">
+                                  {new Date(
+                                    entry.created_at
+                                  ).toLocaleTimeString()}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Button size="sm" variant="ghost">
+                                  <Edit3 className="h-3 w-3" />
+                                </Button>
+                                <Button size="sm" variant="ghost">
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </div>
+                            <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                              {entry.content}
+                            </p>
+                          </div>
+                        );
+                      })}
                     </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
 
-                    {/* Mood Notes */}
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground mb-2 block">
-                        Additional Notes (Optional)
-                      </label>
-                      <Textarea
-                        value={moodNotes}
-                        onChange={e => setMoodNotes(e.target.value)}
-                        placeholder="What's contributing to your mood today?"
-                        className="min-h-[100px] resize-none"
-                      />
+          <TabsContent value="mood" className="mt-6">
+            <div className="space-y-6">
+              <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
+                <CardHeader>
+                  <CardTitle>Mood & Energy Tracking</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Mood Selection */}
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground mb-3 block">
+                      How are you feeling today?
+                    </label>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      {moods.map(mood => {
+                        const Icon = mood.icon;
+                        return (
+                          <button
+                            key={mood.id}
+                            onClick={() => setSelectedMood(mood.id)}
+                            className={`flex flex-col items-center gap-2 p-4 border rounded-lg transition-colors ${
+                              selectedMood === mood.id
+                                ? 'border-primary bg-primary/10'
+                                : 'border-line hover:bg-card-2'
+                            }`}
+                          >
+                            <Icon className={`h-6 w-6 ${mood.color}`} />
+                            <span className="text-sm font-medium">
+                              {mood.label}
+                            </span>
+                          </button>
+                        );
+                      })}
                     </div>
+                  </div>
 
-                    <Button
-                      onClick={handleAddMoodEntry}
-                      disabled={!selectedMood}
+                  {/* Energy Level */}
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground mb-3 block">
+                      Energy Level: {energyLevel}/10
+                    </label>
+                    <input
+                      type="range"
+                      min="1"
+                      max="10"
+                      value={energyLevel}
+                      onChange={e => setEnergyLevel(Number(e.target.value))}
                       className="w-full"
-                    >
-                      Save Mood Entry
-                    </Button>
-                  </CardContent>
-                </Card>
+                    />
+                    <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                      <span>Low</span>
+                      <span>High</span>
+                    </div>
+                  </div>
 
-                {/* Mood History */}
-                {moodEntries.length > 0 && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Mood History</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        {moodEntries.map(entry => {
-                          const mood = moods.find(m => m.id === entry.mood);
-                          const Icon = mood?.icon || Heart;
-                          const color = mood?.color || 'text-primary';
+                  {/* Mood Notes */}
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                      Additional Notes (Optional)
+                    </label>
+                    <Textarea
+                      value={moodNotes}
+                      onChange={e => setMoodNotes(e.target.value)}
+                      placeholder="What's contributing to your mood today?"
+                      className="min-h-[100px] resize-none"
+                    />
+                  </div>
 
-                          return (
-                            <div
-                              key={entry.id}
-                              className="flex items-center gap-3 p-3 border border-line rounded-lg"
-                            >
-                              <Icon className={`h-5 w-5 ${color}`} />
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium">
-                                    {mood?.label}
-                                  </span>
-                                  <span className="text-sm text-muted-foreground">
-                                    Energy: {entry.energy_level}/10
-                                  </span>
-                                </div>
-                                {entry.notes && (
-                                  <p className="text-sm text-muted-foreground mt-1">
-                                    {entry.notes}
-                                  </p>
-                                )}
-                              </div>
-                              <span className="text-xs text-muted-foreground">
-                                {new Date(
-                                  entry.created_at
-                                ).toLocaleTimeString()}
-                              </span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-            </TabsContent>
+                  <Button
+                    onClick={handleAddMoodEntry}
+                    disabled={!selectedMood}
+                    className="w-full"
+                  >
+                    Save Mood Entry
+                  </Button>
+                </CardContent>
+              </Card>
 
-            <TabsContent value="insights" className="mt-6">
-              <div className="space-y-6">
+              {/* Mood History */}
+              {moodEntries.length > 0 && (
                 <Card>
                   <CardHeader>
-                    <CardTitle>AI Insights from Your Journal</CardTitle>
+                    <CardTitle>Mood History</CardTitle>
                   </CardHeader>
                   <CardContent>
+                    <div className="space-y-3">
+                      {moodEntries.map(entry => {
+                        const mood = moods.find(m => m.id === entry.mood);
+                        const Icon = mood?.icon || Heart;
+                        const color = mood?.color || 'text-primary';
+
+                        return (
+                          <div
+                            key={entry.id}
+                            className="flex items-center gap-3 p-3 border border-line rounded-lg"
+                          >
+                            <Icon className={`h-5 w-5 ${color}`} />
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">
+                                  {mood?.label}
+                                </span>
+                                <span className="text-sm text-muted-foreground">
+                                  Energy: {entry.energy_level}/10
+                                </span>
+                              </div>
+                              {entry.notes && (
+                                <p className="text-sm text-muted-foreground mt-1">
+                                  {entry.notes}
+                                </p>
+                              )}
+                            </div>
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(entry.created_at).toLocaleTimeString()}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="insights" className="mt-6">
+            <div className="space-y-6">
+              <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
+                <CardHeader>
+                  <CardTitle>AI Insights from Your Journal</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {USE_MOCK_DATA ? (
                     <div className="space-y-4">
                       <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
                         <h4 className="font-semibold text-blue-900 mb-2">
@@ -577,72 +631,90 @@ export default function JournalClient({ userId }: JournalClientProps) {
                         </p>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="search" className="mt-6">
-              <div className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Search Your Journal</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <input
-                        type="text"
-                        value={searchQuery}
-                        onChange={e => setSearchQuery(e.target.value)}
-                        placeholder="Search through your journal entries..."
-                        className="w-full pl-10 pr-4 py-2 border border-line rounded-md bg-background"
-                      />
-                    </div>
-
-                    {searchQuery && (
-                      <div className="space-y-3">
-                        <p className="text-sm text-muted-foreground">
-                          Found {filteredEntries.length} entries matching "
-                          {searchQuery}"
-                        </p>
-                        {filteredEntries.map(entry => {
-                          const entryType = entryTypes.find(
-                            t => t.id === entry.entry_type
-                          );
-                          const Icon = entryType?.icon || MessageSquare;
-                          const color = entryType?.color || 'text-primary';
-
-                          return (
-                            <div
-                              key={entry.id}
-                              className="p-4 border border-line rounded-lg"
-                            >
-                              <div className="flex items-center gap-2 mb-2">
-                                <Icon className={`h-4 w-4 ${color}`} />
-                                <span className="text-sm font-medium text-muted-foreground">
-                                  {entryType?.label || 'Note'}
-                                </span>
-                                <span className="text-xs text-muted-foreground">
-                                  {new Date(
-                                    entry.journal_date
-                                  ).toLocaleDateString()}
-                                </span>
-                              </div>
-                              <p className="text-sm leading-relaxed">
-                                {entry.content}
-                              </p>
-                            </div>
-                          );
-                        })}
+                  ) : (
+                    <div className="text-center py-12">
+                      <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <TrendingUp className="h-8 w-8 text-primary" />
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-          </Tabs>
-        </div>
+                      <h3 className="text-lg font-semibold text-text mb-2">
+                        No Insights Yet
+                      </h3>
+                      <p className="text-muted max-w-md mx-auto mb-4">
+                        Start journaling to receive personalized AI insights
+                        about your writing patterns, goals, and emotional
+                        trends.
+                      </p>
+                      <Button onClick={() => setActiveTab('timeline')}>
+                        <BookOpen className="h-4 w-4 mr-2" />
+                        Start Journaling
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="search" className="mt-6">
+            <div className="space-y-6">
+              <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
+                <CardHeader>
+                  <CardTitle>Search Your Journal</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={e => setSearchQuery(e.target.value)}
+                      placeholder="Search through your journal entries..."
+                      className="w-full pl-10 pr-4 py-2 border border-line rounded-md bg-background"
+                    />
+                  </div>
+
+                  {searchQuery && (
+                    <div className="space-y-3">
+                      <p className="text-sm text-muted-foreground">
+                        Found {filteredEntries.length} entries matching "
+                        {searchQuery}"
+                      </p>
+                      {filteredEntries.map(entry => {
+                        const entryType = entryTypes.find(
+                          t => t.id === entry.entry_type
+                        );
+                        const Icon = entryType?.icon || MessageSquare;
+                        const color = entryType?.color || 'text-primary';
+
+                        return (
+                          <div
+                            key={entry.id}
+                            className="p-4 border border-line rounded-lg"
+                          >
+                            <div className="flex items-center gap-2 mb-2">
+                              <Icon className={`h-4 w-4 ${color}`} />
+                              <span className="text-sm font-medium text-muted-foreground">
+                                {entryType?.label || 'Note'}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {new Date(
+                                  entry.journal_date
+                                ).toLocaleDateString()}
+                              </span>
+                            </div>
+                            <p className="text-sm leading-relaxed">
+                              {entry.content}
+                            </p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
