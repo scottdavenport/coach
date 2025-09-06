@@ -9,7 +9,8 @@
 - [x] Git branch created: `feature/schema-migration-20250905-182837`
 - [x] Migration scripts committed to branch
 - [x] Backup script updated with correct timestamp
-- [ ] **Supabase development branch created** ⚠️ **MANUAL STEP REQUIRED**
+- [ ] **Migration branch pushed to GitHub** ⚠️ **MANUAL STEP REQUIRED**
+- [ ] **Pull Request created** ⚠️ **MANUAL STEP REQUIRED**
 - [ ] **Database backup completed** ⚠️ **MANUAL STEP REQUIRED**
 - [ ] Backup validation passed
 
@@ -33,36 +34,44 @@
 ## 🚨 Rollback Plan
 
 If issues are found:
+
 1. Run rollback script: `scripts/rollback-to-original-schema.sql`
 2. Switch back to main branch
 3. Delete migration branch
 
 ## 📝 Next Steps
 
-### **Step 1: Create Supabase Development Branch**
-1. Go to: https://supabase.com/dashboard/project/uqzgbvcrnxdzfgmkkoxb
-2. Click "Database" → "Branches"
-3. Click "Create Branch"
-4. Name it: `schema-migration-test`
-5. Copy the new branch URL and keys
+### **Step 1: Push Migration Branch and Create PR**
+
+1. Push your migration branch to GitHub:
+   ```bash
+   git push origin feature/schema-migration-20250905-182837
+   ```
+2. Create a Pull Request from your migration branch
+3. Supabase will automatically create a preview branch for testing
+4. Use the preview branch URL and keys for testing
 
 ### **Step 2: Run Database Backup**
+
 1. Go to your Supabase SQL editor
 2. Run the backup script: `scripts/backup-current-state.sql`
 3. Verify backup was created successfully
 4. Check that `backup_20250905_182920` schema exists
 
 ### **Step 3: Create New Schema**
+
 1. Run the new schema script: `scripts/migrate-to-new-schema.sql`
 2. Verify all new tables were created
 3. Check that all indexes and constraints are in place
 
 ### **Step 4: Migrate Data**
+
 1. Run the data migration script: `scripts/migrate-data-to-new-schema.sql`
 2. Verify data integrity
 3. Check that all data was migrated correctly
 
 ### **Step 5: Test Application**
+
 1. Update your environment variables to use the development branch
 2. Test all functionality
 3. Verify performance improvements
@@ -70,11 +79,13 @@ If issues are found:
 ## 📊 Expected Results
 
 ### **Before Migration:**
+
 - 25+ tables with complex relationships
 - Complex queries with multiple JOINs
 - Inconsistent naming conventions
 
 ### **After Migration:**
+
 - 12 core tables with clear purposes
 - Simplified queries with fewer JOINs
 - Consistent naming conventions
@@ -99,6 +110,7 @@ git branch -D feature/schema-migration-20250905-182837
 ## 📞 Support
 
 If you encounter any issues:
+
 1. Check this checklist
 2. Review the rollback plan
 3. Test in the development branch first
