@@ -26,80 +26,80 @@ DROP TABLE IF EXISTS daily_goals_new CASCADE;
 -- =====================================================
 
 -- Restore all original tables from backup schema
--- Note: Replace 'backup_20250131_143022' with your actual backup schema name
+-- Note: Replace 'backup_20250905_182920' with your actual backup schema name
 
 -- Restore users table (if it was modified)
--- CREATE TABLE public.users AS SELECT * FROM backup_20250131_143022.users;
+-- CREATE TABLE public.users AS SELECT * FROM backup_20250905_182920.users;
 
 -- Restore conversations table
-CREATE TABLE public.conversations AS SELECT * FROM backup_20250131_143022.conversations;
+CREATE TABLE public.conversations AS SELECT * FROM backup_20250905_182920.conversations;
 
 -- Restore events table
-CREATE TABLE public.events AS SELECT * FROM backup_20250131_143022.events;
+CREATE TABLE public.events AS SELECT * FROM backup_20250905_182920.events;
 
 -- Restore user_uploads table
-CREATE TABLE public.user_uploads AS SELECT * FROM backup_20250131_143022.user_uploads;
+CREATE TABLE public.user_uploads AS SELECT * FROM backup_20250905_182920.user_uploads;
 
 -- Restore oura_integrations table
-CREATE TABLE public.oura_integrations AS SELECT * FROM backup_20250131_143022.oura_integrations;
+CREATE TABLE public.oura_integrations AS SELECT * FROM backup_20250905_182920.oura_integrations;
 
 -- Restore oura_data table
-CREATE TABLE public.oura_data AS SELECT * FROM backup_20250131_143022.oura_data;
+CREATE TABLE public.oura_data AS SELECT * FROM backup_20250905_182920.oura_data;
 
 -- Restore weekly_summaries table
-CREATE TABLE public.weekly_summaries AS SELECT * FROM backup_20250131_143022.weekly_summaries;
+CREATE TABLE public.weekly_summaries AS SELECT * FROM backup_20250905_182920.weekly_summaries;
 
 -- Restore monthly_trends table
-CREATE TABLE public.monthly_trends AS SELECT * FROM backup_20250131_143022.monthly_trends;
+CREATE TABLE public.monthly_trends AS SELECT * FROM backup_20250905_182920.monthly_trends;
 
 -- Restore daily_journal table
-CREATE TABLE public.daily_journal AS SELECT * FROM backup_20250131_143022.daily_journal;
+CREATE TABLE public.daily_journal AS SELECT * FROM backup_20250905_182920.daily_journal;
 
 -- Restore daily_goals table
-CREATE TABLE public.daily_goals AS SELECT * FROM backup_20250131_143022.daily_goals;
+CREATE TABLE public.daily_goals AS SELECT * FROM backup_20250905_182920.daily_goals;
 
 -- Restore daily_activities table
-CREATE TABLE public.daily_activities AS SELECT * FROM backup_20250131_143022.daily_activities;
+CREATE TABLE public.daily_activities AS SELECT * FROM backup_20250905_182920.daily_activities;
 
 -- Restore user_daily_metrics table
-CREATE TABLE public.user_daily_metrics AS SELECT * FROM backup_20250131_143022.user_daily_metrics;
+CREATE TABLE public.user_daily_metrics AS SELECT * FROM backup_20250905_182920.user_daily_metrics;
 
 -- Restore user_metric_preferences table
-CREATE TABLE public.user_metric_preferences AS SELECT * FROM backup_20250131_143022.user_metric_preferences;
+CREATE TABLE public.user_metric_preferences AS SELECT * FROM backup_20250905_182920.user_metric_preferences;
 
 -- Restore metric_categories table
-CREATE TABLE public.metric_categories AS SELECT * FROM backup_20250131_143022.metric_categories;
+CREATE TABLE public.metric_categories AS SELECT * FROM backup_20250905_182920.metric_categories;
 
 -- Restore standard_metrics table
-CREATE TABLE public.standard_metrics AS SELECT * FROM backup_20250131_143022.standard_metrics;
+CREATE TABLE public.standard_metrics AS SELECT * FROM backup_20250905_182920.standard_metrics;
 
 -- Restore daily_narratives table
-CREATE TABLE public.daily_narratives AS SELECT * FROM backup_20250131_143022.daily_narratives;
+CREATE TABLE public.daily_narratives AS SELECT * FROM backup_20250905_182920.daily_narratives;
 
 -- Restore conversation_insights table
-CREATE TABLE public.conversation_insights AS SELECT * FROM backup_20250131_143022.conversation_insights;
+CREATE TABLE public.conversation_insights AS SELECT * FROM backup_20250905_182920.conversation_insights;
 
 -- Restore ocr_training_data table
-CREATE TABLE public.ocr_training_data AS SELECT * FROM backup_20250131_143022.ocr_training_data;
+CREATE TABLE public.ocr_training_data AS SELECT * FROM backup_20250905_182920.ocr_training_data;
 
 -- Restore ocr_feedback table
-CREATE TABLE public.ocr_feedback AS SELECT * FROM backup_20250131_143022.ocr_feedback;
+CREATE TABLE public.ocr_feedback AS SELECT * FROM backup_20250905_182920.ocr_feedback;
 
 -- Restore conversation_file_attachments table
-CREATE TABLE public.conversation_file_attachments AS SELECT * FROM backup_20250131_143022.conversation_file_attachments;
+CREATE TABLE public.conversation_file_attachments AS SELECT * FROM backup_20250905_182920.conversation_file_attachments;
 
 -- Restore mood_tracking table
-CREATE TABLE public.mood_tracking AS SELECT * FROM backup_20250131_143022.mood_tracking;
+CREATE TABLE public.mood_tracking AS SELECT * FROM backup_20250905_182920.mood_tracking;
 
 -- Restore workout tables
-CREATE TABLE public.exercises AS SELECT * FROM backup_20250131_143022.exercises;
-CREATE TABLE public.workout_templates AS SELECT * FROM backup_20250131_143022.workout_templates;
-CREATE TABLE public.template_exercises AS SELECT * FROM backup_20250131_143022.template_exercises;
-CREATE TABLE public.user_workouts AS SELECT * FROM backup_20250131_143022.user_workouts;
-CREATE TABLE public.workout_exercises AS SELECT * FROM backup_20250131_143022.workout_exercises;
-CREATE TABLE public.user_workout_preferences AS SELECT * FROM backup_20250131_143022.user_workout_preferences;
-CREATE TABLE public.workout_progress AS SELECT * FROM backup_20250131_143022.workout_progress;
-CREATE TABLE public.workout_recommendations AS SELECT * FROM backup_20250131_143022.workout_recommendations;
+CREATE TABLE public.exercises AS SELECT * FROM backup_20250905_182920.exercises;
+CREATE TABLE public.workout_templates AS SELECT * FROM backup_20250905_182920.workout_templates;
+CREATE TABLE public.template_exercises AS SELECT * FROM backup_20250905_182920.template_exercises;
+CREATE TABLE public.user_workouts AS SELECT * FROM backup_20250905_182920.user_workouts;
+CREATE TABLE public.workout_exercises AS SELECT * FROM backup_20250905_182920.workout_exercises;
+CREATE TABLE public.user_workout_preferences AS SELECT * FROM backup_20250905_182920.user_workout_preferences;
+CREATE TABLE public.workout_progress AS SELECT * FROM backup_20250905_182920.workout_progress;
+CREATE TABLE public.workout_recommendations AS SELECT * FROM backup_20250905_182920.workout_recommendations;
 
 -- =====================================================
 -- 3. RESTORE ORIGINAL INDEXES
@@ -311,7 +311,7 @@ CREATE TRIGGER update_mood_tracking_updated_at BEFORE UPDATE ON public.mood_trac
 -- =====================================================
 
 -- Uncomment the line below if you want to remove the backup schema after successful rollback
--- DROP SCHEMA IF EXISTS backup_20250131_143022 CASCADE;
+-- DROP SCHEMA IF EXISTS backup_20250905_182920 CASCADE;
 
 -- =====================================================
 -- ROLLBACK COMPLETE!

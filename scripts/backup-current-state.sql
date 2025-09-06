@@ -5,55 +5,55 @@
 -- Run this BEFORE making any changes to ensure rollback capability
 
 -- Create backup schema
-CREATE SCHEMA IF NOT EXISTS backup_$(date +%Y%m%d_%H%M%S);
+CREATE SCHEMA IF NOT EXISTS backup_20250905_182920;
 
 -- Set the backup schema name (replace with actual timestamp)
 -- Example: backup_20250131_143022
-SET backup_schema = 'backup_20250131_143022';
+SET backup_schema = 'backup_20250905_182920';
 
 -- =====================================================
 -- 1. BACKUP ALL TABLE STRUCTURES
 -- =====================================================
 
 -- Create backup tables with identical structure
-CREATE TABLE backup_20250131_143022.users AS SELECT * FROM public.users;
-CREATE TABLE backup_20250131_143022.conversations AS SELECT * FROM public.conversations;
-CREATE TABLE backup_20250131_143022.events AS SELECT * FROM public.events;
-CREATE TABLE backup_20250131_143022.user_uploads AS SELECT * FROM public.user_uploads;
-CREATE TABLE backup_20250131_143022.oura_integrations AS SELECT * FROM public.oura_integrations;
-CREATE TABLE backup_20250131_143022.oura_data AS SELECT * FROM public.oura_data;
-CREATE TABLE backup_20250131_143022.weekly_summaries AS SELECT * FROM public.weekly_summaries;
-CREATE TABLE backup_20250131_143022.monthly_trends AS SELECT * FROM public.monthly_trends;
-CREATE TABLE backup_20250131_143022.daily_journal AS SELECT * FROM public.daily_journal;
-CREATE TABLE backup_20250131_143022.daily_goals AS SELECT * FROM public.daily_goals;
-CREATE TABLE backup_20250131_143022.daily_activities AS SELECT * FROM public.daily_activities;
-CREATE TABLE backup_20250131_143022.user_daily_metrics AS SELECT * FROM public.user_daily_metrics;
-CREATE TABLE backup_20250131_143022.user_metric_preferences AS SELECT * FROM public.user_metric_preferences;
-CREATE TABLE backup_20250131_143022.metric_categories AS SELECT * FROM public.metric_categories;
-CREATE TABLE backup_20250131_143022.standard_metrics AS SELECT * FROM public.standard_metrics;
-CREATE TABLE backup_20250131_143022.daily_narratives AS SELECT * FROM public.daily_narratives;
-CREATE TABLE backup_20250131_143022.conversation_insights AS SELECT * FROM public.conversation_insights;
-CREATE TABLE backup_20250131_143022.ocr_training_data AS SELECT * FROM public.ocr_training_data;
-CREATE TABLE backup_20250131_143022.ocr_feedback AS SELECT * FROM public.ocr_feedback;
-CREATE TABLE backup_20250131_143022.conversation_file_attachments AS SELECT * FROM public.conversation_file_attachments;
-CREATE TABLE backup_20250131_143022.mood_tracking AS SELECT * FROM public.mood_tracking;
+CREATE TABLE backup_20250905_182920.users AS SELECT * FROM public.users;
+CREATE TABLE backup_20250905_182920.conversations AS SELECT * FROM public.conversations;
+CREATE TABLE backup_20250905_182920.events AS SELECT * FROM public.events;
+CREATE TABLE backup_20250905_182920.user_uploads AS SELECT * FROM public.user_uploads;
+CREATE TABLE backup_20250905_182920.oura_integrations AS SELECT * FROM public.oura_integrations;
+CREATE TABLE backup_20250905_182920.oura_data AS SELECT * FROM public.oura_data;
+CREATE TABLE backup_20250905_182920.weekly_summaries AS SELECT * FROM public.weekly_summaries;
+CREATE TABLE backup_20250905_182920.monthly_trends AS SELECT * FROM public.monthly_trends;
+CREATE TABLE backup_20250905_182920.daily_journal AS SELECT * FROM public.daily_journal;
+CREATE TABLE backup_20250905_182920.daily_goals AS SELECT * FROM public.daily_goals;
+CREATE TABLE backup_20250905_182920.daily_activities AS SELECT * FROM public.daily_activities;
+CREATE TABLE backup_20250905_182920.user_daily_metrics AS SELECT * FROM public.user_daily_metrics;
+CREATE TABLE backup_20250905_182920.user_metric_preferences AS SELECT * FROM public.user_metric_preferences;
+CREATE TABLE backup_20250905_182920.metric_categories AS SELECT * FROM public.metric_categories;
+CREATE TABLE backup_20250905_182920.standard_metrics AS SELECT * FROM public.standard_metrics;
+CREATE TABLE backup_20250905_182920.daily_narratives AS SELECT * FROM public.daily_narratives;
+CREATE TABLE backup_20250905_182920.conversation_insights AS SELECT * FROM public.conversation_insights;
+CREATE TABLE backup_20250905_182920.ocr_training_data AS SELECT * FROM public.ocr_training_data;
+CREATE TABLE backup_20250905_182920.ocr_feedback AS SELECT * FROM public.ocr_feedback;
+CREATE TABLE backup_20250905_182920.conversation_file_attachments AS SELECT * FROM public.conversation_file_attachments;
+CREATE TABLE backup_20250905_182920.mood_tracking AS SELECT * FROM public.mood_tracking;
 
 -- Workout tables
-CREATE TABLE backup_20250131_143022.exercises AS SELECT * FROM public.exercises;
-CREATE TABLE backup_20250131_143022.workout_templates AS SELECT * FROM public.workout_templates;
-CREATE TABLE backup_20250131_143022.template_exercises AS SELECT * FROM public.template_exercises;
-CREATE TABLE backup_20250131_143022.user_workouts AS SELECT * FROM public.user_workouts;
-CREATE TABLE backup_20250131_143022.workout_exercises AS SELECT * FROM public.workout_exercises;
-CREATE TABLE backup_20250131_143022.user_workout_preferences AS SELECT * FROM public.user_workout_preferences;
-CREATE TABLE backup_20250131_143022.workout_progress AS SELECT * FROM public.workout_progress;
-CREATE TABLE backup_20250131_143022.workout_recommendations AS SELECT * FROM public.workout_recommendations;
+CREATE TABLE backup_20250905_182920.exercises AS SELECT * FROM public.exercises;
+CREATE TABLE backup_20250905_182920.workout_templates AS SELECT * FROM public.workout_templates;
+CREATE TABLE backup_20250905_182920.template_exercises AS SELECT * FROM public.template_exercises;
+CREATE TABLE backup_20250905_182920.user_workouts AS SELECT * FROM public.user_workouts;
+CREATE TABLE backup_20250905_182920.workout_exercises AS SELECT * FROM public.workout_exercises;
+CREATE TABLE backup_20250905_182920.user_workout_preferences AS SELECT * FROM public.user_workout_preferences;
+CREATE TABLE backup_20250905_182920.workout_progress AS SELECT * FROM public.workout_progress;
+CREATE TABLE backup_20250905_182920.workout_recommendations AS SELECT * FROM public.workout_recommendations;
 
 -- =====================================================
 -- 2. BACKUP ALL INDEXES
 -- =====================================================
 
 -- Create a table to store index definitions
-CREATE TABLE backup_20250131_143022.index_definitions AS
+CREATE TABLE backup_20250905_182920.index_definitions AS
 SELECT 
     schemaname,
     tablename,
@@ -67,7 +67,7 @@ WHERE schemaname = 'public';
 -- =====================================================
 
 -- Create a table to store constraint definitions
-CREATE TABLE backup_20250131_143022.constraint_definitions AS
+CREATE TABLE backup_20250905_182920.constraint_definitions AS
 SELECT 
     tc.table_name,
     tc.constraint_name,
@@ -89,7 +89,7 @@ WHERE tc.table_schema = 'public';
 -- =====================================================
 
 -- Create a table to store RLS policy definitions
-CREATE TABLE backup_20250131_143022.rls_policies AS
+CREATE TABLE backup_20250905_182920.rls_policies AS
 SELECT 
     schemaname,
     tablename,
@@ -107,7 +107,7 @@ WHERE schemaname = 'public';
 -- =====================================================
 
 -- Create a table to store function definitions
-CREATE TABLE backup_20250131_143022.function_definitions AS
+CREATE TABLE backup_20250905_182920.function_definitions AS
 SELECT 
     n.nspname as schema_name,
     p.proname as function_name,
@@ -117,7 +117,7 @@ JOIN pg_namespace n ON p.pronamespace = n.oid
 WHERE n.nspname = 'public';
 
 -- Create a table to store trigger definitions
-CREATE TABLE backup_20250131_143022.trigger_definitions AS
+CREATE TABLE backup_20250905_182920.trigger_definitions AS
 SELECT 
     t.tgname as trigger_name,
     c.relname as table_name,
@@ -137,7 +137,7 @@ WHERE c.relname IN (
 -- =====================================================
 
 -- Create a rollback script that can restore everything
-CREATE OR REPLACE FUNCTION backup_20250131_143022.create_rollback_script()
+CREATE OR REPLACE FUNCTION backup_20250905_182920.create_rollback_script()
 RETURNS TEXT AS $$
 DECLARE
     rollback_script TEXT := '';
@@ -163,11 +163,11 @@ BEGIN
     rollback_script := rollback_script || '-- Restore all tables' || E'\n';
     FOR table_record IN 
         SELECT table_name FROM information_schema.tables 
-        WHERE table_schema = 'backup_20250131_143022' 
+        WHERE table_schema = 'backup_20250905_182920' 
         AND table_name NOT LIKE '%_definitions'
         AND table_name NOT LIKE '%_policies'
     LOOP
-        rollback_script := rollback_script || 'CREATE TABLE public.' || table_record.table_name || ' AS SELECT * FROM backup_20250131_143022.' || table_record.table_name || ';' || E'\n';
+        rollback_script := rollback_script || 'CREATE TABLE public.' || table_record.table_name || ' AS SELECT * FROM backup_20250905_182920.' || table_record.table_name || ';' || E'\n';
     END LOOP;
     
     rollback_script := rollback_script || E'\n';
@@ -175,7 +175,7 @@ BEGIN
     -- Restore all indexes
     rollback_script := rollback_script || '-- Restore all indexes' || E'\n';
     FOR index_record IN 
-        SELECT indexdef FROM backup_20250131_143022.index_definitions
+        SELECT indexdef FROM backup_20250905_182920.index_definitions
     LOOP
         rollback_script := rollback_script || index_record.indexdef || ';' || E'\n';
     END LOOP;
@@ -185,7 +185,7 @@ BEGIN
     -- Restore all constraints
     rollback_script := rollback_script || '-- Restore all constraints' || E'\n';
     FOR constraint_record IN 
-        SELECT * FROM backup_20250131_143022.constraint_definitions
+        SELECT * FROM backup_20250905_182920.constraint_definitions
     LOOP
         -- Add constraint restoration logic here
         rollback_script := rollback_script || '-- Constraint: ' || constraint_record.constraint_name || ' on ' || constraint_record.table_name || E'\n';
@@ -196,7 +196,7 @@ BEGIN
     -- Restore all RLS policies
     rollback_script := rollback_script || '-- Restore all RLS policies' || E'\n';
     FOR policy_record IN 
-        SELECT * FROM backup_20250131_143022.rls_policies
+        SELECT * FROM backup_20250905_182920.rls_policies
     LOOP
         rollback_script := rollback_script || 'CREATE POLICY "' || policy_record.policyname || '" ON ' || policy_record.tablename || E'\n';
         rollback_script := rollback_script || '  FOR ' || policy_record.cmd || ' USING (' || policy_record.qual || ');' || E'\n';
@@ -207,7 +207,7 @@ BEGIN
     -- Restore all functions
     rollback_script := rollback_script || '-- Restore all functions' || E'\n';
     FOR function_record IN 
-        SELECT function_definition FROM backup_20250131_143022.function_definitions
+        SELECT function_definition FROM backup_20250905_182920.function_definitions
     LOOP
         rollback_script := rollback_script || function_record.function_definition || ';' || E'\n';
     END LOOP;
@@ -217,7 +217,7 @@ BEGIN
     -- Restore all triggers
     rollback_script := rollback_script || '-- Restore all triggers' || E'\n';
     FOR trigger_record IN 
-        SELECT * FROM backup_20250131_143022.trigger_definitions
+        SELECT * FROM backup_20250905_182920.trigger_definitions
     LOOP
         rollback_script := rollback_script || 'CREATE TRIGGER ' || trigger_record.trigger_name || E'\n';
         rollback_script := rollback_script || '  ON ' || trigger_record.table_name || E'\n';
@@ -232,15 +232,15 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Generate the rollback script
-SELECT backup_20250131_143022.create_rollback_script() as rollback_script;
+SELECT backup_20250905_182920.create_rollback_script() as rollback_script;
 
 -- =====================================================
 -- 7. CREATE BACKUP METADATA
 -- =====================================================
 
 -- Create a metadata table with backup information
-CREATE TABLE backup_20250131_143022.backup_metadata (
-    backup_id TEXT PRIMARY KEY DEFAULT 'backup_20250131_143022',
+CREATE TABLE backup_20250905_182920.backup_metadata (
+    backup_id TEXT PRIMARY KEY DEFAULT 'backup_20250905_182920',
     backup_timestamp TIMESTAMPTZ DEFAULT NOW(),
     backup_reason TEXT DEFAULT 'Schema migration preparation',
     original_schema_version TEXT,
@@ -254,7 +254,7 @@ CREATE TABLE backup_20250131_143022.backup_metadata (
 );
 
 -- Insert backup metadata
-INSERT INTO backup_20250131_143022.backup_metadata (
+INSERT INTO backup_20250905_182920.backup_metadata (
     backup_size_mb,
     table_count,
     index_count,
@@ -286,4 +286,4 @@ SELECT
     policy_count,
     function_count,
     trigger_count
-FROM backup_20250131_143022.backup_metadata;
+FROM backup_20250905_182920.backup_metadata;
