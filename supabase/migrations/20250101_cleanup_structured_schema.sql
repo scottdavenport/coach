@@ -22,3 +22,4 @@ DROP TABLE IF EXISTS daily_log_cards;
 -- - Consistent data structure across all sources
 -- - No duplicate tables or conflicting data flows
 -- - Clean, maintainable schema
+-- Migration trigger: Added to create Supabase preview branch for schema migration testing
