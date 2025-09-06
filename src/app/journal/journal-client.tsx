@@ -230,9 +230,11 @@ export default function JournalClient({ userId }: JournalClientProps) {
           <BookOpen className="h-8 w-8 text-primary" />
           Daily Journal
         </h1>
-        <p className="text-muted mt-2">Track your daily activities and reflections</p>
+        <p className="text-muted mt-2">
+          Track your daily activities and reflections
+        </p>
       </div>
-      
+
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Left Sidebar - Date Navigation & Quick Actions */}
         <div className="lg:col-span-1">
