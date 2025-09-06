@@ -125,7 +125,7 @@ export function PinnedChatBar({ userId }: PinnedChatBarProps) {
     try {
       // Create user message (using original format)
       const userMessage = {
-        id: Date.now(),
+        id: `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         content: messageText,
         role: 'user' as const,
         timestamp: new Date(),
@@ -189,7 +189,7 @@ export function PinnedChatBar({ userId }: PinnedChatBarProps) {
 
       // Add assistant response (using original format)
       const aiMessage = {
-        id: Date.now() + 1,
+        id: `assistant-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         content: data.message,
         role: 'assistant' as const,
         timestamp: new Date(),
@@ -202,11 +202,11 @@ export function PinnedChatBar({ userId }: PinnedChatBarProps) {
     } catch (error) {
       console.error('Error sending message:', error);
       // Add error message
-      const errorMessage: ChatMessage = {
-        id: Math.random().toString(36).substr(2, 9),
+      const errorMessage = {
+        id: `error-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         content: 'Sorry, I encountered an error. Please try again.',
         role: 'assistant' as const,
-        created_at: new Date().toISOString(),
+        timestamp: new Date(),
       };
       addMessage(errorMessage);
     } finally {

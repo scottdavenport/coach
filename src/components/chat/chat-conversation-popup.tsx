@@ -21,13 +21,6 @@ export function ChatConversationPopup({ userId }: ChatConversationPopupProps) {
 
   // Load conversation history
   const loadConversationHistory = useCallback(async () => {
-    // If we have context messages, use those instead of loading from database
-    if (contextMessages.length > 0) {
-      setMessages(contextMessages);
-      setIsLoadingHistory(false);
-      return;
-    }
-
     if (messages.length > 0) return; // Don't reload if already loaded
 
     setIsLoadingHistory(true);
@@ -47,7 +40,7 @@ export function ChatConversationPopup({ userId }: ChatConversationPopupProps) {
       if (data) {
         // Convert to original ChatMessage format
         const historyMessages: ChatMessage[] = data.map((conv, index) => ({
-          id: Date.now() + index,
+          id: `history-${conv.created_at}-${index}`,
           content: conv.message || '',
           role: conv.metadata?.role === 'assistant' ? 'assistant' : 'user',
           timestamp: new Date(conv.created_at || Date.now()),
@@ -59,7 +52,7 @@ export function ChatConversationPopup({ userId }: ChatConversationPopupProps) {
     } finally {
       setIsLoadingHistory(false);
     }
-  }, [userId, messages.length, supabase, contextMessages]);
+  }, [userId, messages.length, supabase]);
 
   // Load history when popup opens
   useEffect(() => {
@@ -83,7 +76,19 @@ export function ChatConversationPopup({ userId }: ChatConversationPopupProps) {
   // Update messages when context messages change
   useEffect(() => {
     if (contextMessages.length > 0) {
-      setMessages(contextMessages);
+      // Merge context messages with existing messages to preserve history
+      setMessages(prevMessages => {
+        // If we don't have any existing messages, use context messages
+        if (prevMessages.length === 0) {
+          return contextMessages;
+        }
+        
+        // Merge context messages with existing messages, avoiding duplicates
+        const existingIds = new Set(prevMessages.map(msg => msg.id));
+        const newMessages = contextMessages.filter(msg => !existingIds.has(msg.id));
+        
+        return [...prevMessages, ...newMessages];
+      });
     }
   }, [contextMessages]);
 
