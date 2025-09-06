@@ -204,111 +204,27 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Parse the conversation for rich context data
-    logger.debug('Starting conversation parsing');
-    const parsedData = await parseConversationForRichContext(message);
-    logger.debug('Conversation parsing complete', {
-      hasHealthData: parsedData.data_types?.health || false,
-      hasActivityData: parsedData.data_types?.activity || false,
-      insightsCount: parsedData.insights?.observations?.length || 0,
-      userId: user.id,
-    });
+    // Note: Conversation parsing now happens in the unified AI call below
+    // This eliminates the need for a separate parsing call, reducing API costs and latency
 
-    // Log extracted data for development review
-    if (
-      parsedData &&
-      (parsedData.data_types?.health ||
-        parsedData.data_types?.activity ||
-        parsedData.data_types?.mood ||
-        parsedData.data_types?.nutrition ||
-        parsedData.data_types?.sleep ||
-        parsedData.data_types?.workout)
-    ) {
-      logger.debug('Conversation insights detected', {
-        userId: user.id,
-        messagePreview: message.substring(0, 100),
-        insights: parsedData.insights?.observations || [],
-        followUpQuestions: parsedData.follow_up_questions?.immediate || [],
-        dataTypes: {
-          health: parsedData.data_types?.health,
-          activity: parsedData.data_types?.activity,
-          mood: parsedData.data_types?.mood,
-          nutrition: parsedData.data_types?.nutrition,
-          sleep: parsedData.data_types?.sleep,
-          workout: parsedData.data_types?.workout,
-        },
-      });
-    }
+    // Note: Conversation insights logging now happens after the unified AI call
 
     // Build system prompt with token counting
-    const baseSystemPrompt = `You are Coach, an AI health and fitness companion designed to help users achieve their health and longevity goals through personalized, evidence-based guidance. You combine the expertise of a personal trainer, health coach, and supportive friend.
+    const baseSystemPrompt = `You are Coach, an AI health and fitness companion focused on holistic wellness.
 
-## CORE IDENTITY
-- **Professional but warm**: Knowledgeable and encouraging without being overly enthusiastic or generic
-- **Honest yet supportive**: Give honest feedback while always encouraging simple steps forward
-- **Adaptive companion**: Meet users exactly where they are on their health journey
-- **Evidence-based**: Ground recommendations in trusted sources and scientific evidence
+CORE IDENTITY:
+- Supportive life companion (not just fitness drill sergeant)
+- Evidence-based guidance with warm, encouraging tone
+- Holistic approach: physical, mental, emotional wellness
+- Meet users where they are on their health journey
 
-## CORE PRINCIPLES
-- **Consistency over perfection**: Focus on sustainable habits rather than perfect execution
-- **Holistic approach**: Balance prevention and optimization across all health domains
-- **Data-driven personalization**: Use rich user data to make custom recommendations
-- **Adaptive responses**: Adjust advice based on real-time data (sleep quality, recovery, etc.)
-
-## YOUR CAPABILITIES & DATA ACCESS
-You have access to comprehensive user data including:
-- **Health metrics**: Sleep, heart rate, HRV, weight, blood pressure, glucose, etc.
-- **Activity data**: Steps, workouts, recovery scores, VO2 max, etc.
-- **Wellness indicators**: Mood, energy, stress, mental clarity, etc.
-- **Nutrition tracking**: Water intake, calories, macros, caffeine, etc.
-- **Lifestyle factors**: Screen time, social activities, work stress, travel, etc.
-- **Conversation history**: Past discussions, goals, preferences, patterns
-- **File uploads**: Workout screenshots, health documents, OCR data
-- **Oura integration**: Sleep, activity, and readiness scores
-- **Pattern recognition**: Trends, correlations, and behavioral insights
-
-## INTERACTION GUIDELINES
-
-### Data Integration & Personalization
-- **Proactively reference** past conversations, patterns, and uploaded data
-- **Adapt recommendations** based on real-time data (e.g., adjust workout intensity if sleep was poor)
-- **Use data contextually** when building training plans and daily journal entries
-- **Ask for clarification** when data conflicts rather than making assumptions
-- **Track user-specified trends** and share insights about patterns you notice
-
-### Response Style
-- **Highly context-aware**: Reference relevant data and conversation history
-- **Ask thoughtful follow-ups** that build on what users share
-- **Make specific recommendations** based on their unique data and goals
-- **Incorporate all knowledge domains** - this is a journaling, workout, health metrics, and trends app
-- **Adapt to skill levels** and accommodate injuries, pain, or soreness
-
-### Health Guidance Boundaries
-- **Provide evidence-based recommendations** for areas with high confidence
-- **Always encourage professional consultation** for medical concerns
-- **Use disclaimers sparingly** - only when giving specific health advice
-- **Position yourself as guidance**, not healthcare
-- **Focus on optimization and prevention** while respecting medical boundaries
-
-### Daily Journal & Workout Integration
-- **Document health data** in daily journal entries for historical tracking
-- **Use metrics to build personalized training plans** that adapt to current body state
-- **Reference uploaded data** when creating journal entries and workout recommendations
-- **Share trend insights** and help users understand their data patterns
-
-## CONVERSATION FLOW
-1. **Acknowledge** what the user shared with warmth and understanding
-2. **Reference relevant data** from their metrics, history, or uploads when applicable
-3. **Provide specific, actionable guidance** based on their unique situation
-4. **Ask thoughtful follow-ups** that deepen the conversation
-5. **Suggest next steps** that align with their goals and current state
-
-## EXAMPLE RESPONSES
-- "I see your sleep score was lower last night (72 vs your usual 85). Given that, let's adjust today's workout to focus on lighter movement rather than high-intensity training."
-- "Your heart rate variability has been trending upward over the past week - that's a great sign of improved recovery. What changes have you noticed in your routine?"
-- "I remember you mentioned feeling stressed about work last week. How has that been affecting your sleep and energy levels?"
-
-Remember: You're not just responding to messages - you're building a comprehensive understanding of each user's health journey and providing personalized guidance that evolves with their data and needs.`;
+RESPONSE STYLE:
+- Conversational and encouraging
+- Ask 1-2 thoughtful follow-up questions
+- Reference user data when relevant
+- Provide actionable, personalized advice
+- Focus on consistency over perfection
+- Be natural and engaging in your responses`;
 
     // Build context sections with reasonable limits
     const limitedUserContext =
@@ -393,7 +309,7 @@ Remember: You're not just responding to messages - you're building a comprehensi
       logger.warn('Using minimal prompt due to token limit', {
         estimatedTokens,
       });
-      const minimalPrompt = `You are Coach, a helpful AI fitness companion. Respond naturally to: "${message}"`;
+      const minimalPrompt = `You are Coach, a helpful AI fitness companion. Respond naturally and conversationally to: "${message}"`;
 
       const completion = await openai.chat.completions.create({
         model: 'gpt-4o-mini',
@@ -468,37 +384,52 @@ Remember: You're not just responding to messages - you're building a comprehensi
       completion.choices[0]?.message?.content ||
       "I'm sorry, I couldn't process that request.";
 
+    logger.info('AI response generated', {
+      responseLength: aiResponse.length,
+      userId: user.id,
+    });
+
+    // Post-process conversation for insights extraction
+    let extractedInsights: ParsedConversation | null = null;
+    try {
+      extractedInsights = await extractInsightsFromConversation(
+        message,
+        aiResponse
+      );
+      logger.info('Insights extracted from conversation', {
+        hasInsights: !!extractedInsights,
+        dataTypes: extractedInsights?.data_types,
+      });
+    } catch (error) {
+      logger.warn('Failed to extract insights from conversation', { error });
+    }
+
     // Store conversation insights if we have any data types detected
     if (
-      parsedData &&
-      (parsedData.data_types?.health ||
-        parsedData.data_types?.activity ||
-        parsedData.data_types?.mood ||
-        parsedData.data_types?.nutrition ||
-        parsedData.data_types?.sleep ||
-        parsedData.data_types?.workout ||
-        parsedData.data_types?.travel ||
-        parsedData.data_types?.lifestyle ||
-        parsedData.insights?.observations?.length > 0 ||
-        parsedData.insights?.patterns?.length > 0)
+      extractedInsights &&
+      (extractedInsights.data_types?.health ||
+        extractedInsights.data_types?.activity ||
+        extractedInsights.data_types?.mood ||
+        extractedInsights.data_types?.lifestyle ||
+        extractedInsights.data_types?.goals ||
+        extractedInsights.insights?.observations?.length > 0)
     ) {
       try {
         logger.info('Conversation insights detected for storage', {
           userId: user.id,
           messagePreview: message.substring(0, 100),
-          insights: parsedData?.insights,
-          followUpQuestions: parsedData?.follow_up_questions,
+          insights: extractedInsights?.insights,
+          followUpQuestions: extractedInsights?.follow_up_questions,
           dataTypes: {
-            health: parsedData?.data_types?.health,
-            activity: parsedData?.data_types?.activity,
-            mood: parsedData?.data_types?.mood,
-            nutrition: parsedData?.data_types?.nutrition,
-            sleep: parsedData?.data_types?.sleep,
-            workout: parsedData?.data_types?.workout,
+            health: extractedInsights?.data_types?.health,
+            activity: extractedInsights?.data_types?.activity,
+            mood: extractedInsights?.data_types?.mood,
+            lifestyle: extractedInsights?.data_types?.lifestyle,
+            goals: extractedInsights?.data_types?.goals,
           },
         });
 
-        // Store the conversation insights with enhanced context
+        // Store the conversation insights with simplified context
         // Get user's timezone preference for proper date handling
         const { data: userData } = await supabase
           .from('users')
@@ -517,49 +448,42 @@ Remember: You're not just responding to messages - you're building a comprehensi
           day: '2-digit',
         }).format(now);
 
-        const enhancedInsights = {
+        const simplifiedInsights = {
           user_id: user.id,
-          conversation_date: userDate, // Using user's timezone date for consistency
+          conversation_date: userDate,
           message: message,
-          insights: Array.isArray(parsedData.insights?.observations)
-            ? parsedData.insights.observations
-            : parsedData.insights?.patterns || [],
+          insights: extractedInsights.insights?.observations || [],
           data_types: {
-            health: parsedData.data_types?.health,
-            activity: parsedData.data_types?.activity,
-            mood: parsedData.data_types?.mood,
-            nutrition: parsedData.data_types?.nutrition,
-            sleep: parsedData.data_types?.sleep,
-            workout: parsedData.data_types?.workout,
+            health: extractedInsights.data_types?.health,
+            activity: extractedInsights.data_types?.activity,
+            mood: extractedInsights.data_types?.mood,
+            lifestyle: extractedInsights.data_types?.lifestyle,
+            goals: extractedInsights.data_types?.goals,
             // Add flags for file data
             has_ocr_data: !!finalOcrData,
             has_multifile_data: !!multiFileData,
           },
-          follow_up_questions: Array.isArray(
-            parsedData.follow_up_questions?.immediate
-          )
-            ? parsedData.follow_up_questions.immediate
-            : parsedData.follow_up_questions?.contextual || [],
+          follow_up_questions: extractedInsights.follow_up_questions || [],
           created_at: new Date().toISOString(),
         };
 
         // Add OCR and multi-file context to insights if present
         if (ocrData) {
-          enhancedInsights.insights.push(
+          simplifiedInsights.insights.push(
             `OCR data extracted from uploaded image: ${JSON.stringify(ocrData).substring(0, 200)}...`
           );
         }
 
         if (multiFileData) {
           if (multiFileData.images?.length > 0) {
-            enhancedInsights.insights.push(
+            simplifiedInsights.insights.push(
               `Uploaded ${multiFileData.images.length} image(s) with analysis`
             );
           }
           if (multiFileData.documents?.length > 0) {
             multiFileData.documents.forEach((doc: any) => {
               if (doc.content) {
-                enhancedInsights.insights.push(
+                simplifiedInsights.insights.push(
                   `Document analysis: ${doc.fileName} - ${doc.content.substring(0, 150)}...`
                 );
               }
@@ -572,21 +496,21 @@ Remember: You're not just responding to messages - you're building a comprehensi
           userId: user.id,
           userDate,
           userTimezone,
-          insightsCount: enhancedInsights.insights.length,
-          dataTypes: enhancedInsights.data_types,
-          enhancedInsights: JSON.stringify(enhancedInsights, null, 2),
+          insightsCount: simplifiedInsights.insights.length,
+          dataTypes: simplifiedInsights.data_types,
+          simplifiedInsights: JSON.stringify(simplifiedInsights, null, 2),
         });
 
         const { data: insertedData, error: insightError } = await supabase
           .from('conversation_insights')
-          .insert(enhancedInsights)
+          .insert(simplifiedInsights)
           .select();
 
         if (insightError) {
           logger.error('Failed to store conversation insights', insightError, {
             userId: user.id,
             errorDetails: insightError,
-            attemptedData: enhancedInsights,
+            attemptedData: simplifiedInsights,
           });
         } else {
           logger.info('Conversation insights stored successfully', {
@@ -720,7 +644,7 @@ Remember: You're not just responding to messages - you're building a comprehensi
         metadata: {
           conversation_id: conversationId,
           role: 'assistant',
-          parsed_health_data: parsedData, // Store the parsed data for reference
+          extracted_insights: extractedInsights, // Store the extracted insights for reference
           conversation_state: conversationState, // Track the conversation type
         },
       });
@@ -734,7 +658,7 @@ Remember: You're not just responding to messages - you're building a comprehensi
     return NextResponse.json({
       message: aiResponse,
       conversationId: conversationData?.id,
-      parsedData: parsedData, // Return parsed data for frontend display
+      extractedInsights: extractedInsights, // Return extracted insights for frontend display
     });
   } catch (error: any) {
     // Handle rate limit errors
@@ -837,10 +761,10 @@ function buildStateContext(conversationState: string): string {
   return '';
 }
 
-async function parseConversationForRichContext(
-  message: string,
-  userHistory?: any, // Optional: past conversation context
-  fileData?: any // Optional: OCR/file upload data
+// Post-process conversation for insights extraction
+async function extractInsightsFromConversation(
+  userMessage: string,
+  aiResponse: string
 ): Promise<ParsedConversation> {
   try {
     const completion = await openai.chat.completions.create({
@@ -848,129 +772,49 @@ async function parseConversationForRichContext(
       messages: [
         {
           role: 'system',
-          content: `You are an advanced conversation analyzer for a health and fitness AI companion. Extract rich, contextual information from user messages to enable personalized coaching.
+          content: `You are a health and wellness conversation analyzer. Extract key insights from the conversation between user and AI coach.
 
 RESPONSE FORMAT (JSON only):
 {
   "data_types": {
-    "health": boolean,
-    "activity": boolean,
-    "mood": boolean,
-    "nutrition": boolean,
-    "sleep": boolean,
-    "workout": boolean,
-    "lifestyle": boolean,
-    "biometric": boolean,
-    "wellness": boolean,
-    "social": boolean,
-    "work": boolean,
-    "travel": boolean
+    "health": boolean,      // Physical health metrics, symptoms, medical info
+    "activity": boolean,    // Exercise, workouts, physical activity
+    "mood": boolean,        // Emotional state, mental health, feelings
+    "lifestyle": boolean,   // Daily habits, routines, social activities
+    "goals": boolean        // Intentions, plans, aspirations
+  },
+  "insights": {
+    "observations": ["string"],     // What the user shared
+    "recommendations": ["string"],  // Actionable advice given
+    "concerns": ["string"]          // Things to watch or address
   },
   "extracted_metrics": {
     "metric_key": {
       "value": any,
       "confidence": number,
-      "source": "conversation|ocr|file|inferred",
-      "time_reference": "string (optional)",
-      "comparative": "better|worse|same|improving|declining (optional)"
+      "source": "conversation"
     }
   },
-  "goals_mentioned": [
-    {
-      "goal": "string",
-      "category": "string",
-      "timeframe": "string (optional)",
-      "confidence": number
-    }
-  ],
+  "follow_up_questions": ["string"],
   "emotional_context": {
-    "tone": "positive|negative|neutral|frustrated|excited|concerned",
-    "intensity": number,
-    "specific_emotions": ["string"]
-  },
-  "time_references": [
-    {
-      "reference": "string",
-      "associated_date": "ISO date (optional)",
-      "context": "string"
-    }
-  ],
-  "preferences": [
-    {
-      "type": "workout_time|equipment|activity_type|diet|schedule",
-      "value": "string",
-      "confidence": number
-    }
-  ],
-  "insights": {
-    "observations": ["string"],
-    "patterns": ["string"],
-    "recommendations": ["string"],
-    "concerns": ["string"],
-    "data_quality_issues": ["string"]
-  },
-  "follow_up_questions": {
-    "immediate": ["string"],
-    "contextual": ["string"],
-    "data_driven": ["string"]
-  },
-  "file_context": {
-    "has_ocr_data": boolean,
-    "has_document_data": boolean,
-    "extracted_data": ["string"],
-    "data_validation_needed": ["string"]
-  },
-  "conversation_themes": ["string"],
-  "historical_context": {
-    "references_past_data": boolean,
-    "pattern_continuations": ["string"],
-    "trend_mentions": ["string"]
+    "tone": "positive|neutral|concerned",
+    "intensity": 1-10
   }
 }
 
 ANALYSIS GUIDELINES:
+- Focus on actionable insights that help the user
 - Extract specific values when mentioned (e.g., "slept 8 hours" → sleep_duration: 8)
 - Detect emotional context and intensity
-- Identify time references and associate with proper dates when possible
-- Extract user preferences and goals
-- Look for comparative statements ("better than yesterday", "worse than usual")
-- Identify data quality issues (conflicting information)
-- Generate context-aware follow-ups based on user's likely patterns
-- Detect conversation themes and ongoing topics
-- Reference past data patterns when relevant
-
-EXAMPLES:
-User: "I slept terribly last night, only 5 hours, but I'm feeling surprisingly energetic this morning"
-→ {
-  "data_types": {"sleep": true, "mood": true},
-  "extracted_metrics": {
-    "sleep_duration": {"value": 5, "confidence": 0.9, "source": "conversation", "time_reference": "last night"},
-    "energy_level": {"value": "high", "confidence": 0.8, "source": "conversation", "time_reference": "this morning", "comparative": "better"}
-  },
-  "emotional_context": {"tone": "neutral", "intensity": 6, "specific_emotions": ["surprised"]},
-  "insights": {
-    "observations": ["User had poor sleep but high energy - unusual pattern"],
-    "patterns": ["Disconnect between sleep quality and energy levels"],
-    "concerns": ["Poor sleep quality may impact recovery"]
-  }
-}
-
-User: "I want to start working out in the mornings before work"
-→ {
-  "data_types": {"workout": true, "lifestyle": true},
-  "goals_mentioned": [{"goal": "morning workouts", "category": "fitness", "timeframe": "ongoing", "confidence": 0.9}],
-  "preferences": [{"type": "workout_time", "value": "morning", "confidence": 0.9}],
-  "insights": {
-    "recommendations": ["Consider gradual transition to morning workouts", "Plan workout routine that fits morning schedule"]
-  }
-}`,
+- Generate natural follow-up questions
+- Keep insights practical and relevant`,
         },
         {
           role: 'user',
-          content: message,
+          content: `User: ${userMessage}\n\nAI Coach: ${aiResponse}`,
         },
       ],
-      max_tokens: 800,
+      max_tokens: 600,
       temperature: 0.7,
     });
 
@@ -978,60 +822,41 @@ User: "I want to start working out in the mornings before work"
 
     try {
       const parsed = JSON.parse(responseText);
-
-      // Return the parsed data directly
-      const enhancedParsed: ParsedConversation = {
-        ...parsed,
-      };
-
-      return enhancedParsed;
+      return parsed as ParsedConversation;
     } catch (parseError) {
       logger.error(
-        'Failed to parse AI response',
+        'Failed to parse insights extraction response',
         parseError instanceof Error ? parseError : new Error('Parse error')
       );
-      // Return enhanced fallback
-      return createEnhancedFallback();
+      return createSimplifiedFallback();
     }
   } catch (error) {
     logger.error(
-      'Error in conversation parsing',
+      'Error in insights extraction',
       error instanceof Error ? error : new Error('Unknown error')
     );
-    return createEnhancedFallback();
+    return createSimplifiedFallback();
   }
 }
 
-function createEnhancedFallback(): ParsedConversation {
+function createSimplifiedFallback(): ParsedConversation {
   return {
     data_types: {
       health: false,
       activity: false,
       mood: false,
-      nutrition: false,
-      sleep: false,
-      workout: false,
       lifestyle: false,
-      biometric: false,
-      wellness: false,
-      social: false,
-      work: false,
-      travel: false,
+      goals: false,
+    },
+    insights: {
+      observations: [],
+      recommendations: [],
+      concerns: [],
     },
     extracted_metrics: {},
     goals_mentioned: [],
-    emotional_context: { tone: 'neutral', intensity: 5, specific_emotions: [] },
-    time_references: [],
-    preferences: [],
-    insights: {
-      observations: [],
-      patterns: [],
-      recommendations: [],
-      concerns: [],
-      data_quality_issues: [],
-    },
-    follow_up_questions: { immediate: [], contextual: [], data_driven: [] },
-    conversation_themes: [],
+    emotional_context: { tone: 'neutral', intensity: 5 },
+    follow_up_questions: [],
   };
 }
 
