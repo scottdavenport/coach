@@ -110,7 +110,7 @@ export function ChatConversationPopup({ userId }: ChatConversationPopupProps) {
 
   return (
     <div
-      className="fixed bottom-20 left-4 right-4 z-40 border border-line rounded-lg shadow-lg max-h-[60vh] flex flex-col"
+      className="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-40 border border-line rounded-lg shadow-lg max-h-[60vh] flex flex-col w-full max-w-4xl"
       style={{ backgroundColor: 'hsl(var(--bg))' }}
     >
       {/* Header */}
